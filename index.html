@@ -14,7 +14,7 @@ window.addEventListener('error',function(e){var t=e.target;window.PACK_ERREURS.p
 <link rel="icon" href="icone-192.png">
 <link rel="apple-touch-icon" href="icone-192.png">
 <meta name="mobile-web-app-capable" content="yes">
-<script>window.PACK_VERSION={"id":"20261001-1649","date":1790866181943,"notes":"rt1"};</script>
+<script>window.PACK_VERSION={"id":"20261001-1658","date":1790866738107,"notes":"rt2"};</script>
 <script>
 // Configuration de départ du pack en ligne (personnes et codes : Google).
 window.PACK_SITE={
@@ -705,9 +705,10 @@ label.f .in{color:var(--ink)}
 .hero-scene{perspective:1100px;width:min(58vw,300px);aspect-ratio:1}
 .hero-logo{position:relative;width:100%;height:100%;transform-style:preserve-3d;animation:logo-tourne 7s linear infinite}
 .hero-logo img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;backface-visibility:visible}
+.hero-tranche{position:absolute;inset:0;-webkit-mask-size:contain;mask-size:contain;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center}
 .hero-reflet{position:absolute;inset:0;-webkit-mask-size:contain;mask-size:contain;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center;
   background:linear-gradient(105deg,transparent 30%,rgba(255,255,255,.75) 47%,rgba(255,255,255,.15) 55%,transparent 65%) no-repeat;background-size:300% 100%;animation:logo-reflet 7s linear infinite;pointer-events:none}
-.hero-ombre{width:min(42vw,220px);height:22px;margin-top:6px;border-radius:50%;background:radial-gradient(closest-side,rgba(8,90,100,.35),rgba(8,90,100,0));animation:logo-ombre 3.5s linear infinite}
+.hero-ombre{width:min(46vw,240px);height:26px;margin-top:6px;border-radius:50%;background:radial-gradient(closest-side,rgba(8,90,100,.35),rgba(8,90,100,0));animation:logo-ombre 3.5s linear infinite}
 @keyframes logo-tourne{from{transform:rotateY(0)}to{transform:rotateY(360deg)}}
 /* Le reflet passe sur la face quand elle se présente de face (début du tour). */
 @keyframes logo-reflet{0%{background-position:120% 0}30%{background-position:-20% 0}100%{background-position:-20% 0}}
@@ -941,14 +942,20 @@ function vLogo(s){
   // Rotation calée sur l'horloge : l'accueil peut se redessiner sans que le logo reparte de zéro (pas d'à-coup).
   // Volume : plusieurs épaisseurs du logo décalées en profondeur (tranche plus sombre), un reflet qui balaie la face,
   // et une ombre au sol qui s'affine quand le logo est vu de profil.
-  const d='animation-delay:-'+((Date.now()/1000)%7).toFixed(2)+'s',src=esc(urlCourte(l)),N=14;
+  // Bloc plein et dense : 80 couches très rapprochées (0,3 px) = ~24 px d'épaisseur, tranche continue sans lamelles ;
+  // elle est ombrée (plus sombre au cœur, un peu plus claire près des faces) pour bien lire le volume.
+  const d='animation-delay:-'+((Date.now()/1000)%7).toFixed(2)+'s',src=esc(urlCourte(l)),N=80,PAS=0.3,demi=(N-1)/2;
+  // Faces avant et arrière = le vrai logo ; entre les deux, une matière pleine (silhouette du logo d'une seule couleur,
+  // teinte qui varie en continu) : la tranche est un mur continu, sans stries entre les couches.
   let couches='';
   for(let i=0;i<N;i++){
-    const z=(i-(N-1)/2)*1.6,bord=i===0||i===N-1,sombre=bord?1:0.55+0.25*Math.abs(i-(N-1)/2)/((N-1)/2);
-    couches+='<img src="'+src+'" alt="" style="transform:translateZ('+z.toFixed(1)+'px)'+(bord?'':';filter:brightness('+sombre.toFixed(2)+') saturate(1.2)')+'">';
+    const z=(i-demi)*PAS,p=Math.abs(i-demi)/demi;
+    if(i===0||i===N-1){couches+='<img src="'+src+'" alt="" style="transform:translateZ('+z.toFixed(2)+'px)">';continue}
+    const c=[[6,88,96],[11,128,138]],k=p*p,col='rgb('+c[0].map((v,j)=>Math.round(v+(c[1][j]-v)*k)).join(',')+')';
+    couches+='<span class="hero-tranche" style="-webkit-mask-image:url('+src+');mask-image:url('+src+');background:'+col+';transform:translateZ('+z.toFixed(2)+'px)"></span>';
   }
   return '<div class="hero" aria-hidden="true"><div class="hero-scene"><div class="hero-logo" style="'+d+'">'+couches+
-    '<span class="hero-reflet" style="-webkit-mask-image:url('+src+');mask-image:url('+src+');transform:translateZ('+((N/2)*1.6+0.2).toFixed(1)+'px);'+d+'"></span></div></div>'+
+    '<span class="hero-reflet" style="-webkit-mask-image:url('+src+');mask-image:url('+src+');transform:translateZ('+(demi*PAS+0.3).toFixed(2)+'px);'+d+'"></span></div></div>'+
     '<div class="hero-ombre" style="'+d+'"></div></div>';
 }
 function vQui(s,z){
