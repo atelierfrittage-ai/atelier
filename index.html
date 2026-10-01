@@ -14,7 +14,7 @@ window.addEventListener('error',function(e){var t=e.target;window.PACK_ERREURS.p
 <link rel="icon" href="icone-192.png">
 <link rel="apple-touch-icon" href="icone-192.png">
 <meta name="mobile-web-app-capable" content="yes">
-<script>window.PACK_VERSION={"id":"20261001-1738","date":1790869104811,"notes":"Icône du pack : logo Dent All Group (comme les autres applications)","sources":1790866673707};</script>
+<script>window.PACK_VERSION={"id":"20261001-1907","date":1790874435162,"notes":"rrt"};</script>
 <script>
 // Configuration de départ du pack en ligne (personnes et codes : Google).
 window.PACK_SITE={
@@ -607,6 +607,7 @@ window.addEventListener('online',function(){verifier()});
 })();
 
 </script>
+<script src="commun/logo-premium.js"></script>
 <style>
 :root{
   --bg:#f3f6f7; --card:#fff; --ink:#15242b; --muted:#5d6f78; --line:#d9e1e5;
@@ -702,18 +703,15 @@ label.f .in{color:var(--ink)}
 .key.ok{background:var(--accent);border-color:var(--accent);color:#fff;font-size:21px}
 
 .hero{display:flex;flex-direction:column;align-items:center;padding:10px 0 18px}
-.hero-scene{perspective:1100px;width:min(58vw,300px);aspect-ratio:1}
-.hero-logo{position:relative;width:100%;height:100%;transform-style:preserve-3d;animation:logo-tourne 7s linear infinite}
-.hero-logo img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;backface-visibility:visible}
-.hero-tranche{position:absolute;inset:0;-webkit-mask-size:contain;mask-size:contain;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center}
-.hero-reflet{position:absolute;inset:0;-webkit-mask-size:contain;mask-size:contain;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center;
-  background:linear-gradient(105deg,transparent 30%,rgba(255,255,255,.75) 47%,rgba(255,255,255,.15) 55%,transparent 65%) no-repeat;background-size:300% 100%;animation:logo-reflet 7s linear infinite;pointer-events:none}
+.hero-scene{position:relative;perspective:1100px;width:min(58vw,300px);aspect-ratio:1}
+.hero-scene canvas{display:block;width:100%;height:100%}
+/* Repli sans WebGL : le logo à plat qui tourne ; logo-premium-plat = image déposée par le composant en cas d'échec. */
+.hero-plat,.hero-scene .logo-premium-plat{display:block;width:100%;height:100%;object-fit:contain;animation:logo-tourne 7s linear infinite}
 .hero-ombre{width:min(46vw,240px);height:26px;margin-top:6px;border-radius:50%;background:radial-gradient(closest-side,rgba(8,90,100,.35),rgba(8,90,100,0));animation:logo-ombre 3.5s linear infinite}
 @keyframes logo-tourne{from{transform:rotateY(0)}to{transform:rotateY(360deg)}}
 /* Le reflet passe sur la face quand elle se présente de face (début du tour). */
-@keyframes logo-reflet{0%{background-position:120% 0}30%{background-position:-20% 0}100%{background-position:-20% 0}}
 @keyframes logo-ombre{0%,100%{transform:scaleX(1);opacity:1}50%{transform:scaleX(.35);opacity:.6}}
-@media (prefers-reduced-motion:reduce){.hero-logo,.hero-reflet,.hero-ombre{animation:none}}
+@media (prefers-reduced-motion:reduce){.hero-plat,.hero-scene .logo-premium-plat,.hero-ombre{animation:none}}
 @media (max-height:700px){.hero-scene{width:min(40vw,190px)}.hero-ombre{width:min(30vw,140px)}}
 .annonce{border-left:6px solid var(--accent)}
 .annonce.important{border-left-color:var(--danger);background:#fff8f8}
@@ -937,26 +935,19 @@ function urlCourte(data){
   try{const [t,b]=data.split(','),bin=atob(b),a=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)a[i]=bin.charCodeAt(i);u=URL.createObjectURL(new Blob([a],{type:t.slice(5).replace(';base64','')}))}catch(e){}
   urlsCourtes.set(data,u);return u;
 }
+// Logo en vrai solide 3D (commun/logo-premium.js : rendu WebGL, un seul canvas déplacé à chaque rendu de l'accueil).
+// Plein et opaque sous tous les angles. Rotation et ombre au sol calées sur l'horloge (pas d'à-coup au redessin).
+const logoSource=s=>s.apparence&&/^data:image\//.test(s.apparence.logo||'')?s.apparence.logo:LOGO_DAG;
 function vLogo(s){
-  const l=s.apparence&&/^data:image\//.test(s.apparence.logo||'')?s.apparence.logo:LOGO_DAG;
-  // Rotation calée sur l'horloge : l'accueil peut se redessiner sans que le logo reparte de zéro (pas d'à-coup).
-  // Volume : plusieurs épaisseurs du logo décalées en profondeur (tranche plus sombre), un reflet qui balaie la face,
-  // et une ombre au sol qui s'affine quand le logo est vu de profil.
-  // Bloc plein et dense : 80 couches très rapprochées (0,3 px) = ~24 px d'épaisseur, tranche continue sans lamelles ;
-  // elle est ombrée (plus sombre au cœur, un peu plus claire près des faces) pour bien lire le volume.
-  const d='animation-delay:-'+((Date.now()/1000)%7).toFixed(2)+'s',src=esc(urlCourte(l)),N=80,PAS=0.3,demi=(N-1)/2;
-  // Faces avant et arrière = le vrai logo ; entre les deux, une matière pleine (silhouette du logo d'une seule couleur,
-  // teinte qui varie en continu) : la tranche est un mur continu, sans stries entre les couches.
-  let couches='';
-  for(let i=0;i<N;i++){
-    const z=(i-demi)*PAS,p=Math.abs(i-demi)/demi;
-    if(i===0||i===N-1){couches+='<img src="'+src+'" alt="" style="transform:translateZ('+z.toFixed(2)+'px)">';continue}
-    const c=[[6,88,96],[11,128,138]],k=p*p,col='rgb('+c[0].map((v,j)=>Math.round(v+(c[1][j]-v)*k)).join(',')+')';
-    couches+='<span class="hero-tranche" style="-webkit-mask-image:url('+src+');mask-image:url('+src+');background:'+col+';transform:translateZ('+z.toFixed(2)+'px)"></span>';
-  }
-  return '<div class="hero" aria-hidden="true"><div class="hero-scene"><div class="hero-logo" style="'+d+'">'+couches+
-    '<span class="hero-reflet" style="-webkit-mask-image:url('+src+');mask-image:url('+src+');transform:translateZ('+(demi*PAS+0.3).toFixed(2)+'px);'+d+'"></span></div></div>'+
-    '<div class="hero-ombre" style="'+d+'"></div></div>';
+  const d='animation-delay:-'+((Date.now()/1000)%7).toFixed(2)+'s';
+  return '<div class="hero" aria-hidden="true"><div class="hero-scene" id="heroScene"></div><div class="hero-ombre" style="'+d+'"></div></div>';
+}
+// Après chaque rendu : on y remet le canvas 3D ; sans WebGL, le logo à plat qui tourne (rien ne peut s'y voir à travers).
+function monterLogo(s){
+  const sc=document.getElementById('heroScene');if(!sc)return;
+  const src=logoSource(s);
+  let ok=false;try{ok=!!(window.LogoPremium&&window.LogoPremium.monter(sc,src))}catch(e){}
+  if(!ok&&!sc.querySelector('img'))sc.innerHTML='<img class="hero-plat" src="'+esc(urlCourte(src))+'" alt="" style="animation-delay:-'+((Date.now()/1000)%7).toFixed(2)+'s">';
 }
 function vQui(s,z){
   const list=s.personnes.filter(p=>L.voitZone(p,z.id)).sort((a,b)=>a.nom.localeCompare(b.nom,'fr'));
@@ -1163,6 +1154,7 @@ function render(){
   else if(se)view.innerHTML=vApplis(se);
   else{ui.ecran='';view.innerHTML=vQui(s,z)}
   hydraterPhotos();
+  monterLogo(s);
   if(!stockageOk)view.insertAdjacentHTML('afterbegin','<div class="banner err"><b>Cette tablette refuse d’enregistrer les données de la page.</b> Rien ne sera gardé à la fermeture. Adresse : '+esc(location.href)+'</div>');
 }
 const stockageOk=(()=>{try{localStorage.setItem('pack-essai','1');localStorage.removeItem('pack-essai');return true}catch(e){return false}})();
