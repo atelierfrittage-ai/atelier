@@ -1,17 +1,12 @@
 {
- "id": "20261002-1039",
- "date": 1790930359457,
- "notes": "df",
- "sources": 1790930040000,
+ "id": "20261002-1236",
+ "date": 1790937393429,
+ "notes": "serie tablette",
+ "sources": 1790936972000,
+ "test": null,
  "tablettes": {
   "T-V5H88Q": {
    "canal": "test"
   }
- },
- "test": {
-  "id": "20261002-1236",
-  "date": 1790937393429,
-  "notes": "serie tablette",
-  "sources": 1790936972000
  }
 }
