@@ -1,14 +1,9 @@
 {
- "id": "20261002-1236",
- "date": 1790937393429,
- "notes": "serie tablette",
- "sources": 1790936972000,
- "test": {
-  "id": "20261002-1354",
-  "date": 1790942041693,
-  "notes": "ff",
-  "sources": 1790941816000
- },
+ "id": "20261002-1354",
+ "date": 1790942041693,
+ "notes": "ff",
+ "sources": 1790941816000,
+ "test": null,
  "tablettes": {
   "T-V5H88Q": {
    "canal": "test"
