@@ -14,7 +14,7 @@ window.addEventListener('error',function(e){var t=e.target;window.PACK_ERREURS.p
 <link rel="icon" href="icone-192.png">
 <link rel="apple-touch-icon" href="icone-192.png">
 <meta name="mobile-web-app-capable" content="yes">
-<script>window.PACK_VERSION={"id":"20261006-1447","num":7,"date":1791290827397,"notes":"","sources":1791283890000};</script>
+<script>window.PACK_VERSION={"id":"20261006-1454","num":8,"date":1791291258735,"notes":"","sources":1791290630000};</script>
 <script>
 // Configuration de départ du pack en ligne (personnes et codes : Google).
 window.PACK_SITE={
@@ -1864,6 +1864,18 @@ textarea.in{width:100%;min-height:120px;resize:vertical}
 .app .ic{width:58px;height:58px;border-radius:17px;display:grid;place-items:center;margin-bottom:6px;color:#fff;
   background:linear-gradient(140deg,var(--c1),var(--c2));box-shadow:0 6px 14px -4px var(--c2),inset 0 1px 0 rgba(255,255,255,.28)}
 .app .ic svg{width:30px;height:30px}
+/* Mode d'emploi de la tablette */
+.btn-aide{white-space:nowrap}
+details.aide{padding:0;margin-bottom:10px}
+details.aide summary{display:flex;align-items:center;gap:12px;padding:14px 16px;font-size:19px;font-weight:700;cursor:pointer;list-style:none;min-height:60px}
+details.aide summary::-webkit-details-marker{display:none}
+details.aide summary::after{content:'›';margin-left:auto;font-size:26px;color:var(--muted);transition:transform .2s}
+details.aide[open] summary::after{transform:rotate(90deg)}
+.aide-ic{flex:none;width:38px;height:38px;display:grid;place-items:center;font-size:24px}
+.aide-ic .ic{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;color:#fff;background:linear-gradient(140deg,var(--c1),var(--c2))}
+.aide-ic .ic svg{width:22px;height:22px}
+.aide-txt{padding:0 18px 12px;font-size:17px;line-height:1.55}
+.aide-txt li{margin:8px 0}
 .app.admin .ic{--c1:#5d6f78;--c2:#2c3e46}
 .chip .ci{width:17px;height:17px;vertical-align:-3px;margin-right:4px;color:var(--c2)}
 .app b{font-size:20px}
@@ -2214,9 +2226,84 @@ function monterLogo(s){
   let ok=false;try{ok=!!(window.LogoPremium&&window.LogoPremium.monter(sc,src))}catch(e){}
   if(!ok&&!sc.querySelector('img'))sc.innerHTML='<img class="hero-plat" src="'+esc(urlCourte(src))+'" alt="" style="animation-delay:-'+((Date.now()/1000)%7).toFixed(2)+'s">';
 }
+// --- Mode d'emploi de la tablette (bouton « ❓ Mode d'emploi » de l'accueil) -------------------------------------
+// Parties générales, puis une partie par application : seulement celles proposées à la personne connectée
+// (toutes avant connexion). La partie Administration n'apparaît que pour l'administrateur.
+const AIDE_GENERAL=[
+ ['🔑','Se connecter et se déconnecter',`<ol>
+   <li>À l’écran <b>« Qui êtes-vous ? »</b>, touchez votre nom, puis tapez votre <b>code personnel</b>.</li>
+   <li>Vos applications s’affichent en tuiles. Touchez une tuile pour l’ouvrir ; le bouton <b>⌂ Accueil</b> (en haut) vous ramène ici.</li>
+   <li>En partant, touchez <b>Se déconnecter</b>. Sinon, la tablette vous déconnecte toute seule après un moment sans utilisation.</li>
+   <li>Pas encore de code, ou code oublié : voyez l’administrateur. Après 5 codes faux, il faut attendre 30 secondes.</li></ol>`],
+ ['🌀','Le logo qui tourne',`<ul>
+   <li><b>Grand logo au milieu</b> : une application s’ouvre, attendez une seconde.</li>
+   <li><b>Petit logo en bas à droite</b> : la tablette échange avec Google (chargement, validation). Vous pouvez continuer à travailler.</li>
+   <li>Pendant que vous remplissez, tout est <b>enregistré tout seul</b>, sans logo.</li></ul>`],
+ ['📶','Sans Wi-Fi',`<ul>
+   <li>La tablette continue de fonctionner : ce que vous saisissez est gardé sur la tablette.</li>
+   <li>Tout part <b>tout seul vers Google</b> au retour du Wi-Fi. N’effacez pas les données de Chrome.</li>
+   <li>Pensez à rouvrir les applications utilisées hors connexion une fois le Wi-Fi revenu : leurs données partent à l’ouverture.</li></ul>`],
+ ['🔄','Mises à jour',`<ul>
+   <li>Le numéro de version est affiché <b>sous l’heure</b>, en haut à droite.</li>
+   <li>Les nouvelles versions s’installent toutes seules quand la tablette est libre (personne de connecté) ou après 2 minutes sans être touchée. La page se recharge une fois : c’est normal.</li></ul>`]
+];
+const AIDE_APPLIS={
+ releve:`<ol>
+   <li><b>L’atelier</b> : état des machines et <b>consignes à reprendre</b>. Choisissez votre nom, puis <b>Fait</b> quand une consigne (silo, piston…) est réalisée.</li>
+   <li><b>Faire la relève</b> : renseignez la date, l’<b>équipe sortante</b>, l’<b>opérateur sortant</b> et si l’équipe est complète.</li>
+   <li>Pour <b>chaque machine</b> : son état (En production, Prête ou Arrêt / Maintenance), le silo ou le piston à décharger, et une remarque si besoin. Ajoutez les observations générales en bas.</li>
+   <li>Quand tout est rempli : <b>Valider et transmettre</b>. La relève part à l’équipe suivante et une nouvelle relève est prête. Le brouillon est gardé à chaque modification : rien n’est perdu si vous quittez.</li>
+   <li><b>Historique</b> : les relèves déjà transmises.</li></ol>`,
+ taches:`<ol>
+   <li><b>Je coche mes tâches</b> : choisissez le jour et votre poste (Matin, Après-midi, Nuit).</li>
+   <li>Touchez une tâche pour la <b>prendre</b> ; touchez-la encore pour la retirer. La tâche faite, indiquez le <b>temps passé</b>. Le bouton <b>ⓘ</b> donne l’aide et les photos de la tâche.</li>
+   <li>En fin de poste : <b>J’ai terminé ✓</b>. Tout est enregistré au fur et à mesure.</li>
+   <li><b>Qui fait quoi</b> : qui a pris quelle tâche.</li></ol>`,
+ fiches:`<ol>
+   <li><b>J’ai un problème</b> : choisissez la fiche qui correspond au problème (et la machine).</li>
+   <li>Suivez les étapes une par une et répondez aux questions : la fiche vous guide jusqu’à la solution ou vous dit qui prévenir.</li>
+   <li><b>Journal</b> : les dépannages déjà faits.</li></ol>`,
+ maintenance:`<ol>
+   <li><b>Je fais une maintenance</b> : choisissez l’opération et la machine.</li>
+   <li>Lisez <b>Avant de commencer</b> (sécurité, matériel, photos), puis suivez chaque étape et validez-la.</li>
+   <li>À la fin, la maintenance est notée avec la date et votre nom. <b>Suivi</b> : ce qui a été fait et ce qui est à faire.</li></ol>`,
+ procedures:`<ol>
+   <li><b>Consulter</b> : cherchez ou choisissez une procédure. Elle se lit toujours dans le même ordre : objectif, quand, sécurité, matériel, étapes, contrôles, en cas de problème.</li>
+   <li><b>Pas à pas</b> : une étape à la fois, en grand. Cochez les consignes de <b>sécurité</b> avant de commencer.</li>
+   <li>Une fois lue : <b>J’ai lu et compris</b>. Une nouvelle version d’une procédure est à relire.</li>
+   <li><b>Suivi</b> : qui a lu quelle procédure.</li></ol>`,
+ lancements:`<ol>
+   <li><b>À lancer · Machines</b> : la liste des plateaux à lancer, machine par machine, mise à jour en direct par le bureau. « Nouveau » = ajouté il y a moins de 10 minutes.</li>
+   <li><b>Préparation</b> puis <b>Prête</b> : indiquez où en est la machine (le fichier n’est pas encore pris).</li>
+   <li><b>Lancer</b> : choisissez le fichier, regardez le <b>plan du plateau</b> envoyé par le bureau et comparez-le avec le vrai plateau. Si c’est le bon : <b>« C’est le bon plateau : lancer »</b>. Sinon : « Ce n’est pas le bon plateau », et prévenez le bureau.</li>
+   <li>Erreur de fichier après le lancement : <b>« Mauvais fichier »</b> le remet en attente.</li>
+   <li>Travail terminé : <b>Libérer</b>. Il part dans l’<b>Historique</b>.</li>
+   <li><b>Écran atelier</b> : l’affichage de la télé de l’atelier.</li></ol>`,
+ tableau:`<ul>
+   <li>Lecture seule : <b>Maintenant</b> (état des machines et consignes), Personnes, Fil d’activité, Dépannages, Procédures, Machines, Équipes, Qui fait quoi, Relèves.</li>
+   <li>Les données arrivent toutes seules de Google toutes les 2 minutes.</li></ul>`
+};
+const AIDE_ADMIN=`<ul>
+   <li>Touchez la tuile <b>Administration</b> (ou <b>⚙ Administration</b> sur une tablette sans code).</li>
+   <li><b>Personnes</b> : ajouter une personne, son rôle, ses zones et son <b>code personnel</b>.</li>
+   <li><b>Qui voit quoi</b> : masquer des applications, des onglets ou des contenus, par rôle ou par personne.</li>
+   <li><b>Zones</b> : machines et applications proposées dans chaque zone.</li>
+   <li><b>Cette tablette</b> : zone, nom, mode (avec code, personnelle, accès libre), <b>état de la tablette</b>, n° de série, historique des versions, « Chercher une mise à jour ».</li>
+   <li>Les changements partent vers toutes les tablettes en moins d’une minute.</li></ul>`;
+function vAide(s,z,se){
+  const applis=se?L.applisPour(se.site,se.zone,se.personne):L.applisSite(s).filter(a=>a.id!=='tableau');
+  const bloc=(icone,titre,html,ouvert)=>'<details class="card aide"'+(ouvert?' open':'')+'><summary><span class="aide-ic" aria-hidden="true">'+icone+'</span>'+titre+'</summary><div class="aide-txt">'+html+'</div></details>';
+  return '<div class="row" style="margin-bottom:12px"><h1 class="grow" style="margin:0">Mode d’emploi</h1><button class="btn" data-act="aide-out">← Retour</button></div>'+
+    '<p class="hint">Touchez un titre pour l’ouvrir.</p>'+
+    AIDE_GENERAL.map(([i,t,h],k)=>bloc(i,t,h,k===0&&!se)).join('')+
+    '<h2 style="margin:22px 0 10px">Les applications</h2>'+
+    applis.filter(a=>AIDE_APPLIS[a.id]).map(a=>bloc('<span class="ic" style="'+teinte(a.id)+'">'+icone(a.id)+'</span>',esc(a.nom),AIDE_APPLIS[a.id],false)).join('')+
+    (se&&se.personne.role==='admin'&&!se.sansCode?'<h2 style="margin:22px 0 10px">Administrateur</h2>'+bloc('⚙️','Administration',AIDE_ADMIN,false):'')+
+    '<p class="hint" style="margin-top:18px">Une question ou un problème : voyez votre chef d’équipe ou l’administrateur.</p>';
+}
 function vQui(s,z){
   const list=s.personnes.filter(p=>L.voitZone(p,z.id)).sort((a,b)=>a.nom.localeCompare(b.nom,'fr'));
-  let h=vLogo(s)+(ui.msg?'<div class="banner">'+esc(ui.msg)+'</div>':'')+vMessages(s,z)+'<section class="card"><h1>Qui êtes-vous ?</h1><p class="hint">Touchez votre nom puis tapez votre code personnel.</p><div class="people">'+
+  let h=vLogo(s)+(ui.msg?'<div class="banner">'+esc(ui.msg)+'</div>':'')+vMessages(s,z)+'<section class="card"><div class="row"><h1 class="grow" style="margin:0">Qui êtes-vous ?</h1><button class="btn btn-aide" data-act="aide">❓ Mode d’emploi</button></div><p class="hint">Touchez votre nom puis tapez votre code personnel.</p><div class="people">'+
     list.map(p=>'<button class="who'+(p.code?'':' off')+'" data-act="login" data-id="'+esc(p.id)+'"><span class="av">'+esc(initiales(p.nom))+'</span><b>'+esc(p.nom)+'</b><small>'+(p.code?(p.role==='operateur'?'':esc(roleNom(p.role))):'Pas encore de code')+'</small></button>').join('')+
     '</div>'+(list.length?'':'<p class="hint">Personne n’est rattaché à cette zone : voir l’administrateur.</p>')+'</section>';
   return h;
@@ -2226,6 +2313,7 @@ function vApplis(se){
   const apps=L.applisPour(se.site,se.zone,se.personne),admin=se.personne.role==='admin'&&!se.sansCode;
   let h=vLogo(se.site)+(ui.msg?'<div class="banner">'+esc(ui.msg)+'</div>':'')+
     '<section class="card"><div class="row"><div class="grow"><h1>'+(se.libre?'Bienvenue':'Bonjour '+esc(se.personne.nom))+'</h1><p class="hint" style="margin:0">'+(se.libre?'Accès libre · ':'')+esc(roleNom(se.personne.role))+' · '+esc(se.zone.nom)+'</p></div>'+
+    '<button class="btn btn-aide" data-act="aide">❓ Mode d’emploi</button>'+
     (se.sansCode?'<button class="btn" data-act="adm-login" title="Administration (code administrateur)">⚙ Administration</button>':'<button class="btn" data-act="logout">Se déconnecter</button>')+'</div></section>'+vMessages(se.site,se.zone)+'<div class="apps">'+
     apps.map(a=>'<a class="app" href="'+esc(a.fichier)+'"><span class="ic" aria-hidden="true" style="'+teinte(a.id)+'">'+icone(a.id)+'</span><b>'+esc(a.nom)+'</b><small>'+esc(a.texte)+'</small></a>').join('')+
     (admin?'<button class="app admin" data-act="admin" style="text-align:left"><span class="ic" aria-hidden="true">'+icone('admin')+'</span><b>Administration</b><small>Personnes, codes, zones, secteurs, cette tablette</small></button>':'')+
@@ -2419,6 +2507,7 @@ function render(){
   document.getElementById('zoneNom').textContent=z?z.nom+(t.nom?' · '+t.nom:''):'Tablette pas encore installée';
   document.title=(z?z.nom+' — ':'')+'Accueil';
   if(!z)view.innerHTML=vInstall(s);
+  else if(ui.ecran==='aide')view.innerHTML=vAide(s,z,se);
   else if(se&&ui.ecran==='admin'&&se.personne.role==='admin'&&!se.sansCode)view.innerHTML=vAdmin(se);
   else if(se&&se.sansCode&&ui.ecran==='adm')view.innerHTML=vAdmLogin(s);
   else if(se)view.innerHTML=vApplis(se);
@@ -2525,6 +2614,9 @@ const actions={
   admin(){ui.ecran='admin'},
   // Tablette sans code : un administrateur s'identifie pour ouvrir l'Administration.
   'adm-login'(){ui.ecran='adm'},
+  // Mode d'emploi : depuis « Qui êtes-vous ? » ou l'accueil d'une personne connectée ; « Retour » revient où l'on était.
+  aide(){ui.ecran='aide';window.scrollTo(0,0)},
+  'aide-out'(){ui.ecran='';window.scrollTo(0,0)},
   'adm-out'(){ui.ecran=''},
   'adm-who'(el){const p=L.personne(site(),el.dataset.id);if(p)login(p,q=>{L.ouvrirSession(q.id);ui.ecran='admin';ui.msg='';kp=null;paintKp();render()});return false},
   'admin-out'(){ui.ecran=''},
