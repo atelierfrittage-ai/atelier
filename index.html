@@ -14,7 +14,7 @@ window.addEventListener('error',function(e){var t=e.target;window.PACK_ERREURS.p
 <link rel="icon" href="icone-192.png">
 <link rel="apple-touch-icon" href="icone-192.png">
 <meta name="mobile-web-app-capable" content="yes">
-<script>window.PACK_VERSION={"id":"20261002-1751","date":1790956267795,"notes":"dd","sources":1790956070000};</script>
+<script>window.PACK_VERSION={"id":"20261006-1121","num":1,"date":1791278498471,"notes":"rt","sources":1791212422000};</script>
 <script>
 // Configuration de départ du pack en ligne (personnes et codes : Google).
 window.PACK_SITE={
@@ -663,7 +663,7 @@ function historique(){try{var l=JSON.parse(localStorage.getItem(K_HISTO)||'[]');
   var l=historique(),der=l[l.length-1];
   if(der&&der.id===V.id)return;
   var e=lire(),test=!!(e&&e.id===V.id&&e.test);
-  l.push({id:V.id,notes:String(V.notes||'').slice(0,200),at:Date.now(),de:der?der.id:null,test:test,
+  l.push({id:V.id,num:Number(V.num)||0,notes:String(V.notes||'').slice(0,200),at:Date.now(),de:der?der.id:null,test:test,
     type:!der?'premiere':der.id>V.id?'retour':'maj'});
   try{localStorage.setItem(K_HISTO,JSON.stringify(l.slice(-60)))}catch(err){}
 })();
@@ -738,8 +738,8 @@ function verifier(manuel){
   return fetch('version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null}).then(function(j){
     if(!j||!j.id){if(manuel)afficher('Impossible de lire la version publiée.');return}
     var cible=choisir(j);
-    if(!cible){dispo=null;bandeau('');if(manuel)afficher('Cette tablette est bloquée sur la version '+V.id+' (réglage de la console du PC) : elle ne reçoit pas les mises à jour.');return}
-    if(cible.id===V.id){dispo=null;bandeau('');if(manuel)afficher('Ce pack est à jour (version '+V.id+(canal==='test'?', tablette test':'')+').');return}
+    if(!cible){dispo=null;bandeau('');if(manuel)afficher('Cette tablette est bloquée sur la version '+(V.num||V.id)+' (réglage de la console du PC) : elle ne reçoit pas les mises à jour.');return}
+    if(cible.id===V.id){dispo=null;bandeau('');if(manuel)afficher('Ce pack est à jour ('+(V.num?'version '+V.num:'version '+V.id)+(canal==='test'?', tablette test':'')+').');return}
     dispo=cible;if(manuel)ecrire(null);installer(!!manuel);
   }).catch(function(){if(manuel)afficher('Pas de connexion internet : vérification impossible.')});
 }
@@ -1761,6 +1761,10 @@ button{cursor:pointer}
 .brand b{display:block;font-size:20px;line-height:1.15}
 .brand span{display:block;font-size:14px;color:var(--muted)}
 .clock{font-size:22px;font-weight:700;color:var(--accent-dark)}
+/* Version du logiciel (pack) installée sur cette tablette, sous l'heure. */
+.heure-v{display:flex;flex-direction:column;align-items:flex-end;line-height:1.15}
+.version{font-size:12px;color:var(--muted);white-space:nowrap}
+.version b{color:#a35f00}
 
 main{max-width:1100px;margin:0 auto;padding:18px 16px 80px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:16px}
@@ -1881,7 +1885,7 @@ body.pack-app{overflow:hidden}
   <div class="top-in">
     <img id="siteLogo" alt="" hidden style="height:44px;max-width:160px;object-fit:contain">
     <div class="brand"><b id="siteNom">Pack Tablettes</b><span id="zoneNom"></span></div>
-    <span class="clock" id="clock"></span>
+    <div class="heure-v"><span class="clock" id="clock"></span><span class="version" id="versionPack"></span></div>
   </div>
 </header>
 <main id="view"></main>
@@ -2092,7 +2096,7 @@ function histoVersions(){
   return '<h3>Historique des versions sur cette tablette</h3><div style="overflow-x:auto"><table class="tbl" style="width:100%;border-collapse:collapse;font-size:14px"><thead><tr>'+
     ['Installée le','Version','','Ce qui change'].map(t=>'<th style="text-align:left;padding:6px 8px;border-bottom:1px solid #d6e2e5">'+t+'</th>').join('')+'</tr></thead><tbody>'+
     l.map((e,k)=>'<tr'+(k===0?' style="font-weight:600"':'')+'><td style="padding:6px 8px;border-bottom:1px solid #eef3f4;white-space:nowrap">'+esc(new Date(e.at).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'}))+'</td>'+
-      '<td style="padding:6px 8px;border-bottom:1px solid #eef3f4;white-space:nowrap">'+esc(vid(e.id))+(k===0?' (actuelle)':'')+'</td>'+
+      '<td style="padding:6px 8px;border-bottom:1px solid #eef3f4;white-space:nowrap">'+esc(e.num?'Version '+e.num:vid(e.id))+(k===0?' (actuelle)':'')+'</td>'+
       '<td style="padding:6px 8px;border-bottom:1px solid #eef3f4">'+esc(quoi[e.type]||'')+(e.test?' · version en test':'')+'</td>'+
       '<td style="padding:6px 8px;border-bottom:1px solid #eef3f4;color:#5b6b72">'+esc(e.notes||'')+'</td></tr>').join('')+'</tbody></table></div>';
 }
@@ -2182,7 +2186,7 @@ function vAdmin(se){
     '<p>Modèle : <b>'+esc(L.modele()||L.typeAppareil())+'</b>'+(L.modele()?'':' <span class="hint">(modèle exact non donné par ce navigateur)</span>')+'</p>'+
     '<p class="hint">Le numéro de série ne peut pas être lu par une page web : recopiez-le une fois (étiquette au dos, ou Paramètres › À propos de la tablette › État › Numéro de série).</p>'+
     '<div class="row"><input class="in grow" id="tSerie" maxlength="30" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="N° de série ou d’inventaire" value="'+esc(L.serie())+'" data-enter="serie"><button class="btn" data-act="serie">Enregistrer</button></div></section>'+
-    '<section class="card"><h2>Logiciel</h2><p class="hint">Version du pack : <b>'+esc(L.versionPack())+'</b>'+(window.PACK_VERSION&&window.PACK_VERSION.date?' (publiée le '+esc(new Date(window.PACK_VERSION.date).toLocaleString('fr-FR'))+')':'')+'. Identifiant de la tablette : <b>'+esc(L.appareil()||'—')+'</b>.</p>'+
+    '<section class="card"><h2>Logiciel</h2><p class="hint">Version du pack : <b>'+esc(window.PACK_VERSION&&window.PACK_VERSION.num?'Version '+window.PACK_VERSION.num:L.versionPack()==='fichier'?'fichier':'d’essai (non publiée)')+'</b>. Identifiant de la tablette : <b>'+esc(L.appareil()||'—')+'</b>.</p>'+
     (window.PACK_VERSION?'<p class="hint">Les nouvelles versions publiées depuis la console du PC s’installent toutes seules (vérification toutes les 2 minutes, installation dès que la tablette est libre ou après 2 minutes sans utilisation). Le bouton ci-dessous l’installe tout de suite.</p><button class="btn" data-act="maj-voir">Chercher une mise à jour</button>'+histoVersions():'')+
     (window.PACK_VERSION?'<h3>Code d’accès de l’atelier</h3><p class="hint">Code de la Google Sheet tapé à l’installation'+(L.codeLocal()?' (enregistré)':' (aucun)')+'. À changer seulement si le code de la Sheet a changé.</p>'+
       '<div class="row"><input class="in grow" id="gCode" maxlength="20" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Nouveau code d’accès" data-enter="g-code"><button class="btn" data-act="g-code">Enregistrer</button></div>':'')+'</section>';
@@ -2576,7 +2580,17 @@ document.addEventListener('keydown',e=>{
 // Activité sur l'accueil : garde la session ouverte ; sinon retour à « Qui êtes-vous ? ».
 let lastTouch=0;
 ['pointerdown','keydown'].forEach(ev=>document.addEventListener(ev,()=>{const t=Date.now();if(t-lastTouch>15000){lastTouch=t;L.toucher()}},true));
-function tick(){const d=new Date();document.getElementById('clock').textContent=pad(d.getHours())+':'+pad(d.getMinutes())}
+function tick(){const d=new Date();document.getElementById('clock').textContent=pad(d.getHours())+':'+pad(d.getMinutes());afficherVersion()}
+// « Version 02/10/2026 17:51 » (pack en ligne) ou « Version fichier » (pack copié sur la tablette) ; « tablette test » ou
+// « bloquée » selon le réglage de mises à jour choisi dans la console du PC.
+function afficherVersion(){
+  const el=document.getElementById('versionPack');if(!el)return;
+  const V=window.PACK_VERSION,c=window.PackEnLigne&&PackEnLigne.canal?PackEnLigne.canal():'normale';
+  // Numéro donné à la publication (console du PC) ; avant publication (aperçu du PC) ou pack copié : pas de numéro.
+  const nom=V&&V.num?'Version '+V.num:V&&V.id?'Version d’essai (non publiée)':'Version fichier';
+  el.innerHTML=esc(nom)+(c==='test'?' · <b>tablette test</b>':c==='bloquee'?' · <b>bloquée</b>':'');
+  el.title=V&&V.notes?V.notes:'';
+}
 // Fin d'une connexion par code (inactivité) : retour à « Qui êtes-vous ? », ou à l'accueil sans code de la tablette.
 // Seule la fin d'une connexion par code compte (pas une nouvelle connexion, ni la session de base d'une tablette sans code).
 const quiCode=()=>{const x=L.sessionCode();return x?x.personne.id:''};
