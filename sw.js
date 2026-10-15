@@ -27,6 +27,8 @@ self.addEventListener('fetch',function(e){
   if(/version\.json$/.test(url.pathname)||/sw\.js$/.test(url.pathname))return; // toujours le site
   // Téléchargement d'une nouvelle version par la page (en-ligne.js) : toujours le site, rien n'est gardé ici.
   if(url.searchParams.has('maj')||/\/versions\//.test(url.pathname))return;
+  // Console en ligne (<site>/console/, 2026-10-15) : une autre page, jamais remplacée par la copie du pack.
+  if(/\/console(\/|$)/.test(url.pathname))return;
   if(estPage(req,url)){
     // La copie gardée d'abord ; le site seulement si la tablette n'en a pas encore.
     e.respondWith(caches.match('./index.html').then(function(r){
