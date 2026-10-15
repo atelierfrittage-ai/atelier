@@ -1,0 +1,1055 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src https://script.google.com https://script.googleusercontent.com; base-uri 'none'; form-action 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Console de l’atelier</title>
+<style>
+/* Console en ligne du Pack Tablettes (lot 3, 2026-10-15) : LECTURE SEULE, d'après la maquette validée.
+   Page publique : elle ne contient AUCUN secret (seulement l'adresse du script Google, ajoutée par construire-unique.mjs).
+   Chaque lecture est contrôlée par le script Google (session, partie, secteur) : le menu n'est qu'un affichage. */
+:root{
+  --bg:#f3f6f7;--card:#fff;--ink:#15242b;--muted:#5d6f78;--line:#d9e1e5;--line2:#e8eef0;
+  --accent:#0B8A96;--accent-dark:#065E66;--accent-soft:#DDF3F5;
+  --ok:#1F7A3A;--ok-bg:#E2F5E7;--warn:#A85A00;--warn-bg:#FFF1D6;--warn-line:#E08A00;--err:#C0262D;--err-bg:#FDE8E8;
+  --nav:#132229;--nav2:#1c313a;--shadow:0 1px 2px rgba(21,36,43,.06),0 4px 14px rgba(21,36,43,.06);
+}
+*{box-sizing:border-box}
+html{scrollbar-gutter:stable}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+@media (min-width:1700px){body{font-size:17px}}
+button,input,select{font:inherit;color:inherit}
+[hidden]{display:none!important}
+svg.i{width:20px;height:20px;flex:none}
+.pa{--c1:#16a3ad;--c2:#0b6f78;display:inline-grid;place-items:center;width:40px;height:40px;border-radius:12px;background:linear-gradient(140deg,var(--c1),var(--c2));color:#fff;flex:none;box-shadow:inset 0 1px 0 rgba(255,255,255,.25)}
+.pa svg{width:22px;height:22px}
+.pa.s{width:30px;height:30px;border-radius:9px}.pa.s svg{width:17px;height:17px}
+.pa.l{width:56px;height:56px;border-radius:16px}.pa.l svg{width:30px;height:30px}
+/* Connexion */
+.login{min-height:100vh;display:grid;place-items:center;padding:24px;background:radial-gradient(1200px 600px at 20% 0%,#dff2f4,transparent),var(--bg)}
+.login .box{width:min(440px,100%);background:#fff;border:1px solid var(--line);border-radius:18px;padding:30px 30px 24px;box-shadow:var(--shadow)}
+.login h1{margin:14px 0 2px;font-size:26px}
+.login p.sub{margin:0 0 20px;color:var(--muted)}
+.lbl{display:flex;flex-direction:column;gap:6px;font-size:15px;font-weight:600;color:var(--muted);margin-bottom:14px}
+.in{border:1px solid #b9c6cc;border-radius:10px;padding:10px 12px;min-height:48px;background:#fff;width:100%;color:var(--ink);font-weight:400}
+.in:focus{outline:3px solid #9ED6DC;border-color:var(--accent)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--line);background:#fff;border-radius:10px;padding:8px 16px;min-height:44px;font-weight:600;cursor:pointer;color:var(--ink);white-space:nowrap;font-size:15px}
+.btn:hover{border-color:#b9c6cc;background:#fafcfc}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.pri:hover{background:var(--accent-dark)}
+.btn.big{min-height:56px;font-size:17px;width:100%}
+.btn:disabled{opacity:.55;cursor:wait}
+.msg{border-radius:10px;padding:10px 14px;margin:0 0 14px;font-size:15px;display:flex;gap:10px;align-items:flex-start}
+.msg.err{background:var(--err-bg);border:1px solid #e9a3a6}
+.msg.warn{background:var(--warn-bg);border:1px solid var(--warn-line)}
+.msg.ok{background:var(--ok-bg);border:1px solid #9fd3ad}
+.msg.info{background:var(--accent-soft);border:1px solid #9ED6DC}
+.msg svg{margin-top:2px}
+/* Coquille */
+.app{display:grid;grid-template-columns:252px minmax(0,1fr);min-height:100vh}
+.nav{background:var(--nav);color:#d3e0e5;position:sticky;top:0;height:100vh;overflow-y:auto;padding:14px 10px 20px;display:flex;flex-direction:column;gap:2px}
+.brand{display:flex;gap:10px;align-items:center;padding:4px 8px 14px}
+.brand b{display:block;color:#fff;font-size:17px;line-height:1.2}
+.brand span{font-size:14px;opacity:.75}
+.nav h3{margin:14px 10px 4px;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:#8fa6af;font-weight:700}
+.nav button{display:flex;align-items:center;gap:10px;width:100%;border:0;background:transparent;color:#d3e0e5;text-align:left;padding:6px 10px;min-height:44px;border-radius:10px;font-weight:600;font-size:15px;cursor:pointer}
+.nav button:hover{background:var(--nav2);color:#fff}
+.nav button[aria-current="page"]{background:#0e4d55;color:#fff;box-shadow:inset 3px 0 0 #5fd0da}
+.nav button .t{flex:1;line-height:1.25}
+.nav .bdg{font-size:13px;font-weight:700;border-radius:999px;padding:1px 8px;background:#2b4651;color:#cfe3e8}
+.nav .bdg.r{background:var(--err);color:#fff}
+.nav .foot{margin-top:auto;padding:14px 10px 0;font-size:14px;color:#8fa6af}
+.main{min-width:0;display:flex;flex-direction:column}
+.top{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:14px;padding:10px 24px;background:rgba(243,246,247,.95);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.secsel{display:inline-flex;gap:3px;background:#e3eaed;padding:4px;border-radius:12px;flex-wrap:wrap}
+.secsel button{border:0;background:transparent;border-radius:9px;padding:6px 14px;min-height:40px;font-weight:600;color:var(--muted);cursor:pointer;font-size:15px}
+.secsel button[aria-pressed="true"]{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(21,36,43,.14)}
+.secfixe{display:inline-flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px 14px;font-weight:700;min-height:44px}
+.secfixe small{font-weight:600;color:var(--muted);font-size:14px}
+.grow{flex:1}
+.sync{display:inline-flex;align-items:center;gap:6px;font-size:15px;color:var(--muted);font-weight:600}
+.sync.ok{color:var(--ok)}.sync.err{color:var(--err)}
+.who{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:4px 6px 4px 4px}
+.who .av{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent-dark);font-weight:800;font-size:15px}
+.who b{display:block;font-size:15px;line-height:1.2}.who span{font-size:14px;color:var(--muted)}
+.who .btn{padding:4px 12px;border-radius:999px}
+#page{padding:22px 24px 80px;max-width:1560px;width:100%}
+/* Éléments communs */
+.ph{display:flex;align-items:flex-start;gap:14px;margin-bottom:18px;flex-wrap:wrap}
+.ph h1{margin:0;font-size:25px;line-height:1.2}
+.ph p{margin:4px 0 0;color:var(--muted);max-width:820px}
+.ph .grow{min-width:260px}
+.ro{display:inline-flex;align-items:center;gap:6px;background:#eef2f4;border:1px solid #cdd8dc;color:#41545C;border-radius:999px;padding:3px 12px;font-size:14px;font-weight:700;vertical-align:middle;margin-left:8px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:var(--shadow)}
+.card h2{margin:0 0 12px;font-size:18px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.hint{color:var(--muted);font-size:15px}
+.tag{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:2px 10px;font-size:14px;font-weight:700;background:#e9eef0;color:#41545C;white-space:nowrap;flex:none}
+.tag.ok{background:var(--ok-bg);color:var(--ok)}.tag.warn{background:var(--warn-bg);color:var(--warn)}.tag.err{background:var(--err-bg);color:var(--err)}.tag.acc{background:var(--accent-soft);color:var(--accent-dark)}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.g3{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:16px;align-items:start}
+.stack>*+*{margin-top:16px}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line2);vertical-align:top}
+th{font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:700}
+.chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 14px;min-height:44px;font-size:15px;font-weight:600;color:var(--muted);cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-dark)}
+.vide{padding:22px;text-align:center;color:var(--muted);font-size:15px}
+/* Accueil */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:16px}
+.kpi{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 16px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:4px;border-top:4px solid var(--k,#c9d3d7);cursor:pointer;text-align:left;font-size:15px}
+.kpi:hover{border-color:#b9c6cc}
+.kpi small{font-size:14px;color:var(--muted);font-weight:700}
+.kpi b{font-size:32px;line-height:1.1;font-variant-numeric:tabular-nums;display:flex;align-items:center;gap:8px}
+.kpi b .sy{font-size:18px;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;color:#fff;background:var(--k)}
+.kpi span{font-size:14px;color:var(--muted)}
+.k-err{--k:var(--err)}.k-warn{--k:var(--warn-line)}.k-ok{--k:var(--ok)}.k-acc{--k:var(--accent)}
+.secs{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-bottom:16px}
+.sec{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 16px;box-shadow:var(--shadow);cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:8px;font-size:15px}
+.sec:hover{border-color:var(--accent)}
+.sec h3{margin:0;font-size:17px;display:flex;align-items:center;gap:10px}
+.sec ul{list-style:none;margin:0;padding:0;display:grid;gap:5px}
+.sec li{display:flex;justify-content:space-between;gap:8px}
+.sec li span{color:var(--muted)}
+.al{display:flex;gap:12px;align-items:center;padding:10px 12px;border-radius:12px;background:#fff8ec;border:1px solid #f3d7a6}
+.al.err{background:#fff4f4;border-color:#f0c2c4}
+.al .sy{flex:none;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:800;font-size:14px;background:var(--warn-line)}
+.al.err .sy{background:var(--err)}
+.al .tx{flex:1;font-size:15px}.al .tx b{display:block}
+.als{display:grid;gap:8px}
+.lan{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line2);font-size:15px}
+.lan:last-child{border-bottom:0}
+.st{font-weight:700;border-radius:999px;padding:2px 10px;font-size:14px;color:#fff;white-space:nowrap}
+.st-fonctionnement{background:var(--ok)}.st-prete{background:var(--warn)}.st-preparation{background:#41545C}.st-libre{background:#6f8187}
+.quick{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
+.quick button{display:flex;align-items:center;gap:10px;border:1px solid var(--line);background:#fff;border-radius:12px;padding:10px 12px;min-height:60px;font-weight:600;cursor:pointer;text-align:left;font-size:15px}
+.quick button:hover{border-color:var(--accent);background:var(--accent-soft)}
+/* Parc */
+.tb{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.tb .in{max-width:380px;min-height:44px}
+.mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.mac{position:relative;background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;cursor:pointer;text-align:left;padding:0;display:flex;flex-direction:column;box-shadow:var(--shadow);font-size:15px}
+.mac:hover{border-color:var(--accent)}
+.mac[aria-current="true"]{outline:3px solid var(--accent)}
+.mac .vis{height:64px;display:grid;place-items:center;background:linear-gradient(140deg,#e9f3f5,#d5e6ea);color:var(--accent-dark)}
+.mac.off .vis{background:#eef1f2;filter:grayscale(1)}
+.mac .bd{padding:10px 14px 12px;display:grid;gap:4px}
+.mac .bd b{font-size:17px}
+.mac .bd .l{font-size:14px;color:var(--muted)}
+.mac .sec-t{z-index:1;position:absolute;top:10px;left:10px;font-size:13px;font-weight:800;background:rgba(255,255,255,.92);border-radius:999px;padding:2px 10px;color:var(--accent-dark)}
+.parc{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:start}
+.parc.ouvert{grid-template-columns:minmax(0,1fr) 400px}
+.fiche{position:sticky;top:80px;max-height:calc(100vh - 100px);overflow:auto}
+.fiche dl{display:grid;grid-template-columns:max-content 1fr;gap:6px 14px;margin:0;font-size:15px}
+.fiche dt{color:var(--muted);font-weight:600}.fiche dd{margin:0}
+.photo{max-width:100%;border-radius:10px;border:1px solid var(--line);display:block;margin-top:8px}
+/* Calendrier */
+.cal{display:grid;border:1px solid var(--line);border-radius:14px;overflow:auto;background:#fff}
+.cal>div{padding:8px;border-bottom:1px solid var(--line2);border-right:1px solid var(--line2);min-height:54px;font-size:14px}
+.cal .hd{background:#f5f8f9;font-weight:800;color:var(--muted);min-height:auto;text-align:center}
+.cal .hd.auj{background:var(--accent-soft);color:var(--accent-dark)}
+.cal .mn{font-weight:700;font-size:15px}
+.op{display:flex;flex-direction:column;border-radius:8px;padding:4px 8px;font-weight:700;margin-bottom:4px;font-size:14px;border:1px solid;line-height:1.3}
+.op small{font-weight:600;font-size:13px;opacity:.9}
+.op.r{background:var(--err-bg);border-color:#f0c2c4;color:var(--err)}
+.op.a{background:var(--warn-bg);border-color:#f3d7a6;color:var(--warn)}
+.op.f{background:var(--ok-bg);border-color:#bfe2c8;color:var(--ok)}
+.op.p{background:#f3f6f7;border-color:var(--line);color:#41545C}
+.leg{display:flex;gap:14px;flex-wrap:wrap;font-size:14px;color:var(--muted);margin:10px 0}
+/* Contenus */
+.cont{display:grid;grid-template-columns:minmax(260px,360px) minmax(0,1fr);gap:16px;align-items:start}
+.liste{display:grid;gap:6px;max-height:calc(100vh - 220px);overflow:auto}
+.it{display:flex;gap:10px;align-items:center;text-align:left;border:1px solid var(--line);background:#fff;border-radius:12px;padding:8px 12px;min-height:52px;cursor:pointer;font-size:15px;font-weight:600}
+.it:hover{border-color:#b9c6cc}
+.it[aria-current="true"]{border:2px solid var(--accent);background:#f4fbfc;padding:7px 11px}
+.it small{display:block;font-weight:400;color:var(--muted);font-size:14px}
+.det h3{margin:16px 0 6px;font-size:16px}
+.det ol,.det ul{margin:0;padding-left:22px}.det li{margin:4px 0}
+.det .att{color:var(--warn);font-weight:600}
+/* Accès des managers (modification) */
+.accg{display:grid;grid-template-columns:320px minmax(0,1fr);gap:16px;align-items:start;padding-bottom:70px}
+.mlist{display:grid;gap:8px}
+.mcard{display:flex;gap:12px;align-items:center;width:100%;text-align:left;border:1px solid var(--line);background:#fff;border-radius:12px;padding:10px 12px;cursor:pointer;min-height:64px;font-size:15px}
+.mcard:hover{border-color:#b9c6cc}
+.mcard[aria-current="true"]{border:2px solid var(--accent);background:#f4fbfc;padding:9px 11px}
+.mcard .av,.av.gros{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-weight:800;background:var(--accent-soft);color:var(--accent-dark);flex:none}
+.av.gros{width:52px;height:52px;font-size:18px}
+.mcard.coupe .av{background:#eceff0;color:#6f8187}
+.mcard b{display:block}.mcard span{font-size:14px;color:var(--muted)}
+.mcard .r{margin-left:auto;text-align:right}
+.etat{display:flex;gap:16px;align-items:stretch;flex-wrap:wrap}
+.sw{display:inline-flex;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff}
+.sw button{border:0;background:#fff;min-height:48px;padding:6px 18px;font-weight:700;cursor:pointer;color:var(--muted);font-size:15px}
+.sw button+button{border-left:1px solid var(--line)}
+.sw button:disabled{cursor:not-allowed;opacity:.6}
+.sw button.on-ok[aria-pressed="true"]{background:var(--ok-bg);color:var(--ok)}
+.sw button.on-err[aria-pressed="true"]{background:var(--err-bg);color:var(--err)}
+.perm td{padding:6px 10px;vertical-align:middle}.perm td:last-child,.perm th:last-child{width:1%;white-space:nowrap}
+.perm tr.grp td{background:#f5f8f9;font-size:13px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;padding:8px 10px}
+.perm .nm{display:flex;align-items:center;gap:10px;font-weight:600}
+.tri{display:inline-grid;grid-template-columns:repeat(3,max-content);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.tri button{border:0;background:#fff;min-height:44px;min-width:110px;padding:4px 12px;white-space:nowrap;font-size:15px;font-weight:700;color:var(--muted);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.tri button+button{border-left:1px solid var(--line)}
+.tri button[aria-pressed="true"].v0{background:#eceff0;color:#41545C}
+.tri button[aria-pressed="true"].v1{background:var(--accent-soft);color:var(--accent-dark)}
+.tri button[aria-pressed="true"].v2{background:var(--ok-bg);color:var(--ok)}
+.tri button:disabled{cursor:not-allowed;color:#a9b6bb;background:#fafbfb}
+.lock{display:inline-flex;align-items:center;gap:6px;font-size:15px;color:var(--muted);font-weight:600}
+.btn.dan{background:#fff;border-color:#e9a3a6;color:var(--err)}
+.btn.dan.plein{background:var(--err);border-color:var(--err);color:#fff}
+.savebar{position:fixed;bottom:12px;left:276px;right:24px;z-index:10;display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:rgba(255,255,255,.97);border:1px solid var(--line);border-radius:14px;padding:10px 16px;box-shadow:0 -6px 22px rgba(21,36,43,.08)}
+.savebar .st{flex:1;font-size:15px;color:var(--muted)}
+@media (max-width:1100px){.accg{grid-template-columns:1fr}}
+@media (max-width:860px){.savebar{left:16px;right:16px}}.parc.ouvert{grid-template-columns:minmax(0,1fr) 340px}}
+@media (max-width:1000px){.cont{grid-template-columns:1fr}.parc.ouvert{grid-template-columns:1fr}.fiche{position:static;max-height:none}}
+@media (max-width:860px){.app{grid-template-columns:1fr}.nav{position:static;height:auto}.top{position:static}#page{padding:16px}}
+</style>
+</head>
+<body>
+<div id="racine"></div>
+<script>
+'use strict';
+// Adresse du script Google : rangée ici par construire-unique.mjs à la publication (l'adresse seulement, JAMAIS de code).
+var GOOGLE_URL_PUBLIE="https://script.google.com/macros/s/AKfycbze1gObxtHz27INigV6AM_PSkjHxhT3uRpDEusERH9wzZkoowbF93iVKCtuGz02x5pBog/exec";
+
+// ---------------------------------------------------------------------------------------------------------------
+// Moteur du calendrier de maintenance : recopié de l'appli Maintenance (bloc <calendrier>) par construire-unique.mjs.
+// <calendrier> Moteur du calendrier de maintenance (ES5, sans dépendance) : recopié tel quel dans l'écran fraisage de la
+// console du PC (route /maintenance-calendrier.js du serveur). Entrée : l'état de l'appli (ops, journal, operators, machines, cal).
+var CalMaint=(function(){
+  var p2=function(n){return (n<10?'0':'')+n};
+  function D(s){var p=s.split('-');return new Date(+p[0],p[1]-1,+p[2],12)}
+  function S(d){return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate())}
+  function ajoute(s,n){var d=D(s);d.setDate(d.getDate()+n);return S(d)}
+  function lundi(s){var d=D(s);d.setDate(d.getDate()-(d.getDay()+6)%7);return S(d)}
+  function ecart(a,b){return Math.round((D(b)-D(a))/864e5)}
+  function auj(t){return S(new Date(t||Date.now()))}
+  // Jour travaillé : pas fermé, et jour de la semaine prévu (période particulière, sinon semaine habituelle).
+  function travaille(cal,s){
+    var i;for(i=0;i<cal.fermes.length;i++)if(s>=cal.fermes[i].du&&s<=cal.fermes[i].au)return false;
+    var j=cal.jours;for(i=0;i<cal.periodes.length;i++)if(s>=cal.periodes[i].du&&s<=cal.periodes[i].au){j=cal.periodes[i].jours;break}
+    return j.indexOf(D(s).getDay())>=0;
+  }
+  function ferme(cal,s){for(var i=0;i<cal.fermes.length;i++)if(s>=cal.fermes[i].du&&s<=cal.fermes[i].au)return cal.fermes[i].nom||'Fermé';return ''}
+  // Rang d'un jour travaillé depuis une date de départ (0 = premier jour travaillé à partir de cette date).
+  function rangTravail(cal,debut,s,cache){
+    var k=debut+'>'+s;if(cache&&cache[k]!=null)return cache[k];
+    var n=0,d=debut,sens=s>=debut?1:-1;
+    if(sens>0){while(d<s){if(travaille(cal,d))n++;d=ajoute(d,1)}}else{while(d>s){d=ajoute(d,-1);if(travaille(cal,d))n--}}
+    if(cache)cache[k]=n;return n;
+  }
+  // Jour non travaillé : avancé au dernier jour travaillé avant (sans sortir de la semaine).
+  function avancer(cal,s,lun){var d=s;while(d>=lun){if(travaille(cal,d))return d;d=ajoute(d,-1)}return ''}
+  function equipeDu(cal,s,cache){
+    var r=cal.roulement||{},L=(r.equipes||[]).length;if(!L)return null;
+    // n absent ou 0 (donnée ancienne ou abîmée) : traité comme 1 (sinon division par zéro).
+    var debut=r.debut||'2026-01-05',n=Math.max(1,Math.round(Number(r.n)||1)),i;
+    if(r.mode==='jour')i=Math.floor(rangTravail(cal,debut,s,cache)/n);
+    else i=Math.floor(ecart(lundi(debut),lundi(s))/7/n);
+    return r.equipes[((i%L)+L)%L];
+  }
+  // Dates d'une règle entre du et au (inclus).
+  // Une règle ne compte qu'à partir de sa date « à partir du » et du jour où elle a été créée (l'identifiant contient
+  // l'heure de création) : les semaines d'avant le calendrier ne sont ni « à faire » ni « pas faites ».
+  function creeeLe(g){var t=parseInt(String(g.id).slice(1,-4),36);return t>1.7e12&&t<4e12?S(new Date(t)):''}
+  function datesRegle(cal,g,du,au,cache){
+    var q=g.quand,out=[],debut=g.debut||(cal.roulement||{}).debut||'2026-01-05',d,w,t,plancher=creeeLe(g);
+    if(!(q.n>=1))q=Object.assign({},q,{n:1});
+    if(g.debut&&g.debut>plancher)plancher=g.debut;
+    if(plancher&&plancher>du)du=plancher;if(du>au)return out;
+    if(q.type==='jour'||q.type==='nj'){for(d=du;d<=au;d=ajoute(d,1))if(travaille(cal,d)&&(q.type==='jour'||((rangTravail(cal,debut,d,cache)%q.n)+q.n)%q.n===0))out.push(d)}
+    else if(q.type==='semaine'){
+      for(w=lundi(du);w<=au;w=ajoute(w,7)){
+        if(((Math.round(ecart(lundi(debut),w)/7)%q.n)+q.n)%q.n!==0)continue;
+        var cibles=q.jours.map(function(j){return avancer(cal,ajoute(w,(j+6)%7),w)});
+        if(q.dernier)cibles.push(avancer(cal,ajoute(w,6),w));
+        cibles.forEach(function(c){if(c&&c>=du&&c<=au&&out.indexOf(c)<0)out.push(c)});
+      }
+    }else{
+      var m=D(du);m.setDate(1);
+      for(;S(m)<=au;m.setMonth(m.getMonth()+1)){
+        var premier=S(m),lst=[];for(t=premier;t.slice(0,7)===premier.slice(0,7);t=ajoute(t,1))if(D(t).getDay()===q.js)lst.push(t);
+        var c=q.rang>=5||q.rang>lst.length?lst[lst.length-1]:lst[q.rang-1];if(!c)continue;
+        c=avancer(cal,c,ajoute(c,-6));if(c&&c>=du&&c<=au)out.push(c);
+      }
+    }
+    return out.sort();
+  }
+  function absent(cal,nom,s){var l=cal.conges||[];for(var i=0;i<l.length;i++){var g=l[i];if(g.nom===nom&&s>=g.du&&s<=g.au)return g}return null}
+  // Occurrences entre du et au : {regle, op, date, origine, machines, prevus, noms, equipe, rempl:[{absent,par,valide,conge}], annulee}.
+  function occurrences(st,du,au){
+    var cal=st.cal;if(!cal||!cal.regles.length)return [];
+    var cache={},out=[],charge={},ops={},i;
+    st.ops.forEach(function(f){ops[f.id]=f});
+    cal.regles.forEach(function(g){
+      var f=ops[g.op];if(!f)return;
+      // Machines (2026-10-15) : celles de la règle, sinon celles de l'opération encore en service, sinon (opération
+      // sans liste) toutes. Opération avec une liste dont plus aucune machine n'est en service : AUCUNE, pas d'occurrence.
+      var fm=(f.machines||[]).filter(function(m){return st.machines.indexOf(m)>=0});
+      if(f.aucune||((f.machines||[]).length&&!fm.length))return;
+      var machines=(g.machines||[]).length?g.machines:(f.machines||[]).length?fm:st.machines;
+      var qui=g.qui||{type:'roulement',noms:[]};
+      var dates=datesRegle(cal,g,ajoute(du,-7),ajoute(au,7),cache);
+      dates.forEach(function(d){
+        // Exception sans « noms » (ancienne donnée) : la date peut changer, les personnes restent celles prévues.
+        var x=(cal.exc||{})[g.id+'|'+d],date=x&&x.date!==undefined&&x.date!==null?x.date:d;
+        if(date?(date<du||date>au):(d<du||d>au))return;
+        var eq=qui.type==='roulement'?equipeDu(cal,date||d,cache):null;
+        var prevus=x&&Array.isArray(x.noms)&&x.noms.length?x.noms:qui.type==='fixe'?(qui.noms||[]):eq?(eq.personnes||[]):[];
+        out.push({regle:g,op:f,date:date,origine:d,annulee:date==='',machines:machines,prevus:prevus.slice(),noms:prevus.slice(),equipe:eq,rempl:[]});
+        if(date)prevus.forEach(function(n){charge[n]=(charge[n]||0)+1});
+      });
+    });
+    // Congés : la personne absente est remplacée par le remplaçant validé, sinon par une personne proposée :
+    // présente, pas déjà prévue, formée à l'opération (déjà faite seule) de préférence, et la moins chargée.
+    var formes={};st.journal.forEach(function(e){if(e.result==='ok'&&e.fid&&e.op&&!e.aide)formes[e.fid+'|'+e.op]=1});
+    out.forEach(function(o){
+      if(!o.date)return;
+      o.noms=o.prevus.map(function(n){
+        var g=absent(cal,n,o.date);if(!g)return n;
+        var par=(cal.rempl||{})[g.id],valide=!!par;
+        if(!par){
+          var cand=(st.operators||[]).filter(function(c){return c!==n&&o.prevus.indexOf(c)<0&&!absent(cal,c,o.date)});
+          cand.sort(function(a,b){return (formes[o.op.id+'|'+b]||0)-(formes[o.op.id+'|'+a]||0)||(charge[a]||0)-(charge[b]||0)||a.localeCompare(b)});
+          par=cand[0]||'';
+        }
+        o.rempl.push({absent:n,par:par,valide:valide,conge:g});
+        return par||n;
+      });
+    });
+    for(i=0;i<out.length;i++)if(!out[i].date)out[i].noms=[];
+    return out.filter(function(o){return o.date||o.annulee}).sort(function(a,b){return (a.date||a.origine)<(b.date||b.origine)?-1:1});
+  }
+  // Une machine est faite pour une occurrence si une maintenance TERMINÉE de l'opération a eu lieu après l'occurrence
+  // précédente (une avance est permise) et avant l'occurrence suivante.
+  function faite(st,o,m,suivante,precedente){
+    for(var i=0;i<st.journal.length;i++){var e=st.journal[i];if(e.result==='ok'&&e.fid===o.op.id&&e.machine===m){var j=S(new Date(e.end));if((precedente?j>precedente:j>=o.date)&&(!suivante||j<suivante))return e}}
+    return null;
+  }
+  // États pour l'écran télé (même forme que les échéances par fréquence) : {f, m, due, etat, qui, nb}.
+  function etats(st,now){
+    if(!st.cal||!st.cal.regles.length)return null;
+    now=now||Date.now();var today=auj(now),occ=occurrences(st,ajoute(today,-21),ajoute(today,21)).filter(function(o){return o.date}),out=[];
+    var heure=function(o){var h=(o.regle.avant||'23:59').split(':'),d=D(o.date);d.setHours(+h[0],+h[1],0,0);return d.getTime()};
+    var parCle={};occ.forEach(function(o){o.machines.forEach(function(m){var k=o.regle.id+'|'+m;(parCle[k]=parCle[k]||[]).push(o)})});
+    Object.keys(parCle).forEach(function(k){
+      // Seule compte la dernière occurrence passée (ou d'aujourd'hui) : faite → on regarde la suivante ; sinon en retard.
+      var l=parCle[k],m=k.slice(k.indexOf('|')+1),choix=null,etat='ok',last=0,i=-1,j;
+      for(j=0;j<l.length;j++)if(l[j].date<=today)i=j;
+      var fait=i>=0?faite(st,l[i],m,l[i+1]?l[i+1].date:'',i>0?l[i-1].date:''):null;
+      if(fait)last=fait.end;
+      if(i>=0&&!fait){choix=l[i];etat=l[i].date<today?'retard':heure(l[i])<now?'retard':'jour'}
+      else if(l[i+1]){choix=l[i+1];etat=ecart(today,choix.date)<=1?'bientot':'ok'}
+      if(!choix)return;
+      out.push({f:choix.op,m:m,last:last,due:heure(choix),etat:etat,qui:choix.noms.join(' + '),nb:choix.noms.length,occ:choix});
+    });
+    var R={retard:0,jamais:1,jour:2,bientot:3,ok:4};
+    return out.sort(function(a,b){return R[a.etat]-R[b.etat]||a.due-b.due});
+  }
+  return {D:D,S:S,ajoute:ajoute,lundi:lundi,ecart:ecart,auj:auj,travaille:travaille,ferme:ferme,equipeDu:equipeDu,datesRegle:datesRegle,occurrences:occurrences,faite:faite,etats:etats,absent:absent};
+})();
+// </calendrier>
+// ---------------------------------------------------------------------------------------------------------------
+
+// Essai sur ce PC (page servie par localhost) : seule une adresse locale (imitation de Google) est acceptée, donnée par
+// ?google=… ; jamais le vrai Google pendant un essai (règle n° 1 du socle). Page publiée : l'adresse rangée ci-dessus.
+function adresseScript(){
+  const local=/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)||location.protocol==='file:';
+  if(local){
+    try{const u=new URL(new URLSearchParams(location.search).get('google')||'');if(/^(localhost|127\.0\.0\.1)$/.test(u.hostname)&&/^https?:$/.test(u.protocol))return u.href}catch(e){}
+    return '';
+  }
+  return /^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(GOOGLE_URL_PUBLIE)?GOOGLE_URL_PUBLIE:'';
+}
+const URL_SCRIPT=adresseScript();
+const INACTIF_MS=10*60000; // déconnexion après 10 minutes sans activité (décision 2026-10-15), comme le script
+const CLE_JETON='console-jeton';
+
+// Icônes au trait (viewBox 24, trait 1,9) et teintes : celles de la maquette (reprises de l'Accueil des tablettes).
+const ICO={
+  accueil:'<path d="M3 11 12 3l9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/>',
+  tableau:'<path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>',
+  ecran:'<rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/>',
+  tablette:'<rect x="5" y="2" width="14" height="20" rx="2"/><path d="M11 18h2"/>',
+  lancements:'<path d="M2 20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8l-7 5V8l-7 5V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M17 18h1"/><path d="M12 18h1"/><path d="M7 18h1"/>',
+  calendrier:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18"/><path d="M8 3v4"/><path d="M16 3v4"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/>',
+  parc:'<path d="M2 20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8l-7 5V8l-7 5V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M17 18h1"/><path d="M12 18h1"/><path d="M7 18h1"/>',
+  personnes:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7"/><path d="M18 14a6.5 6.5 0 0 1 3.5 6"/>',
+  maintenance:'<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>',
+  fiches:'<circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/><path d="m14.83 9.17 4.24-4.24"/><path d="m14.83 14.83 4.24 4.24"/><path d="m9.17 14.83-4.24 4.24"/><circle cx="12" cy="12" r="4"/>',
+  procedures:'<rect width="8" height="4" x="8" y="2" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/>',
+  taches:'<path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/>',
+  releve:'<path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/>',
+  message:'<path d="M3 11v2a1 1 0 0 0 1 1h3l5 4V6L7 10H4a1 1 0 0 0-1 1z"/><path d="M16 8.5a5 5 0 0 1 0 7"/><path d="M19 5.5a9 9 0 0 1 0 13"/>',
+  acces:'<path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3z"/><circle cx="12" cy="11" r="2.5"/><path d="M12 13.5V17"/>',
+  droits:'<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+  apparence:'<path d="M12 22a10 10 0 1 1 10-10c0 2.8-2.2 4-4 4h-2.5a1.5 1.5 0 0 0-1 2.6A1.5 1.5 0 0 1 12 22z"/><circle cx="7.5" cy="11" r="1.2"/><circle cx="10.5" cy="7" r="1.2"/><circle cx="15.5" cy="7.5" r="1.2"/>',
+  version:'<path d="M12 15V3"/><path d="m7 8 5-5 5 5"/><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/>',
+  liaisons:'<path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/>',
+  aide:'<circle cx="12" cy="12" r="9"/><path d="M9.5 9.2a2.6 2.6 0 0 1 5 .9c0 1.7-2.5 2.3-2.5 3.9"/><path d="M12 17.2h.01"/>',
+  cadenas:'<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+  oeil:'<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+  ok:'<path d="m5 12 5 5 9-10"/>',
+  plus:'<path d="M12 5v14"/><path d="M5 12h14"/>',
+  crayon:'<path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="m13.5 6.5 4 4"/>',
+  masque:'<path d="M3 3l18 18"/><path d="M10.6 5.1A10 10 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3 3.9"/><path d="M6.6 6.6A17 17 0 0 0 2 12s3.6 7 10 7a9.6 9.6 0 0 0 5.4-1.6"/>',
+  alerte:'<path d="M12 3 2 20h20L12 3z"/><path d="M12 10v4"/><path d="M12 17h.01"/>',
+  sortie:'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/>',
+  horloge:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  actualiser:'<path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/>',
+  image:'<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/>',
+  logo:'<path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/><circle cx="12" cy="12" r="2.5"/>'
+};
+const TEINTE={accueil:['#16a3ad','#0b6f78'],tableau:['#7c6cf0','#4b3bbd'],ecran:['#4f8fae','#24566e'],tablette:['#5d7f8c','#2c4752'],
+  lancements:['#e08a17','#a35f00'],calendrier:['#f2a93b','#c27206'],parc:['#4f8fae','#24566e'],personnes:['#16a3ad','#0b6f78'],
+  maintenance:['#f2a93b','#c27206'],fiches:['#ef6b5b','#c0262d'],procedures:['#3b8fe0','#1d5aa6'],taches:['#3aa85b','#1f7a3a'],releve:['#16a3ad','#0b6f78'],
+  message:['#e0679b','#a8336a'],acces:['#0B8A96','#065E66'],droits:['#7c6cf0','#4b3bbd'],apparence:['#e0679b','#a8336a'],version:['#3b8fe0','#1d5aa6'],
+  liaisons:['#5d6f78','#2c3e46'],aide:['#5d6f78','#2c3e46'],logo:['#16a3ad','#065E66']};
+const svg=(id,cls)=>'<svg class="'+(cls||'i')+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(ICO[id]||ICO.aide)+'</svg>';
+const pastille=(id,taille)=>{const t=TEINTE[id]||['#5d6f78','#2c3e46'];return '<span class="pa'+(taille?' '+taille:'')+'" style="--c1:'+t[0]+';--c2:'+t[1]+'">'+svg(id)+'</span>'};
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+// Les parties : mêmes identifiants que le script Google (PARTIES_CONSOLE_). lect : ne se modifie pas.
+// pc : se fait sur le PC de l'atelier (console du PC) ; la page en ligne ne fait que l'indiquer.
+const GROUPES=[['direct','Atelier en direct'],['plan','Planification'],['mach','Machines & personnes'],['cont','Contenus des applis'],['regl','Réglages']];
+const PARTIES=[
+  {id:'accueil',g:'direct',nom:'Vue d’ensemble',ico:'accueil',lect:1},
+  {id:'tableau',g:'direct',nom:'Tableau de bord',ico:'tableau',lect:1},
+  {id:'ecrans',g:'direct',nom:'Écrans télé',ico:'ecran',pc:1},
+  {id:'tablettes',g:'direct',nom:'Tablettes & alertes',ico:'tablette'},
+  {id:'lancements',g:'plan',nom:'Lancements machines',ico:'lancements'},
+  {id:'calendrier',g:'plan',nom:'Calendrier de maintenance',ico:'calendrier'},
+  {id:'parc',g:'mach',nom:'Parc machines',ico:'parc'},
+  {id:'personnes',g:'mach',nom:'Personnes',ico:'personnes'},
+  {id:'c-maint',g:'cont',nom:'Opérations de maintenance',ico:'maintenance',app:'maintenance'},
+  {id:'c-fiches',g:'cont',nom:'Fiches réflexes',ico:'fiches',app:'fiches'},
+  {id:'c-proc',g:'cont',nom:'Procédures',ico:'procedures',app:'procedures'},
+  {id:'c-taches',g:'cont',nom:'Tâches à faire',ico:'taches',app:'taches'},
+  {id:'c-releve',g:'cont',nom:'Listes de la Relève',ico:'releve'},
+  {id:'c-message',g:'cont',nom:'Message d’accueil',ico:'message'},
+  {id:'acces',g:'regl',nom:'Accès des managers',ico:'acces',admin:1},
+  {id:'droits',g:'regl',nom:'Qui voit quoi (tablettes)',ico:'droits'},
+  {id:'apparence',g:'regl',nom:'Apparence & administration',ico:'apparence',admin:1,pc:1},
+  {id:'version',g:'regl',nom:'Nouvelle version du pack',ico:'version',admin:1,pc:1},
+  {id:'liaisons',g:'regl',nom:'Liaisons Google & site',ico:'liaisons',admin:1,pc:1},
+  {id:'aide',g:'regl',nom:'Mode d’emploi',ico:'aide',lect:1}
+];
+const P=id=>PARTIES.find(p=>p.id===id);
+
+// État de la page. Rien n'est gardé dans le navigateur, sauf le jeton de session (sessionStorage : il disparaît
+// à la fermeture de l'onglet). Jamais le code.
+const S={jeton:'',moi:null,site:null,page:'accueil',secteur:'tous',dernierGeste:Date.now(),err:'',info:'',
+  charge:{},photos:{},sel:{},semaine:'',parcQ:'',maj:0,etat:'',occupe:false};
+function lireJeton(){try{return sessionStorage.getItem(CLE_JETON)||''}catch(e){return ''}}
+function ecrireJeton(j){try{if(j)sessionStorage.setItem(CLE_JETON,j);else sessionStorage.removeItem(CLE_JETON)}catch(e){}}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Appels au script Google : POST en text/plain (pas de demande préalable du navigateur), sans cookie.
+async function appel(op,extra){
+  if(!URL_SCRIPT)throw new Error('Adresse du script Google absente.');
+  const corps={console:Object.assign({op:op},S.jeton&&op!=='connexion'?{jeton:S.jeton}:{},extra||{})};
+  let r;
+  try{r=await fetch(URL_SCRIPT,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(corps),redirect:'follow',credentials:'omit',cache:'no-store'})}
+  catch(e){throw new Error('Pas de connexion avec Google. Vérifiez internet, puis réessayez.')}
+  let j=null;try{j=await r.json()}catch(e){}
+  if(!j||typeof j.status!=='number')throw new Error('Google ne répond pas correctement. Réessayez dans un instant.');
+  // Session terminée (10 min sans activité, accès coupé, code changé…) : retour à l'écran de connexion.
+  if(j.status===401&&op!=='connexion'){finSession((j.data&&j.data.error)||'Session terminée : reconnectez-vous.');throw new Error('session')}
+  return j;
+}
+// Lecture gardée 60 s (même opération, mêmes paramètres) ; « Actualiser » vide tout.
+async function lire(op,extra){
+  const cle=op+'|'+JSON.stringify(extra||{}),g=S.charge[cle];
+  if(g&&Date.now()-g.t<60000)return g.r;
+  const j=await appel(op,extra);
+  const r={ok:j.status===200,status:j.status,data:j.data||{},error:j.data&&j.data.error||''};
+  if(r.ok||r.status===403)S.charge[cle]={t:Date.now(),r:r};
+  S.maj=Date.now();
+  return r;
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Connexion, session, déconnexion
+function vLogin(){
+  return '<div class="login"><form class="box" id="fLogin" autocomplete="off">'+
+    '<div class="row" style="gap:12px">'+pastille('logo','l')+'<div><div style="font-weight:800;font-size:15px;color:var(--accent-dark)">Dent All Group</div><div class="hint">Pack Tablettes</div></div></div>'+
+    '<h1>Console de l’atelier</h1><p class="sub">Entrez votre nom et votre code de la console (différent du code des tablettes).</p>'+
+    (URL_SCRIPT?'':'<div class="msg err">'+svg('alerte')+'<div><b>Console pas encore reliée à Google.</b><br>'+(/^(localhost|127\.0\.0\.1)$/.test(location.hostname)?'Essai sur ce PC : ajoutez l’adresse de l’imitation de Google (?google=http://localhost:…). Le vrai Google n’est jamais utilisé pendant un essai.':'Prévenez le responsable d’atelier.')+'</div></div>')+
+    (S.err?'<div class="msg err" role="alert">'+svg('alerte')+'<div><b>'+esc(S.err)+'</b></div></div>':'')+
+    (S.info?'<div class="msg info" role="status">'+svg('horloge')+'<div>'+esc(S.info)+'</div></div>':'')+
+    '<label class="lbl">Votre nom<input class="in" id="lNom" name="nom" autocomplete="off" autocapitalize="words" spellcheck="false" required value="'+esc(S.nomTape||'')+'"></label>'+
+    '<label class="lbl">Code de la console<input class="in" id="lCode" name="code" type="password" autocomplete="off" required minlength="8"></label>'+
+    '<button class="btn pri big" type="submit"'+(URL_SCRIPT&&!S.occupe?'':' disabled')+'>'+(S.occupe?'Connexion…':'Se connecter')+'</button>'+
+    '<p class="hint" style="margin:14px 0 0;text-align:center">Code oublié ou accès coupé : contactez le responsable d’atelier.</p>'+
+    '</form></div>';
+}
+async function seConnecter(nom,code){
+  S.err='';S.info='';S.occupe=true;S.nomTape=nom;render();
+  try{
+    // Le script retrouve la personne d'après le nom tapé (sans tenir compte des majuscules, accents et espaces).
+    const j=await appel('connexion',{nom:nom,code:code});
+    if(j.status!==200){S.err=(j.data&&j.data.error)||'Connexion refusée.';return}
+    S.jeton=j.data.jeton;ecrireJeton(S.jeton);S.nomTape='';
+    await demarrer();
+  }catch(e){S.err=e.message}
+  finally{S.occupe=false;render()}
+}
+// Droits de la personne connectée (moi) et ce qu'elle voit du site (site-lire).
+async function demarrer(){
+  const m=await appel('moi');
+  if(m.status!==200)throw new Error((m.data&&m.data.error)||'Connexion refusée.');
+  S.moi=m.data;S.dernierGeste=Date.now();S.charge={};
+  const s=await lire('site-lire');
+  S.site=s.ok&&s.data.site?s.data.site:{nom:'',secteurs:[],zones:[]};
+  const vis=S.site.secteurs||[];
+  S.secteur=vis.length===1?vis[0]:'tous';
+  if(!droit(S.page))S.page=premierePartie();
+}
+function finSession(message){
+  S.jeton='';S.moi=null;S.site=null;S.charge={};S.photos={};S.sel={};S.acc=null;ecrireJeton('');
+  S.info=message||'';S.err='';render();
+}
+async function seDeconnecter(message){
+  const j=S.jeton;
+  if(j){try{await fetch(URL_SCRIPT,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({console:{op:'deconnexion',jeton:j}}),credentials:'omit',cache:'no-store'})}catch(e){}}
+  finSession(message||'Vous êtes déconnecté.');
+}
+// Inactivité : 10 minutes sans geste → déconnexion (la page s'actualise toute seule, ce qui ne compte pas comme un geste).
+['pointerdown','keydown','wheel','touchstart'].forEach(t=>addEventListener(t,()=>{S.dernierGeste=Date.now()},{passive:true}));
+setInterval(()=>{
+  if(!S.jeton)return;
+  if(Date.now()-S.dernierGeste>=INACTIF_MS){seDeconnecter('Déconnecté après 10 minutes sans activité.');return}
+  // Vue d'ensemble et lancements : actualisés toutes les 60 s tant que la personne est là.
+  if((S.page==='accueil'||S.page==='lancements')&&Date.now()-S.maj>60000){S.charge={};chargerPage()}
+},15000);
+
+// ---------------------------------------------------------------------------------------------------------------
+// Droits (affichage seulement : le script Google contrôle chaque lecture)
+function droit(id){
+  const p=P(id);if(!p||!S.moi)return '';
+  if(S.moi.admin)return p.lect?'lecture':'modif';
+  if(p.admin)return '';
+  return (S.moi.parties||{})[id]||'';
+}
+function premierePartie(){const p=PARTIES.find(x=>droit(x.id));return p?p.id:'aide'}
+const secteursVisibles=()=>(S.site&&S.site.secteurs)||[];
+const secteursAffiches=()=>S.secteur==='tous'?secteursVisibles():[S.secteur];
+const NOMS_SECTEURS={frittage:'Frittage',fraisage:'Fraisage',grattage:'Grattage',resine:'Résine'};
+const secNom=id=>NOMS_SECTEURS[id]||(id?id.charAt(0).toUpperCase()+id.slice(1):'');
+// Pages qui ont besoin d'UN secteur : celui du sélecteur, sinon le premier visible.
+const unSecteur=()=>S.secteur!=='tous'?S.secteur:(secteursVisibles()[0]||'');
+
+// ---------------------------------------------------------------------------------------------------------------
+// Coquille
+function vNav(){
+  let h='<nav class="nav" aria-label="Parties de la console"><div class="brand">'+pastille('logo')+'<div><b>Console de l’atelier</b><span>'+esc(S.site&&S.site.nom||'Dent All Group')+'</span></div></div>';
+  GROUPES.forEach(([g,titre])=>{
+    const l=PARTIES.filter(p=>p.g===g&&droit(p.id));if(!l.length)return;
+    h+='<h3>'+titre+'</h3>';
+    l.forEach(p=>{
+      const b=!S.moi.admin&&droit(p.id)==='lecture'&&!p.lect?'<span class="bdg" title="lecture seule">Lecture</span>':'';
+      h+='<button data-go="'+p.id+'"'+(S.page===p.id?' aria-current="page"':'')+'>'+pastille(p.ico,'s')+'<span class="t">'+p.nom+'</span>'+b+'</button>';
+    });
+  });
+  return h+'<div class="foot">Console en ligne · lecture seule<br>Les modifications se font encore sur le PC de l’atelier.</div></nav>';
+}
+function vTop(){
+  const vis=secteursVisibles(),adm=S.moi.admin;
+  const sec=vis.length>1?'<div class="secsel" role="group" aria-label="Secteur affiché">'+[{id:'tous',nom:'Tous les secteurs'}].concat(vis.map(id=>({id,nom:secNom(id)}))).map(s=>'<button data-sec="'+esc(s.id)+'" aria-pressed="'+(S.secteur===s.id)+'">'+esc(s.nom)+'</button>').join('')+'</div>'
+    :'<span class="secfixe" title="Secteur fixé par le responsable d’atelier">'+svg('cadenas')+' Secteur : '+esc(vis.map(secNom).join(', ')||'aucun')+(adm?'':' <small>(fixé)</small>')+'</span>';
+  const ini=String(S.moi.nom||'?').split(/\s+/).map(x=>x.charAt(0)).join('').slice(0,2).toUpperCase();
+  const h=S.maj?new Date(S.maj).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):'';
+  return '<header class="top">'+sec+'<span class="grow"></span>'+
+    '<span class="sync '+(S.etat==='err'?'err':'ok')+'" id="sync">'+svg(S.etat==='err'?'alerte':'ok')+(S.etat==='err'?' Google ne répond pas':h?' À jour · '+h:'')+'</span>'+
+    '<button class="btn" data-act="actualiser">'+svg('actualiser')+'Actualiser</button>'+
+    '<div class="who"><span class="av">'+esc(ini)+'</span><div><b>'+esc(S.moi.nom)+'</b><span>'+(adm?'Administrateur · tout':'Manager')+'</span></div><button class="btn" data-act="sortir">'+svg('sortie')+'Se déconnecter</button></div></header>';
+}
+function enTete(id,texte,droite){
+  // Accès des managers : la seule partie déjà en modification (administrateur), 2026-10-15.
+  const p=P(id),ro=!p.lect&&!p.pc&&!(id==='acces'&&S.moi&&S.moi.admin);
+  return '<div class="ph">'+pastille(p.ico,'l')+'<div class="grow"><h1>'+p.nom+(ro?'<span class="ro">'+svg('oeil')+' Lecture seule</span>':'')+'</h1><p>'+texte+'</p></div>'+(droite||'')+'</div>';
+}
+function render(){
+  const r=document.getElementById('racine');
+  if(!S.jeton||!S.moi){r.innerHTML=vLogin();const n=document.getElementById(S.nomTape?'lCode':'lNom');if(n&&!S.occupe)n.focus();return}
+  if(!droit(S.page))S.page=premierePartie();
+  r.innerHTML='<div class="app">'+vNav()+'<div class="main">'+vTop()+'<main id="page"><div class="vide">Chargement…</div></main></div></div>';
+  chargerPage();
+}
+let numChargement=0;
+async function chargerPage(){
+  const n=++numChargement,el=()=>document.getElementById('page');
+  if(!el())return;
+  try{
+    const h=await (PAGES[S.page]||vPC)();
+    if(n!==numChargement||!el())return;
+    el().innerHTML=h;S.etat='';
+  }catch(e){
+    if(e.message==='session')return;
+    S.etat='err';
+    if(n===numChargement&&el())el().innerHTML='<div class="msg err">'+svg('alerte')+'<div><b>'+esc(e.message)+'</b></div></div>';
+  }
+  const s=document.getElementById('sync');if(s&&S.jeton)s.outerHTML=vTop().match(/<span class="sync[\s\S]*?<\/span>/)[0];
+}
+// Refus du script (partie ou secteur non autorisés) : message clair, sans détail.
+const refus=r=>'<div class="msg warn">'+svg('cadenas')+'<div><b>'+(r.status===403?'Vous n’avez pas accès à cette partie pour ce secteur.':esc(r.error||'Lecture impossible.'))+'</b></div></div>';
+function choixSecteur(){
+  const vis=secteursVisibles();if(vis.length<2)return '';
+  return '<div class="row" role="group" aria-label="Secteur" style="margin-bottom:14px">'+vis.map(id=>'<button class="chip" data-sec="'+esc(id)+'" aria-pressed="'+(unSecteur()===id)+'">'+esc(secNom(id))+'</button>').join('')+'</div>';
+}
+const dateFr=t=>t?new Date(t).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'}):'';
+const heureFr=t=>t?new Date(t).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):'';
+const liste=l=>(l||[]).filter(Boolean).map(esc).join(', ');
+const boutonPhoto=id=>id?'<button class="btn" data-photo="'+esc(id)+'">'+svg('image')+'Voir la photo</button><div data-ph="'+esc(id)+'"></div>':'';
+
+// ---------------------------------------------------------------------------------------------------------------
+// Données calculées (vue d'ensemble, calendrier)
+async function calendrierDe(sec){
+  const r=await lire('calendrier-lire',{secteur:sec});
+  if(!r.ok)return null;
+  const d=r.data;
+  return {cal:d.cal,ops:d.ops||[],journal:d.journal||[],machines:d.machines||[],operators:d.operators||[]};
+}
+function compterMaint(st){
+  const n={retard:0,jour:0,bientot:0,liste:[]};
+  if(!st||!st.cal||typeof CalMaint==='undefined')return n;
+  try{(CalMaint.etats(st,Date.now())||[]).forEach(e=>{if(n[e.etat]!==undefined)n[e.etat]++;if(e.etat==='retard'||e.etat==='jour')n.liste.push(e)})}catch(e){}
+  return n;
+}
+const ETATS_LANC={libre:'○ Libre',preparation:'◐ Préparation',prete:'■ Prête',fonctionnement:'▶ En fonctionnement'};
+function machinesLancement(st){const m=Object.assign({},st&&st.machines||{});Object.keys(st&&st.files||{}).forEach(k=>{if(!m[k])m[k]={etat:'libre'}});return m}
+function vueAujourdhui(t){if(!t)return false;const m=/^(\d\d)\/(\d\d)\/(\d{4})/.exec(t);if(!m)return false;const d=new Date();return +m[1]===d.getDate()&&+m[2]===d.getMonth()+1&&+m[3]===d.getFullYear()}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Pages
+const PAGES={};
+PAGES.accueil=async()=>{
+  const secs=secteursAffiches(),adm=S.moi.admin,frit=secs.includes('frittage');
+  const [cals,lanc,tabs,parc,rel]=await Promise.all([
+    droit('calendrier')?Promise.all(secs.map(s=>calendrierDe(s).catch(()=>null))):Promise.resolve([]),
+    droit('lancements')&&frit?lire('lancements-lire'):null,
+    droit('tablettes')?lire('tablettes-lire'):null,
+    droit('parc')?lire('parc-lire'):null,
+    droit('tableau')&&frit?lire('releves-lire'):null]);
+  const maint={};secs.forEach((s,i)=>maint[s]=compterMaint(cals[i]));
+  const som=k=>secs.reduce((n,s)=>n+maint[s][k],0);
+  const machinesParc=parc&&parc.ok&&parc.data.parc?parc.data.parc.machines.filter(m=>secs.includes(m.secteur)):[];
+  const lm=lanc&&lanc.ok?machinesLancement(lanc.data.state):null;
+  const nb=e=>lm?Object.values(lm).filter(m=>m.etat===e).length:0;
+  const tl=tabs&&tabs.ok?tabs.data.tablettes:null,tVues=tl?tl.filter(t=>vueAujourdhui(t.vu)).length:0;
+  const aujR=new Date().toDateString(),relJour=rel&&rel.ok?(rel.data.records||[]).filter(r=>new Date(r.createdAt).toDateString()===aujR).length:null;
+  const titre=S.secteur==='tous'?(adm?'Tout l’atelier, d’un coup d’œil':'Vos secteurs'):'Secteur '+secNom(S.secteur);
+  let h=enTete('accueil',esc(titre)+' — ce qui demande votre attention aujourd’hui. Actualisé toutes les minutes.',
+    '<span class="tag acc" style="align-self:center">'+svg('horloge')+' '+esc(new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'}))+'</span>');
+  if(!adm)h+='<div class="msg info">'+svg('acces')+'<div>Vous voyez les parties que le responsable d’atelier vous a ouvertes, en <b>lecture</b>.</div></div>';
+  const k=(cls,sym,val,lib,sous,aller)=>'<button class="kpi '+cls+'"'+(aller&&droit(aller)?' data-go="'+aller+'"':'')+'><small>'+lib+'</small><b><span class="sy" aria-hidden="true">'+sym+'</span>'+val+'</b><span>'+sous+'</span></button>';
+  h+='<div class="kpis">';
+  if(droit('calendrier'))h+=k(som('retard')?'k-err':'k-ok',som('retard')?'✕':'✓',som('retard'),'Maintenances en retard',som('retard')?'à rattraper':'aucune','calendrier')+
+    k(som('jour')?'k-warn':'k-ok','•',som('jour'),'À faire aujourd’hui',som('bientot')+' pour demain','calendrier');
+  if(lm)h+=k('k-ok','▶',nb('fonctionnement')+' / '+Object.keys(lm).length,'Machines en fonctionnement',nb('prete')+' prête(s) à lancer · '+Object.values(lanc.data.state.files||{}).reduce((a,l)=>a+l.length,0)+' fichier(s) en attente','lancements');
+  if(relJour!==null)h+=k(relJour?'k-ok':'k-warn',relJour?'✓':'!',relJour,'Relèves du jour',relJour?'enregistrée(s) aujourd’hui':'pas encore de relève aujourd’hui','tableau');
+  if(tl)h+=k(tVues<tl.length?'k-warn':'k-ok',tVues<tl.length?'!':'✓',tVues+' / '+tl.length,'Tablettes vues aujourd’hui',tVues<tl.length?(tl.length-tVues)+' sans nouvelles aujourd’hui':'toutes vues','tablettes');
+  if(parc&&parc.ok&&parc.data.parc)h+=k('k-acc','⚙',machinesParc.filter(m=>m.actif!==false).length,'Machines en service',machinesParc.filter(m=>m.actif===false).length+' hors service','parc');
+  h+='</div>';
+  if(S.secteur==='tous'&&secteursVisibles().length>1){
+    h+='<div class="secs">'+secs.map(s=>{const m=maint[s],mp=machinesParc.filter(x=>x.secteur===s);
+      const etat=!droit('calendrier')?'':m.retard?'<span class="tag err">✕ '+m.retard+' en retard</span>':m.jour?'<span class="tag warn">• '+m.jour+' à faire</span>':'<span class="tag ok">✓ À jour</span>';
+      return '<button class="sec" data-sec="'+esc(s)+'"><h3>'+pastille(s==='frittage'?'lancements':'maintenance','s')+esc(secNom(s))+'<span style="margin-left:auto">'+etat+'</span></h3><ul>'+
+        (droit('calendrier')?'<li><span>Maintenances</span><b>'+m.retard+' retard · '+m.jour+' auj.</b></li>':'')+
+        (parc&&parc.ok?'<li><span>Machines en service</span><b>'+mp.filter(x=>x.actif!==false).length+' / '+mp.length+'</b></li>':'')+
+        (s==='frittage'&&lm?'<li><span>Lancements</span><b>'+nb('fonctionnement')+' en cours · '+nb('prete')+' prête(s)</b></li>':'')+'</ul></button>'}).join('')+'</div>';
+  }
+  const al=[];
+  secs.forEach(s=>maint[s].liste.forEach(e=>al.push({niv:e.etat==='retard'?'err':'warn',titre:(e.etat==='retard'?'Maintenance en retard : ':'À faire aujourd’hui : ')+e.m,texte:(e.f&&e.f.title||'')+(e.qui?' · '+e.qui:''),sec:s,aller:'calendrier'})));
+  if(lm)Object.keys(lm).filter(n=>lm[n].etat==='prete').forEach(n=>al.push({niv:'warn',titre:n+' prête à lancer',texte:lm[n].depuis?'depuis '+heureFr(lm[n].depuis):'',sec:'frittage',aller:'lancements'}));
+  h+='<div class="g3"><div class="stack"><section class="card"><h2>'+svg('alerte')+'À traiter <span class="tag '+(al.some(a=>a.niv==='err')?'err':al.length?'warn':'ok')+'">'+al.length+'</span></h2>'+
+    (al.length?'<div class="als">'+al.slice(0,30).map(a=>'<div class="al '+a.niv+'"><span class="sy" aria-hidden="true">'+(a.niv==='err'?'✕':'!')+'</span><div class="tx"><b>'+esc(a.titre)+' <span class="tag">'+esc(secNom(a.sec))+'</span></b>'+esc(a.texte)+'</div><button class="btn" data-go="'+a.aller+'">Voir</button></div>').join('')+'</div>'
+      :'<div class="msg ok" style="margin:0">'+svg('ok')+'<b>Rien à traiter dans ce que vous voyez.</b></div>')+'</section>';
+  if(lm)h+='<section class="card"><h2>'+pastille('lancements','s')+'Lancements en direct<span class="grow"></span><button class="btn" data-go="lancements">Ouvrir les lancements</button></h2>'+
+    (Object.keys(lm).length?Object.keys(lm).sort().map(n=>{const m=lm[n];return '<div class="lan"><div><b>'+esc(n)+'</b> <span class="hint">'+(m.fichier?'· fichier '+esc(m.fichier.num):'')+(m.depuis?' · depuis '+heureFr(m.depuis):'')+'</span></div><span class="st st-'+esc(m.etat)+'">'+ETATS_LANC[m.etat]+'</span></div>'}).join(''):'<div class="vide">Aucune machine en lancement.</div>')+'</section>';
+  h+='</div><div class="stack"><section class="card"><h2>Accès rapide</h2><div class="quick">'+PARTIES.filter(p=>p.id!=='accueil'&&droit(p.id)&&!p.pc).map(p=>'<button data-go="'+p.id+'">'+pastille(p.ico,'s')+p.nom+'</button>').join('')+'</div></section></div></div>';
+  return h;
+};
+
+PAGES.parc=async()=>{
+  const r=await lire('parc-lire');
+  let h=enTete('parc','Les machines de vos secteurs, comme dans le parc du pack. Touchez une machine pour voir sa fiche.');
+  if(!r.ok)return h+refus(r);
+  if(!r.data.parc)return h+'<div class="card vide">Le parc machines n’est pas encore rempli.</div>';
+  const zones={};(r.data.zones||[]).forEach(z=>zones[z.id]=z.nom);
+  const q=S.parcQ.trim().toLowerCase();
+  const ms=r.data.parc.machines.filter(m=>secteursAffiches().includes(m.secteur)&&(!q||[m.nom,m.type,m.marque,m.modele,m.serie].join(' ').toLowerCase().includes(q)))
+    .sort((a,b)=>String(a.nom).localeCompare(String(b.nom),'fr',{numeric:true}));
+  const sel=ms.find(m=>m.id===S.sel.parc);
+  h+='<div class="tb"><input class="in" id="parcQ" type="search" placeholder="Chercher une machine, un type, un n° de série…" value="'+esc(S.parcQ)+'"><span class="hint">'+ms.length+' machine(s)</span></div>';
+  h+='<div class="parc'+(sel?' ouvert':'')+'"><div class="mgrid">'+(ms.length?ms.map(m=>{
+    const manque=!m.serie||!m.type;
+    return '<button class="mac'+(m.actif===false?' off':'')+'" data-parc="'+esc(m.id)+'"'+(sel&&sel.id===m.id?' aria-current="true"':'')+'><span class="sec-t">'+esc(secNom(m.secteur))+'</span><div class="vis">'+svg('parc')+'</div><div class="bd"><b>'+esc(m.nom)+'</b>'+
+      '<span class="l">'+esc(m.type||'type à préciser')+(m.zone?' · '+esc(zones[m.zone]||m.zone):' · tout le secteur')+'</span>'+
+      '<span class="row" style="gap:6px">'+(m.actif===false?'<span class="tag">Hors service</span>':'<span class="tag ok">✓ En service</span>')+(manque?'<span class="tag warn">! Fiche à compléter</span>':'')+'</span></div></button>'}).join(''):'<div class="vide">Aucune machine.</div>')+'</div>';
+  if(sel){
+    const ligne=(l,v)=>v?'<dt>'+l+'</dt><dd>'+esc(v)+'</dd>':'';
+    h+='<aside class="card fiche"><h2>'+pastille('parc','s')+esc(sel.nom)+'<span class="grow"></span><button class="btn" data-parc="">Fermer</button></h2><dl>'+
+      ligne('Secteur',secNom(sel.secteur))+ligne('Zone',sel.zone?zones[sel.zone]||sel.zone:'Tout le secteur')+ligne('Type',sel.type)+ligne('Marque',sel.marque)+ligne('Modèle',sel.modele)+
+      ligne('N° de série',sel.serie)+ligne('Mise en service',sel.mes)+ligne('SAV',sel.sav)+ligne('Broches',sel.broches)+ligne('État',sel.actif===false?'Hors service':'En service')+
+      ligne('Anciens noms',liste(sel.anciens))+ligne('Notes',sel.notes)+'</dl>'+
+      (sel.photo?'<h3 style="margin:14px 0 4px;font-size:16px">Photo</h3>'+boutonPhoto(sel.photo):'')+(sel.plaque?'<h3 style="margin:14px 0 4px;font-size:16px">Plaque</h3>'+boutonPhoto(sel.plaque):'')+'</aside>';
+  }
+  return h+'</div>';
+};
+
+PAGES.personnes=async()=>{
+  const r=await lire('personnes-lire');
+  let h=enTete('personnes','Les personnes de vos secteurs. Les codes ne sont jamais affichés : seulement s’ils sont définis.');
+  if(!r.ok)return h+refus(r);
+  const zones={};(r.data.zones||[]).forEach(z=>zones[z.id]=z.nom);
+  const ROLES={operateur:'Opérateur',chef:'Chef d’équipe',responsable:'Responsable',admin:'Administrateur'};
+  const l=r.data.personnes.slice().sort((a,b)=>a.nom.localeCompare(b.nom,'fr'));
+  return h+'<section class="card">'+(l.length?'<table><thead><tr><th>Nom</th><th>Rôle</th><th>Rattachement</th><th>Code tablette</th></tr></thead><tbody>'+
+    l.map(p=>'<tr><td><b>'+esc(p.nom)+'</b></td><td>'+esc(ROLES[p.role]||p.role)+'</td><td>'+esc(p.role==='admin'?'Toutes les zones':(p.secteurs.map(s=>'Tout le secteur '+secNom(s)).concat(p.zones.map(z=>zones[z]||z)).join(', ')||'Tout le site'))+'</td><td>'+(p.codeDefini?'<span class="tag ok">✓ défini</span>':'<span class="tag warn">pas encore</span>')+'</td></tr>').join('')+'</tbody></table>'
+    :'<div class="vide">Aucune personne dans vos secteurs.</div>')+'</section>';
+};
+
+PAGES['c-message']=async()=>{
+  const r=await lire('messages-lire');
+  let h=enTete('c-message','Les annonces affichées sur l’accueil des tablettes de vos secteurs.');
+  if(!r.ok)return h+refus(r);
+  const zones={};(r.data.zones||[]).forEach(z=>zones[z.id]=z.nom);
+  const l=r.data.messages||[];
+  return h+(l.length?'<div class="stack">'+l.map(m=>'<section class="card"><h2>'+pastille('message','s')+esc(m.titre||'(sans titre)')+'<span class="grow"></span>'+(m.niveau==='important'?'<span class="tag err">! Important</span>':'<span class="tag acc">Info</span>')+'</h2>'+
+    '<p style="margin:0 0 8px;white-space:pre-wrap">'+esc(m.texte||'')+'</p><p class="hint" style="margin:0">'+(m.zones&&m.zones.length?'Zones : '+esc(m.zones.map(z=>zones[z]||z).join(', ')):'Toutes les tablettes')+(m.du||m.au?' · du '+esc(m.du||'…')+' au '+esc(m.au||'…'):'')+'</p>'+
+    (m.images||[]).map(i=>boutonPhoto(i.photo)).join('')+'</section>').join('')+'</div>':'<div class="card vide">Aucun message.</div>');
+};
+
+PAGES.droits=async()=>{
+  const r=await lire('droits-lire');
+  let h=enTete('droits','Ce qui est masqué sur les tablettes, par rôle, par secteur et par personne.');
+  if(!r.ok)return h+refus(r);
+  const d=r.data.droits||{},noms={};(r.data.personnes||[]).forEach(p=>noms[p.id]=p.nom);
+  const ROLES={operateur:'Opérateurs',chef:'Chefs d’équipe',responsable:'Responsables',admin:'Administrateurs'};
+  const bloc=b=>{const l=[];if(b.applis&&b.applis.length)l.push('Applis masquées : '+b.applis.join(', '));
+    ['onglets','contenus'].forEach(k=>Object.keys(b[k]||{}).forEach(a=>{if(b[k][a].length)l.push((k==='onglets'?'Onglets':'Contenus')+' masqués dans '+a+' : '+b[k][a].length)}));
+    return l.length?'<ul style="margin:0;padding-left:20px">'+l.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>':'<span class="hint">Rien de masqué</span>'};
+  const table=(titre,o,nom)=>'<section class="card"><h2>'+titre+'</h2>'+(Object.keys(o||{}).length?'<table><tbody>'+Object.keys(o).map(k=>'<tr><td style="width:30%"><b>'+esc(nom(k))+'</b></td><td>'+bloc(o[k])+'</td></tr>').join('')+'</tbody></table>':'<div class="vide">Aucun réglage.</div>')+'</section>';
+  return h+'<div class="stack">'+table('Par rôle',d.roles,k=>ROLES[k]||k)+table('Par secteur',d.secteurs,secNom)+table('Par personne',d.personnes,k=>noms[k]||k)+'</div>';
+};
+
+// Contenus des applis : une liste à gauche, le détail à droite (lecture seule). sous() rend du TEXTE (échappé à l'affichage).
+const CONTENUS={
+  maintenance:{liste:'ops',titre:'title',sous:o=>(o.machines||[]).filter(Boolean).join(', ')||'Toutes les machines',detail:o=>
+    sect('Machines',liste(o.machines))+lst('Matériel',o.tools)+lst('Sécurité',o.safety)+(o.prep&&o.prep.length?'<h3>Avant de commencer</h3>'+o.prep.map(p=>'<p>'+esc(p.texte||'')+'</p>'+boutonPhoto(p.photo)).join(''):'')+
+    etapes((o.steps||[]).map(s=>({t:s.title,d:s.detail,p:s.photo,x:s.axes?'à faire sur chaque broche':''})))+lst('Contrôles',o.checks)+
+    ((o.variantes||[]).length?'<h3>Versions par type de machine</h3><ul>'+o.variantes.map(v=>'<li>'+esc((v.types||[]).join(', '))+' : '+(v.steps||[]).length+' étape(s)</li>').join('')+'</ul>':'')},
+  fiches:{liste:'fiches',titre:'title',sous:o=>(o.reflexes||[]).length+' réflexe(s)',detail:o=>
+    (o.intro?'<p>'+esc(o.intro)+'</p>':'')+lst('Signes',o.signs)+(o.images||[]).map(i=>'<p class="hint">'+esc(i.texte||'')+'</p>'+boutonPhoto(i.photo)).join('')+(o.before?'<h3>Avant de commencer</h3><p>'+esc(o.before)+'</p>':'')+
+    (o.reflexes||[]).map((r,i)=>'<h3>Réflexe '+(i+1)+' : '+esc(r.title)+'</h3><ol>'+(r.items||[]).map(x=>'<li>'+esc(x)+'</li>').join('')+'</ol>'+(r.images||[]).map(im=>boutonPhoto(im.photo)).join('')).join('')+
+    lst('Vérifications',o.checks)+(o.rappel?'<h3>Rappel</h3><p>'+esc(o.rappel)+'</p>':'')},
+  procedures:{liste:'procs',titre:'titre',sous:o=>(o.categorie||'')+' · '+(o.statut==='validee'?'validée v'+(o.version||1):'brouillon'),detail:o=>
+    '<p>'+(o.statut==='validee'?'<span class="tag ok">✓ Validée · v'+esc(o.version)+'</span>':'<span class="tag">Brouillon</span>')+' <span class="hint">'+esc(o.categorie||'')+'</span></p>'+
+    sect('Objectif',o.objectif)+sect('Quand',o.quand)+sect('Responsable',o.responsable)+sect('Durée',o.duree)+sect('Machines',liste(o.machines))+lst('Matériel',o.materiel)+lst('Sécurité',o.securite)+
+    etapes((o.etapes||[]).map(s=>({t:s.titre,d:s.detail,a:s.attention,p:s.photo})))+lst('Contrôles',o.controles)+sect('En cas de problème',o.probleme)+
+    (o.images||[]).map(i=>'<p class="hint">'+esc(i.texte||'')+'</p>'+boutonPhoto(i.photo)).join('')},
+  taches:{liste:'tasks',titre:'name',sous:o=>o.cat||'',detail:o=>sect('Catégorie',o.cat)+sect('Comment faire',o.aide)+(o.images||[]).map(i=>'<p class="hint">'+esc(i.texte||'')+'</p>'+boutonPhoto(i.photo)).join('')}
+};
+const sect=(t,v)=>v?'<h3>'+t+'</h3><p style="margin:0;white-space:pre-wrap">'+esc(v)+'</p>':'';
+const lst=(t,l)=>l&&l.length?'<h3>'+t+'</h3><ul>'+l.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>':'';
+const etapes=l=>l.length?'<h3>Étapes</h3><ol>'+l.map(s=>'<li><b>'+esc(s.t||'')+'</b>'+(s.d?'<br>'+esc(s.d):'')+(s.a?'<br><span class="att">! '+esc(s.a)+'</span>':'')+(s.x?' <span class="tag acc">'+esc(s.x)+'</span>':'')+(s.p?'<br>'+boutonPhoto(s.p):'')+'</li>').join('')+'</ol>':'';
+function pageContenu(id){
+  return async()=>{
+    const p=P(id),A=CONTENUS[p.app],sec=unSecteur();
+    let h=enTete(id,'Le contenu tel que les tablettes le reçoivent, secteur '+esc(secNom(sec))+'.');
+    if(!sec)return h+'<div class="card vide">Aucun secteur visible.</div>';
+    h+=S.secteur==='tous'?choixSecteur():'';
+    const r=await lire('contenu-lire',{app:p.app,secteur:sec});
+    if(!r.ok)return h+refus(r);
+    const st=r.data.state;
+    if(!st)return h+'<div class="card vide">Aucune donnée pour ce secteur : les tablettes du secteur ne les ont pas encore envoyées.</div>';
+    const l=(st[A.liste]||[]).filter(o=>!o.archived).sort((a,b)=>String(a[A.titre]).localeCompare(String(b[A.titre]),'fr',{numeric:true}));
+    if(!l.length)return h+'<div class="card vide">Rien pour l’instant dans ce secteur.</div>';
+    const cle=id+'|'+sec,sel=l.find(o=>o.id===S.sel[cle])||l[0];
+    h+='<div class="cont"><div class="liste" role="list">'+l.map(o=>'<button class="it" role="listitem" data-item="'+esc(cle)+'" data-id="'+esc(o.id)+'"'+(o===sel?' aria-current="true"':'')+'>'+pastille(p.ico,'s')+'<span>'+esc(o[A.titre]||'(sans titre)')+'<small>'+esc(A.sous(o))+'</small></span></button>').join('')+'</div>'+
+      '<section class="card det"><h2>'+esc(sel[A.titre]||'')+'</h2>'+A.detail(sel)+'</section></div>';
+    if(p.app==='taches'&&(st.postes||[]).length)h+='<p class="hint">Postes : '+esc(st.postes.map(x=>x.name+(x.start?' ('+x.start+')':'')).join(' · '))+'</p>';
+    return h;
+  };
+}
+['c-maint','c-fiches','c-proc','c-taches'].forEach(id=>PAGES[id]=pageContenu(id));
+
+PAGES['c-releve']=async()=>{
+  const r=await lire('releve-listes');
+  let h=enTete('c-releve','Équipes, opérateurs et machines proposés dans la Relève d’équipe (frittage).');
+  if(!r.ok)return h+refus(r);
+  const l=r.data.listes;
+  if(!l)return h+'<div class="card vide">Pas encore de relève sur Google.</div>';
+  const col=(t,v)=>'<section class="card"><h2>'+t+' <span class="tag">'+v.length+'</span></h2>'+(v.length?'<ul style="margin:0;padding-left:20px">'+v.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>':'<div class="vide">Vide</div>')+'</section>';
+  return h+'<div class="secs">'+col('Équipes',l.teams)+col('Opérateurs',l.operators)+col('Machines',l.machines)+'</div>';
+};
+
+PAGES.lancements=async()=>{
+  const r=await lire('lancements-lire');
+  let h=enTete('lancements','Les machines du frittage, leur état et leur file d’attente. Actualisé toutes les minutes.');
+  if(!r.ok)return h+refus(r);
+  const st=r.data.state||{},lm=machinesLancement(st),noms=Object.keys(lm).sort((a,b)=>a.localeCompare(b,'fr',{numeric:true}));
+  if(!noms.length)return h+'<div class="card vide">Aucune machine en lancement pour l’instant.</div>';
+  h+='<div class="mgrid">'+noms.map(n=>{const m=lm[n],f=(st.files||{})[n]||[];
+    return '<section class="card"><h2>'+esc(n)+'<span class="grow"></span><span class="st st-'+esc(m.etat)+'">'+ETATS_LANC[m.etat]+'</span></h2>'+
+      (m.fichier?'<p style="margin:0 0 6px"><b>En cours : '+esc(m.fichier.num)+'</b>'+(m.fichier.note?' <span class="hint">· '+esc(m.fichier.note)+'</span>':'')+'</p>'+boutonPhoto(m.fichier.photo):'')+
+      (m.depuis?'<p class="hint" style="margin:0 0 6px">Depuis '+heureFr(m.depuis)+(m.par?' · '+esc(m.par):'')+'</p>':'')+
+      '<h3 style="font-size:15px;margin:10px 0 4px">File d’attente ('+f.length+')</h3>'+(f.length?'<ol style="margin:0;padding-left:22px">'+f.map(x=>'<li><b>'+esc(x.num)+'</b>'+(x.note?' · '+esc(x.note):'')+(x.photo?' '+boutonPhoto(x.photo):'')+'</li>').join('')+'</ol>':'<p class="hint" style="margin:0">Vide</p>')+'</section>'}).join('')+'</div>';
+  const hi=(st.histo||[]).slice(-15).reverse();
+  if(hi.length)h+='<section class="card" style="margin-top:16px"><h2>Derniers fichiers fabriqués</h2><table><thead><tr><th>Machine</th><th>Fichier</th><th>Fin</th></tr></thead><tbody>'+hi.map(x=>'<tr><td>'+esc(x.machine)+'</td><td>'+esc(x.num)+'</td><td>'+(x.fin?dateFr(x.fin)+' '+heureFr(x.fin):'')+'</td></tr>').join('')+'</tbody></table></section>';
+  return h;
+};
+
+PAGES.tablettes=async()=>{
+  const r=await lire('tablettes-lire');
+  let h=enTete('tablettes','Les tablettes de vos zones : dernière connexion, version du pack et état envoyé. Jamais les codes des Réglages.');
+  if(!r.ok)return h+refus(r);
+  const l=r.data.tablettes||[];
+  return h+'<section class="card">'+(l.length?'<table><thead><tr><th>Tablette</th><th>Zone</th><th>Dernière connexion</th><th>Version</th><th>État</th></tr></thead><tbody>'+
+    l.map(t=>'<tr><td><b>'+esc(t.nom||t.id)+'</b><br><span class="hint">'+esc(t.id)+'</span></td><td>'+esc(t.zone)+'</td><td>'+(vueAujourdhui(t.vu)?'<span class="tag ok">✓ '+esc(t.vu)+'</span>':'<span class="tag warn">! '+esc(t.vu||'jamais')+'</span>')+'</td><td>'+esc(t.version)+'</td><td>'+esc(t.etat)+'</td></tr>').join('')+'</tbody></table>'
+    :'<div class="vide">Aucune tablette dans vos zones.</div>')+'</section>';
+};
+
+PAGES.tableau=async()=>{
+  const r=await lire('releves-lire');
+  let h=enTete('tableau','Relèves d’équipe enregistrées (frittage) et consignes en cours.');
+  if(!r.ok)return h+refus(r);
+  const rec=(r.data.records||[]).slice().reverse().slice(0,40);
+  const lireP=x=>{try{return JSON.parse(x.payload)}catch(e){return {}}};
+  h+='<div class="g3"><section class="card"><h2>'+pastille('releve','s')+'Dernières relèves</h2>'+(rec.length?'<table><thead><tr><th>Date</th><th>Équipe</th><th>Opérateur</th><th>Remarques</th></tr></thead><tbody>'+
+    rec.map(x=>{const p=lireP(x);return '<tr><td>'+dateFr(x.createdAt)+' '+heureFr(x.createdAt)+'</td><td>'+esc(p.outgoing||'')+'</td><td>'+esc(p.operator||'')+'</td><td>'+esc(p.notes||'')+'</td></tr>'}).join('')+'</tbody></table>':'<div class="vide">Aucune relève enregistrée.</div>')+'</section>';
+  const ac=r.data.actions||[];
+  h+='<section class="card"><h2>'+svg('alerte')+'Consignes à faire <span class="tag '+(ac.length?'warn':'ok')+'">'+ac.length+'</span></h2>'+(ac.length?'<div class="als">'+ac.map(a=>'<div class="al"><span class="sy">!</span><div class="tx"><b>'+esc(a.machine||'')+'</b>'+esc(a.label||'')+'</div></div>').join('')+'</div>':'<div class="msg ok" style="margin:0">'+svg('ok')+'<b>Aucune consigne en attente.</b></div>')+'</section></div>';
+  return h;
+};
+
+// Calendrier : vue semaine machine × jour, calculée avec le moteur de l'appli Maintenance.
+PAGES.calendrier=async()=>{
+  const sec=unSecteur();
+  let h=enTete('calendrier','Maintenances prévues de la semaine, secteur '+esc(secNom(sec))+'. Les réglages du calendrier se font dans l’appli Maintenance.');
+  if(!sec)return h+'<div class="card vide">Aucun secteur visible.</div>';
+  h+=S.secteur==='tous'?choixSecteur():'';
+  const r=await lire('calendrier-lire',{secteur:sec});
+  if(!r.ok)return h+refus(r);
+  const st={cal:r.data.cal,ops:r.data.ops||[],journal:r.data.journal||[],machines:r.data.machines||[],operators:r.data.operators||[]};
+  if(!st.cal||!(st.cal.regles||[]).length||typeof CalMaint==='undefined')return h+'<div class="card vide">Aucun calendrier réglé pour ce secteur.</div>';
+  const C=CalMaint,auj=C.auj(),lun=S.semaine||C.lundi(auj);
+  const jours=[0,1,2,3,4,5,6].map(i=>C.ajoute(lun,i)).filter(d=>(st.cal.jours||[1,2,3,4,5]).indexOf(C.D(d).getDay())>=0||C.D(d).getDay()%6!==0);
+  // Occurrences sur une période plus large : une maintenance n'est « faite » que si elle a eu lieu entre l'occurrence
+  // précédente et la suivante de la même règle sur la même machine (même règle que l'écran télé : CalMaint.etats).
+  let large=[];try{large=C.occurrences(st,C.ajoute(lun,-28),C.ajoute(lun,35)).filter(o=>o.date)}catch(e){}
+  const occ=large.filter(o=>o.date>=jours[0]&&o.date<=jours[jours.length-1]);
+  const suite={};large.forEach(o=>o.machines.forEach(m=>{const k=o.regle.id+'|'+m;(suite[k]=suite[k]||[]).push(o)}));
+  const faiteSur=(o,m)=>{const l=suite[o.regle.id+'|'+m]||[],i=l.indexOf(o);try{return C.faite(st,o,m,l[i+1]?l[i+1].date:'',i>0?l[i-1].date:'')}catch(e){return null}};
+  const machines=st.machines.length?st.machines:[...new Set(occ.flatMap(o=>o.machines))];
+  h+='<div class="row" style="margin-bottom:10px"><button class="btn" data-semaine="'+C.ajoute(lun,-7)+'">‹ Semaine précédente</button><button class="btn" data-semaine="">Cette semaine</button><button class="btn" data-semaine="'+C.ajoute(lun,7)+'">Semaine suivante ›</button>'+
+    '<span class="hint">Semaine du '+esc(C.D(lun).toLocaleDateString('fr-FR',{day:'numeric',month:'long'}))+'</span></div>';
+  h+='<div class="leg"><span><span class="op r" style="display:inline-flex">✕</span> en retard</span><span><span class="op a" style="display:inline-flex">•</span> aujourd’hui</span><span><span class="op f" style="display:inline-flex">✓</span> faite</span><span><span class="op p" style="display:inline-flex">○</span> prévue</span></div>';
+  h+='<div class="cal" style="grid-template-columns:200px repeat('+jours.length+',minmax(120px,1fr))"><div class="hd">Machine</div>'+jours.map(d=>'<div class="hd'+(d===auj?' auj':'')+'">'+esc(C.D(d).toLocaleDateString('fr-FR',{weekday:'short',day:'numeric'}))+(C.ferme(st.cal,d)?'<br><small>'+esc(C.ferme(st.cal,d))+'</small>':'')+'</div>').join('');
+  machines.forEach(m=>{
+    h+='<div class="mn">'+esc(m)+'</div>';
+    jours.forEach(d=>{
+      h+='<div>'+occ.filter(o=>o.date===d&&o.machines.indexOf(m)>=0).map(o=>{
+        const f=faiteSur(o,m);
+        const c=f?'f':d<auj?'r':d===auj?'a':'p',sy={f:'✓',r:'✕',a:'•',p:'○'}[c];
+        return '<span class="op '+c+'">'+sy+' '+esc(o.op.title||'')+'<small>'+esc(f?'faite par '+(f.op||'')+(f.end?' le '+dateFr(f.end):''):(o.noms||[]).join(' + '))+'</small></span>'}).join('')+'</div>';
+    });
+  });
+  h+='</div>';
+  if(!machines.length)h+='<div class="card vide">Aucune machine dans ce calendrier.</div>';
+  return h;
+};
+
+// Accès des managers (administrateur) : MODIFICATION (2026-10-15), d'après la maquette validée (page d).
+// Opérations du script : comptes-lire, compte-ecrire (contrôle 409 sur maj), compte-code, compte-couper. Le script
+// vérifie tout (parties réservées, rôle admin, soi-même) ; la page n'est qu'une aide à la saisie.
+// S.acc : {sel: id du compte affiché, b: brouillon {id, actif, fin, admin, secteurs, parties, depuis}, modifie, msg, couper}
+const MODELES={
+  lecture:{titre:'Lecture partout',f:p=>'lecture'},
+  secteur:{titre:'Manager de secteur',f:p=>({accueil:'lecture',tableau:'lecture',ecrans:'lecture',tablettes:'lecture',aide:'lecture',parc:'lecture',personnes:'lecture',
+    calendrier:'modif',lancements:'modif','c-maint':'modif','c-fiches':'modif','c-proc':'modif','c-taches':'modif'})[p.id]||''},
+  rien:{titre:'Tout masquer',f:p=>''}
+};
+// Même règle que le script (nomComparable_) : deux comptes au même nom ne peuvent pas se connecter par leur nom.
+const nomComparable=s=>{s=String(s==null?'':s).slice(0,80);try{s=s.normalize('NFD').replace(/[̀-ͯ]/g,'')}catch(e){}return s.toLowerCase().replace(/[’‘]/g,"'").replace(/\s+/g,' ').trim()};
+function brouillonDe(c){return {id:c.id,actif:c.actif,fin:c.fin||'',admin:!!c.admin,secteurs:(c.secteurs||[]).filter(s=>s!=='*'),parties:Object.assign({},c.parties||{}),depuis:c.maj||0}}
+const A=()=>S.acc||(S.acc={sel:'',b:null,modifie:false,msg:null,couper:false,nouveau:''});
+const dFr=d=>d?d.split('-').reverse().join('/'):'';
+PAGES.acces=async()=>{
+  const r=await lire('comptes-lire');
+  let h=enTete('acces','Qui peut ouvrir la console par internet, quels secteurs il voit et ce qu’il peut faire dans chaque partie. Un changement s’applique à la prochaine action du manager.',
+    '<button class="btn pri" data-acc="donner">'+svg('plus')+'Donner un accès</button>');
+  if(!r.ok)return h+refus(r);
+  const a=A(),comptes=r.data.comptes.slice().sort((x,y)=>(y.admin-x.admin)||String(x.nom).localeCompare(String(y.nom),'fr'));
+  const parties=r.data.parties||[],personnes=r.data.personnes||[],secs=secteursVisibles();
+  const moi=comptes.find(c=>c.nom===S.moi.nom&&c.admin);
+  if(a.msg)h+='<div class="msg '+a.msg[0]+'" role="status">'+svg(a.msg[0]==='ok'?'ok':'alerte')+'<div>'+a.msg[1]+'</div></div>';
+  // Homonymes : la connexion par nom les refuse tous les deux.
+  const vus={},doublons=[];comptes.forEach(c=>{const k=nomComparable(c.nom);if(!k)return;if(vus[k]&&!doublons.includes(k))doublons.push(k);vus[k]=(vus[k]||[]).concat(c.nom)});
+  if(doublons.length)h+='<div class="msg warn">'+svg('alerte')+'<div><b>Comptes au même nom : '+esc(doublons.map(k=>vus[k].join(' / ')).join(' ; '))+'.</b> Ces personnes ne peuvent pas se connecter par leur nom : renommez l’une d’elles dans Personnes (sur le PC de l’atelier).</div></div>';
+  // Nouvel accès : choix d'une personne du pack qui n'a pas encore de compte.
+  if(a.nouveau==='choix'){
+    const libres=personnes.filter(p=>!comptes.some(c=>c.id===p.id)).sort((x,y)=>x.nom.localeCompare(y.nom,'fr'));
+    h+='<section class="card" style="margin-bottom:16px"><h2>'+svg('plus')+'Donner un accès à une personne du pack</h2>'+(libres.length?
+      '<div class="row"><label class="lbl" style="margin:0;min-width:300px">Personne<select class="in" id="accPers">'+libres.map(p=>'<option value="'+esc(p.id)+'">'+esc(p.nom)+(p.role==='admin'?' (administrateur du pack)':'')+'</option>').join('')+'</select></label>'+
+      '<button class="btn pri" data-acc="creer" style="align-self:flex-end">Continuer</button><button class="btn" data-acc="fermer-nouveau" style="align-self:flex-end">Annuler</button></div>'+
+      '<p class="hint" style="margin:10px 0 0">Seule une personne <b>Administrateur</b> dans le pack peut devenir administrateur de la console. Les autres sont des managers.</p>'
+      :'<div class="vide">Toutes les personnes du pack ont déjà un compte.</div>')+'</section>';
+  }
+  if(!a.b&&!a.sel&&comptes.length){const c=comptes.find(x=>!x.admin)||comptes[0];a.sel=c.id;a.b=brouillonDe(c)}
+  const c=comptes.find(x=>x.id===a.sel)||null,b=a.b,pers=b&&personnes.find(p=>p.id===b.id);
+  h+='<div class="accg"><div><div class="mlist">'+comptes.map(x=>{
+      const st=x.bloque?'<span class="tag err">✕ Bloqué</span>':!x.actif?'<span class="tag err">✕ Coupé</span>':!x.ouvert?'<span class="tag err">✕ Terminé</span>':'<span class="tag ok">✓ Actif</span>';
+      const ini=String(x.nom||'?').split(/\s+/).map(m=>m.charAt(0)).join('').slice(0,2).toUpperCase();
+      return '<button class="mcard'+(x.ouvert?'':' coupe')+'" data-acc="choisir" data-id="'+esc(x.id)+'" aria-current="'+(x.id===a.sel)+'"><span class="av">'+esc(ini)+'</span><div><b>'+esc(x.nom||x.id)+'</b><span>'+
+        (x.admin?'Administrateur · tout':esc(x.secteurs.map(secNom).join(', ')||'aucun secteur'))+'<br>'+(x.vuLe?'vu le '+dateFr(x.vuLe)+' '+heureFr(x.vuLe):'jamais connecté')+'</span></div><div class="r">'+st+(x.fin?'<br><span class="hint" style="font-size:14px">jusqu’au '+dFr(x.fin)+'</span>':'')+(x.codeDefini?'':'<br><span class="tag warn">pas de code</span>')+'</div></button>'}).join('')+
+    (a.sel&&!c&&b?'<button class="mcard" aria-current="true"><span class="av">+</span><div><b>'+esc(pers?pers.nom:b.id)+'</b><span>nouvel accès, pas encore enregistré</span></div></button>':'')+
+    '</div><p class="hint">Un compte de la console est rattaché à une <b>personne</b> du pack. Son code de la console est différent de son code des tablettes.</p></div>';
+  if(!b)return h+'<div class="card vide">Choisissez un compte, ou « Donner un accès ».</div></div>';
+  const soi=!!(c&&moi&&c.id===moi.id),estAdmin=b.admin,peutAdmin=pers&&pers.role==='admin';
+  const nom=c?c.nom:pers?pers.nom:b.id;
+  // Fiche : accès, date de fin, secteurs.
+  h+='<div class="stack"><section class="card"><div class="row" style="gap:14px;margin-bottom:14px"><span class="av gros">'+esc(String(nom).split(/\s+/).map(m=>m.charAt(0)).join('').slice(0,2).toUpperCase())+'</span>'+
+    '<div style="flex:1"><h2 style="margin:0">'+esc(nom)+'</h2><span class="hint">'+(estAdmin?'Administrateur de la console':'Manager')+(c?' · dernière connexion : '+(c.vuLe?dateFr(c.vuLe)+' à '+heureFr(c.vuLe):'jamais'):'')+(c&&c.majPar?' · modifié par '+esc(c.majPar):'')+'</span></div></div>'+
+    (soi?'<div class="msg info">'+svg('acces')+'<div>C’est votre compte : vous ne pouvez ni le couper, ni lui mettre une date de fin.</div></div>':'')+
+    '<div class="etat"><div><div class="hint" style="font-weight:700;margin-bottom:6px">Accès</div><div class="sw" role="group" aria-label="Accès"><button class="on-ok" data-acc="actif" data-v="1" aria-pressed="'+b.actif+'"'+(soi?' disabled':'')+'>✓ Actif</button><button class="on-err" data-acc="actif" data-v="0" aria-pressed="'+!b.actif+'"'+(soi?' disabled':'')+'>✕ Coupé</button></div></div>'+
+    '<label class="lbl" style="margin:0;min-width:220px">Fin de l’accès (facultatif)<input class="in" type="date" id="accFin" value="'+esc(b.fin)+'"'+(soi?' disabled':'')+'></label>'+
+    '<div style="align-self:flex-end;flex:1;min-width:240px" class="hint">'+(!b.actif?'<b style="color:var(--err)">Ne peut plus se connecter.</b> Ses réglages sont gardés : « Actif » les lui rend.':b.fin?'L’accès se coupe tout seul après le <b>'+dFr(b.fin)+'</b>.':'Pas de date de fin : l’accès reste ouvert jusqu’à ce que vous le coupiez.')+'</div></div>'+
+    (peutAdmin&&!soi?'<div class="row" style="margin-top:14px"><button class="chip" data-acc="admin" aria-pressed="'+estAdmin+'">'+(estAdmin?'✓ ':'')+'Administrateur de la console</button><span class="hint">Personne « Administrateur » du pack : peut tout voir et tout faire.</span></div>':'')+
+    (estAdmin?'':'<h3 style="margin:20px 0 8px;font-size:16px">Secteurs visibles</h3><div class="row">'+secs.map(s=>'<button class="chip" data-acc="secteur" data-s="'+esc(s)+'" aria-pressed="'+b.secteurs.includes(s)+'">'+(b.secteurs.includes(s)?'✓ ':'')+esc(secNom(s))+'</button>').join('')+
+      '<span class="hint">'+(b.secteurs.length?'Il ne voit que les machines, maintenances, contenus et alertes de ces secteurs.':'<b style="color:var(--warn)">Aucun secteur : il ne verra presque rien.</b>')+'</span></div>')+'</section>';
+  // Tableau parties × Masqué / Lecture / Modification.
+  if(estAdmin)h+='<section class="card"><h2>Ce qu’il voit et ce qu’il peut faire</h2><div class="msg ok" style="margin:0">'+svg('ok')+'<b>Administrateur : toutes les parties, tous les secteurs.</b></div></section>';
+  else h+='<section class="card"><h2>Ce qu’il voit et ce qu’il peut faire</h2><div class="row" style="margin:-4px 0 12px"><span class="hint">Partir d’un modèle :</span>'+
+    Object.keys(MODELES).map(k=>'<button class="btn" data-acc="modele" data-v="'+k+'">'+MODELES[k].titre+'</button>').join('')+'<span class="hint">puis ajuster ligne par ligne.</span></div>'+
+    '<table class="perm"><thead><tr><th>Partie de la console</th><th>Droit</th></tr></thead><tbody>'+
+    GROUPES.map(([g,t])=>'<tr class="grp"><td colspan="2">'+t+'</td></tr>'+PARTIES.filter(p=>p.g===g).map(p=>{
+      const sp=parties.find(x=>x.id===p.id)||{},v=b.parties[p.id]||'';
+      const cell=p.admin||sp.admin?'<span class="lock">'+svg('cadenas')+'Administrateur seulement</span>':
+        '<div class="tri" role="radiogroup" aria-label="'+esc(p.nom)+'">'+[['','v0','masque','Masqué'],['lecture','v1','oeil','Lecture'],['modif','v2','crayon','Modification']].map(([k,cl,ic,l])=>
+        '<button class="'+cl+'" role="radio" data-acc="droit" data-p="'+p.id+'" data-v="'+k+'" aria-checked="'+(v===k)+'" aria-pressed="'+(v===k)+'"'+(k==='modif'&&(p.lect||sp.lect)?' disabled title="Cette partie se consulte seulement"':'')+'>'+svg(ic)+l+'</button>').join('')+'</div>';
+      return '<tr><td><span class="nm">'+pastille(p.ico,'s')+p.nom+'</span></td><td>'+cell+'</td></tr>'}).join('')).join('')+'</tbody></table>'+
+    '<p class="hint" style="margin:10px 0 0">Pour l’instant, la console en ligne ne fait que montrer : « Modification » servira quand les pages de modification seront prêtes.</p></section>';
+  // Code de la console.
+  if(c)h+='<section class="card"><h2>'+svg('cadenas')+'Code de la console <span class="tag '+(c.codeDefini?'ok">✓ défini':'warn">pas encore défini')+'</span></h2>'+
+    '<div class="row"><label class="lbl" style="margin:0;min-width:240px">Nouveau code<input class="in" type="password" id="accCode" autocomplete="new-password" minlength="8"></label>'+
+    '<label class="lbl" style="margin:0;min-width:240px">Le même, encore une fois<input class="in" type="password" id="accCode2" autocomplete="new-password" minlength="8"></label>'+
+    '<button class="btn pri" data-acc="code" style="align-self:flex-end">'+(c.codeDefini?'Changer le code':'Définir le code')+'</button></div>'+
+    '<p class="hint" style="margin:10px 0 0">8 caractères au moins (sans compter les espaces), différent du code des tablettes. Le code n’est jamais réaffiché : donnez-le vous-même à la personne. Changer le code déconnecte ses sessions ouvertes.</p></section>';
+  else h+='<section class="card"><div class="hint">Enregistrez d’abord cet accès, puis définissez son code de la console.</div></section>';
+  // Journal : pas encore d'opération de lecture du journal (onglet « Console — journal » de la Google Sheet).
+  if(c)h+='<section class="card"><h2>'+svg('horloge')+'Dernières connexions</h2><p style="margin:0">'+(c.vuLe?'Dernière connexion réussie : <b>'+dateFr(c.vuLe)+' à '+heureFr(c.vuLe)+'</b>.':'Jamais connecté.')+'</p>'+
+    '<p class="hint" style="margin:6px 0 0">Le journal complet (connexions réussies et refusées, modifications) est dans la Google Sheet, onglet « Console — journal ».</p></section>';
+  // Couper l'accès tout de suite (avec confirmation).
+  if(c&&!soi)h+='<section class="card" style="border-color:#f0c2c4"><div class="row"><div style="flex:1;min-width:260px"><b>Couper l’accès tout de suite</b><div class="hint">La personne est déconnectée à sa prochaine action, sur tous ses appareils. Rien n’est effacé.</div></div>'+
+    (!c.actif?'<span class="tag err">✕ Accès coupé</span>':a.couper?'<button class="btn dan plein" data-acc="couper-ok">'+svg('cadenas')+'Oui, couper l’accès de '+esc(nom)+'</button><button class="btn" data-acc="couper-non">Annuler</button>':'<button class="btn dan" data-acc="couper">'+svg('cadenas')+'Couper l’accès</button>')+'</div></section>';
+  h+='</div></div>';
+  h+='<div class="savebar"><span class="st">'+(a.modifie?'<b style="color:var(--warn)">• Modifications à enregistrer.</b>':c?'✓ Tout est enregistré.':'<b style="color:var(--warn)">• Nouvel accès à enregistrer.</b>')+'</span>'+
+    (a.modifie||!c?'<button class="btn" data-acc="annuler">Annuler</button>':'')+'<button class="btn pri" data-acc="enregistrer"'+(a.modifie||!c?'':' disabled')+'>Enregistrer l’accès</button></div>';
+  return h;
+};
+function changeBrouillon(f){const a=A();if(!a.b)return;f(a.b);a.modifie=true;a.msg=null;chargerPage()}
+async function actionAcces(b){
+  const a=A(),act=b.dataset.acc;
+  if(act==='choisir'||act==='donner'){
+    if(a.modifie){a.msg=['warn','Enregistrez ou annulez d’abord les modifications en cours.'];return chargerPage()}
+    if(act==='donner'){a.nouveau='choix';a.msg=null;return chargerPage()}
+    const r=await lire('comptes-lire'),c=r.ok&&r.data.comptes.find(x=>x.id===b.dataset.id);
+    if(c){a.sel=c.id;a.b=brouillonDe(c);a.couper=false;a.msg=null}
+    return chargerPage();
+  }
+  if(act==='fermer-nouveau'){a.nouveau='';return chargerPage()}
+  if(act==='creer'){const s=document.getElementById('accPers');if(!s)return;a.nouveau='';a.sel=s.value;a.b={id:s.value,actif:true,fin:'',admin:false,secteurs:[],parties:{},depuis:0};a.modifie=true;a.msg=null;return chargerPage()}
+  if(act==='actif')return changeBrouillon(x=>{x.actif=b.dataset.v==='1'});
+  if(act==='admin')return changeBrouillon(x=>{x.admin=!x.admin});
+  if(act==='secteur')return changeBrouillon(x=>{const s=b.dataset.s;x.secteurs=x.secteurs.includes(s)?x.secteurs.filter(y=>y!==s):x.secteurs.concat(s)});
+  if(act==='droit')return changeBrouillon(x=>{if(b.dataset.v)x.parties[b.dataset.p]=b.dataset.v;else delete x.parties[b.dataset.p]});
+  if(act==='modele')return changeBrouillon(x=>{const M=MODELES[b.dataset.v];x.parties={};PARTIES.forEach(p=>{if(p.admin)return;let v=M.f(p);if(v==='modif'&&p.lect)v='lecture';if(v)x.parties[p.id]=v})});
+  if(act==='annuler'){a.modifie=false;a.msg=null;a.couper=false;S.charge={};const r=await lire('comptes-lire'),c=r.ok&&r.data.comptes.find(x=>x.id===a.sel);a.b=c?brouillonDe(c):null;if(!c)a.sel='';return chargerPage()}
+  if(act==='enregistrer'){
+    const x=a.b;b.disabled=true;
+    const j=await appel('compte-ecrire',{compte:{id:x.id,actif:x.actif,fin:x.fin,admin:x.admin,secteurs:x.admin?['*']:x.secteurs,parties:x.admin?{}:x.parties,depuis:x.depuis}});
+    S.charge={};
+    if(j.status===200){a.b=brouillonDe(j.data.compte);a.sel=j.data.compte.id;a.modifie=false;a.msg=['ok','Accès enregistré. Il s’applique à la prochaine action de la personne.']}
+    else if(j.status===409)a.msg=['err','<b>Ce compte a été modifié ailleurs pendant que vous le régliez.</b> <button class="btn" data-acc="recharger">Recharger la version actuelle</button> (vos changements seront à refaire).'];
+    else a.msg=['err','<b>'+esc((j.data&&j.data.error)||'Enregistrement refusé.')+'</b>'];
+    return chargerPage();
+  }
+  if(act==='recharger'){a.modifie=false;S.charge={};const r=await lire('comptes-lire'),c=r.ok&&r.data.comptes.find(x=>x.id===a.sel);a.b=c?brouillonDe(c):null;a.msg=['info','Version actuelle rechargée.'];return chargerPage()}
+  if(act==='code'){
+    const c1=document.getElementById('accCode'),c2=document.getElementById('accCode2'),v1=c1?c1.value:'',v2=c2?c2.value:'';
+    if(c1)c1.value='';if(c2)c2.value='';
+    if(v1.replace(/\s/g,'').length<8){a.msg=['err','<b>Le code doit faire au moins 8 caractères (sans compter les espaces).</b>'];return chargerPage()}
+    if(v1!==v2){a.msg=['err','<b>Les deux codes tapés sont différents.</b> Rien n’est changé.'];return chargerPage()}
+    const j=await appel('compte-code',{id:a.sel,code:v1});S.charge={};
+    a.msg=j.status===200?['ok','Code de la console enregistré. Donnez-le vous-même à la personne : il ne sera plus jamais affiché.']:['err','<b>'+esc((j.data&&j.data.error)||'Code refusé.')+'</b>'];
+    return chargerPage();
+  }
+  if(act==='couper'){a.couper=true;return chargerPage()}
+  if(act==='couper-non'){a.couper=false;return chargerPage()}
+  if(act==='couper-ok'){
+    const j=await appel('compte-couper',{id:a.sel});S.charge={};a.couper=false;
+    if(j.status===200){a.b=brouillonDe(j.data.compte);a.modifie=false;a.msg=['ok','Accès coupé : la personne est déconnectée à sa prochaine action.']}
+    else a.msg=['err','<b>'+esc((j.data&&j.data.error)||'Coupure refusée.')+'</b>'];
+    return chargerPage();
+  }
+}
+
+// Parties qui se font sur le PC de l'atelier.
+function vPC(){
+  const p=P(S.page);
+  if(p.id==='aide')return enTete('aide','Comment se servir de la console en ligne.')+'<section class="card det">'+
+    '<h3>Se connecter</h3><p>Votre nom et votre code de la console (8 caractères au moins, différent du code des tablettes). Le code est donné par le responsable d’atelier.</p>'+
+    '<h3>Ce que vous voyez</h3><p>Le menu ne montre que les parties ouvertes pour vous, et seulement vos secteurs. Pour l’instant, tout est en <b>lecture</b> : les modifications se font sur le PC de l’atelier.</p>'+
+    '<h3>Sécurité</h3><ul><li>Déconnexion automatique après 10 minutes sans activité.</li><li>Après 5 codes faux, le compte est bloqué 15 minutes. Si votre compte est bloqué sans raison, prévenez le responsable d’atelier.</li><li>Sur un ordinateur partagé, touchez « Se déconnecter » en partant.</li></ul></section>';
+  return enTete(p.id,'Cette partie se fait sur le PC de l’atelier (console du PC).')+'<div class="msg info">'+svg('aide')+'<div>La console en ligne ne fait pas encore cette partie : ouvrez la <b>console du PC</b> de l’atelier.</div></div>';
+}
+['ecrans','apparence','version','liaisons','aide'].forEach(id=>PAGES[id]=async()=>vPC());
+
+// ---------------------------------------------------------------------------------------------------------------
+// Événements
+document.addEventListener('submit',e=>{
+  if(e.target.id!=='fLogin')return;
+  e.preventDefault();
+  const nom=document.getElementById('lNom').value.trim(),code=document.getElementById('lCode').value;
+  document.getElementById('lCode').value='';
+  if(nom&&code)seConnecter(nom,code);
+});
+document.addEventListener('click',async e=>{
+  const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.acc){S.dernierGeste=Date.now();actionAcces(b).catch(x=>{if(x.message!=='session'){A().msg=['err','<b>'+esc(x.message)+'</b>'];chargerPage()}});return}
+  if(b.dataset.go){S.page=b.dataset.go;try{history.replaceState(null,'','#'+S.page)}catch(x){}render();scrollTo(0,0);return}
+  if(b.dataset.sec!==undefined){S.secteur=b.dataset.sec;S.semaine='';render();return}
+  if(b.dataset.act==='sortir'){seDeconnecter();return}
+  if(b.dataset.act==='actualiser'){S.charge={};render();return}
+  if(b.dataset.parc!==undefined){S.sel.parc=b.dataset.parc;chargerPage();return}
+  if(b.dataset.item){S.sel[b.dataset.item]=b.dataset.id;chargerPage();return}
+  if(b.dataset.semaine!==undefined){S.semaine=b.dataset.semaine;chargerPage();return}
+  if(b.dataset.photo){
+    const id=b.dataset.photo,zone=b.nextElementSibling;
+    b.disabled=true;b.textContent='Chargement…';
+    try{
+      if(!S.photos[id]){const r=await appel('photo-lire',{id});if(r.status!==200)throw new Error(r.status===429?'Trop de photos demandées : réessayez plus tard.':(r.data&&r.data.error)||'Photo absente.');S.photos[id]=r.data.data}
+      if(!/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+\/=]+$/.test(S.photos[id]))throw new Error('Photo illisible.');
+      if(zone){zone.innerHTML='<img class="photo" alt="Photo" src="'+S.photos[id]+'">'}
+      b.remove();
+    }catch(x){if(x.message==='session')return;b.disabled=false;b.textContent=x.message}
+  }
+});
+document.addEventListener('change',e=>{if(e.target.id==='accFin'){const v=e.target.value;changeBrouillon(x=>{x.fin=/^\d{4}-\d\d-\d\d$/.test(v)?v:''})}});
+document.addEventListener('input',e=>{if(e.target.id==='parcQ'){S.parcQ=e.target.value;clearTimeout(S.tq);S.tq=setTimeout(async()=>{await chargerPage();const q=document.getElementById('parcQ');if(q){q.focus();q.setSelectionRange(q.value.length,q.value.length)}},250)}});
+
+addEventListener('hashchange',()=>{const h=decodeURIComponent(location.hash.slice(1));if(P(h)&&S.moi&&h!==S.page){S.page=h;render()}});
+// Démarrage : session de cet onglet encore valable ? (le script le dit)
+(async()=>{
+  S.jeton=lireJeton();
+  // #parc, #calendrier… : la partie à ouvrir (le menu reste limité aux parties visibles).
+  const h=decodeURIComponent(location.hash.slice(1));if(P(h))S.page=h;
+  if(S.jeton&&URL_SCRIPT){try{await demarrer()}catch(e){if(e.message!=='session'){S.jeton='';ecrireJeton('')}}}
+  render();
+})();
+</script>
+</body>
+</html>
