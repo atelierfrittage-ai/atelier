@@ -70,7 +70,12 @@ svg.i{width:20px;height:20px;flex:none}
 .secfixe small{font-weight:600;color:var(--muted);font-size:14px}
 .grow{flex:1}
 .sync{display:inline-flex;align-items:center;gap:6px;font-size:15px;color:var(--muted);font-weight:600}
-.sync.ok{color:var(--ok)}.sync.err{color:var(--err)}
+.sync.ok{color:var(--ok)}.sync.err{color:var(--err)}.sync.warn{color:var(--warn)}
+button.sync{border:1px solid transparent;background:transparent;border-radius:10px;padding:4px 10px;min-height:44px;cursor:pointer;font:inherit;font-weight:600;font-size:15px}
+button.sync:hover{background:#fff;border-color:var(--line)}
+button.sync.err{background:var(--err-bg);border-color:#e9a3a6}button.sync.warn{background:var(--warn-bg);border-color:var(--warn-line)}
+#panneauGoogle{position:fixed;right:24px;top:72px;width:min(480px,92vw);z-index:40;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 40px rgba(21,36,43,.25);padding:16px 18px;font-size:15px}
+#panneauGoogle h2{margin:0 0 6px;font-size:18px}
 .who{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:4px 6px 4px 4px}
 .who .av{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent-dark);font-weight:800;font-size:15px}
 .who b{display:block;font-size:15px;line-height:1.2}.who span{font-size:14px;color:var(--muted)}
@@ -201,7 +206,19 @@ th{font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.05
 .savebar{position:fixed;bottom:12px;left:276px;right:24px;z-index:10;display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:rgba(255,255,255,.97);border:1px solid var(--line);border-radius:14px;padding:10px 16px;box-shadow:0 -6px 22px rgba(21,36,43,.08)}
 .savebar .st{flex:1;font-size:15px;color:var(--muted)}
 @media (max-width:1100px){.accg{grid-template-columns:1fr}}
-@media (max-width:860px){.savebar{left:16px;right:16px}}.parc.ouvert{grid-template-columns:minmax(0,1fr) 340px}}
+@media (max-width:860px){.savebar{left:16px;right:16px}}
+/* Édition (lot 4) */
+textarea.in{min-height:84px;resize:vertical;font:inherit}
+.form{display:grid;gap:14px}
+.form .lbl{margin-bottom:6px}
+.fs{border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin:0}
+.fs legend{font-weight:700;color:var(--muted);font-size:15px;padding:0 6px}
+.fs .chip input{width:18px;height:18px}
+.etape{border:1px dashed #c9d3d7;border-radius:10px;padding:10px 12px;margin:0 0 10px;display:grid;gap:10px;background:#fbfdfd}
+ol.file{margin:8px 0 0;padding-left:22px}
+.mgrid.lanc{grid-template-columns:repeat(auto-fill,minmax(380px,1fr))}ol.file li{margin:0 0 8px}
+.det .row .btn{min-width:44px}
+@media (max-width:1280px){.g3{grid-template-columns:1fr}.parc.ouvert{grid-template-columns:minmax(0,1fr) 340px}}
 @media (max-width:1000px){.cont{grid-template-columns:1fr}.parc.ouvert{grid-template-columns:1fr}.fiche{position:static;max-height:none}}
 @media (max-width:860px){.app{grid-template-columns:1fr}.nav{position:static;height:auto}.top{position:static}#page{padding:16px}}
 </style>
@@ -445,15 +462,54 @@ function lireJeton(){try{return sessionStorage.getItem(CLE_JETON)||''}catch(e){r
 function ecrireJeton(j){try{if(j)sessionStorage.setItem(CLE_JETON,j);else sessionStorage.removeItem(CLE_JETON)}catch(e){}}
 
 // ---------------------------------------------------------------------------------------------------------------
+// --- Témoin « Google » (2026-10-15) : tiré des appels déjà faits ; vert = OK, orange = lent ou ancien,
+// rouge = Google ne répond pas ou le script répond par une erreur. Un clic : ce qui se passe et quoi faire.
+S.google={ok:0,duree:0,erreur:null};
+function noterGoogle(type,message){S.google.erreur={type,message:String(message||'').slice(0,160),at:Date.now()};majTemoin()}
+function noterReponseGoogle(j,duree){
+  const msg=String((j.data&&j.data.error)||'');
+  if(j.status===503&&/occupé/i.test(msg))return noterGoogle('occupe',msg);
+  // « Opération refusée » : opération absente du script déployé (script pas à jour) ; 503 / 500 : exception du script.
+  if(j.status>=500||(j.status===400&&/^Opération refusée|mettez à jour le script|pas encore installée/i.test(msg)))return noterGoogle('script',msg||('erreur '+j.status));
+  S.google.ok=Date.now();S.google.duree=duree;S.google.erreur=null;majTemoin();
+}
+const TEXTES_GOOGLE={
+  internet:['Pas d’internet','Cet appareil n’est plus relié à internet. Vérifiez le Wi-Fi ou le câble ; la console reprend toute seule au retour d’internet.'],
+  injoignable:['Google ne répond pas','Google ne répond pas pour le moment (délai dépassé ou connexion refusée). Réessayez dans quelques minutes ; si cela dure, prévenez le responsable d’atelier.'],
+  script:['Erreur du script Google','Google répond, mais le script de la Google Sheet renvoie une erreur (souvent : script pas à jour). Prévenez le responsable d’atelier.'],
+  occupe:['Google occupé','Google est très sollicité en ce moment ; cela passe en général tout seul en quelques secondes.'],
+  lent:['Google lent','Google répond, mais lentement.'],
+  ancien:['Pas de nouvelles récentes','La dernière réponse de Google date de plusieurs minutes.'],
+  ok:['Google OK','La liaison avec la Google Sheet fonctionne.']
+};
+function typeGoogle(){const g=S.google;if(g.erreur)return g.erreur.type;if(!g.ok)return '';if(Date.now()-g.ok>5*60000)return 'ancien';if(g.duree>8000)return 'lent';return 'ok'}
+function temoinGoogle(){
+  const g=S.google,t=typeGoogle(),hm=x=>new Date(x).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+  if(!t)return '<button class="sync" id="sync" data-act="google" type="button">'+svg('horloge')+' Google…</button>';
+  const cls=t==='ok'?'ok':t==='lent'||t==='ancien'||t==='occupe'?'warn':'err';
+  const lib=t==='ok'?'Google OK · '+hm(g.ok):t==='lent'?'Google lent · '+hm(g.ok):t==='ancien'?'Dernière réponse il y a '+Math.round((Date.now()-g.ok)/60000)+' min':
+    t==='script'?'Erreur du script : '+g.erreur.message.slice(0,40):TEXTES_GOOGLE[t][0];
+  return '<button class="sync '+cls+'" id="sync" data-act="google" type="button" title="Liaison avec Google : touchez pour le détail">'+svg(cls==='ok'?'ok':'alerte')+' '+esc(lib)+'</button>';
+}
+function majTemoin(){const s=document.getElementById('sync');if(s&&S.jeton)s.outerHTML=temoinGoogle();const p=document.getElementById('panneauGoogle');if(p)ouvrirPanneauGoogle(true)}
+function ouvrirPanneauGoogle(maj){
+  let p=document.getElementById('panneauGoogle');
+  if(!p){if(maj)return;p=document.createElement('div');p.id='panneauGoogle';p.setAttribute('role','dialog');p.setAttribute('aria-label','Liaison avec Google');document.body.appendChild(p)}
+  const g=S.google,t=typeGoogle()||'ancien',x=TEXTES_GOOGLE[t];
+  p.innerHTML='<h2>'+esc(x[0])+'</h2><p style="margin:0 0 8px">'+esc(x[1])+'</p>'+(g.erreur&&g.erreur.message?'<p style="margin:0 0 8px"><b>Message :</b> '+esc(g.erreur.message)+'</p>':'')+
+    '<p class="hint" style="margin:0 0 12px">'+(g.ok?'Dernière réponse de Google : '+esc(dateFr(g.ok)+' '+heureFr(g.ok)):'Pas encore de réponse de Google.')+'</p>'+
+    '<div class="row" style="justify-content:flex-end"><button class="btn" type="button" data-act="google-fermer">Fermer</button></div>';
+}
 // Appels au script Google : POST en text/plain (pas de demande préalable du navigateur), sans cookie.
 async function appel(op,extra){
   if(!URL_SCRIPT)throw new Error('Adresse du script Google absente.');
   const corps={console:Object.assign({op:op},S.jeton&&op!=='connexion'?{jeton:S.jeton}:{},extra||{})};
-  let r;
+  let r;const t0=Date.now();
   try{r=await fetch(URL_SCRIPT,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(corps),redirect:'follow',credentials:'omit',cache:'no-store'})}
-  catch(e){throw new Error('Pas de connexion avec Google. Vérifiez internet, puis réessayez.')}
+  catch(e){noterGoogle(navigator.onLine===false?'internet':'injoignable','connexion impossible');throw new Error('Pas de connexion avec Google. Vérifiez internet, puis réessayez.')}
   let j=null;try{j=await r.json()}catch(e){}
-  if(!j||typeof j.status!=='number')throw new Error('Google ne répond pas correctement. Réessayez dans un instant.');
+  if(!j||typeof j.status!=='number'){noterGoogle('script','réponse illisible (HTTP '+r.status+')');throw new Error('Google ne répond pas correctement. Réessayez dans un instant.')}
+  noterReponseGoogle(j,Date.now()-t0);
   // Session terminée (10 min sans activité, accès coupé, code changé…) : retour à l'écran de connexion.
   if(j.status===401&&op!=='connexion'){finSession((j.data&&j.data.error)||'Session terminée : reconnectez-vous.');throw new Error('session')}
   return j;
@@ -507,7 +563,7 @@ async function demarrer(){
   if(!droit(S.page))S.page=premierePartie();
 }
 function finSession(message){
-  S.jeton='';S.moi=null;S.site=null;S.charge={};S.photos={};S.sel={};S.acc=null;ecrireJeton('');
+  S.jeton='';S.moi=null;S.site=null;S.charge={};S.photos={};S.sel={};S.acc=null;S.edit=null;S.msgCont=S.msgLanc=S.msgCal=null;ecrireJeton('');
   S.info=message||'';S.err='';render();
 }
 async function seDeconnecter(message){
@@ -521,7 +577,13 @@ setInterval(()=>{
   if(!S.jeton)return;
   if(Date.now()-S.dernierGeste>=INACTIF_MS){seDeconnecter('Déconnecté après 10 minutes sans activité.');return}
   // Vue d'ensemble et lancements : actualisés toutes les 60 s tant que la personne est là.
-  if((S.page==='accueil'||S.page==='lancements')&&Date.now()-S.maj>60000){S.charge={};chargerPage()}
+  // Pas pendant une saisie (numéro de fichier en cours de frappe, formulaire…).
+  const saisie=[...document.querySelectorAll('#page input,#page textarea')].some(i=>i===document.activeElement||(i.type!=='file'&&i.type!=='checkbox'&&i.value));
+  if((S.page==='accueil'||S.page==='lancements')&&!saisie&&!S.edit&&Date.now()-S.maj>60000){S.charge={};chargerPage()}
+  // Témoin « Google » : petite vérification si rien n'a été échangé depuis 2 min 30 (la personne est là).
+  const dernier=Math.max(S.google.ok,S.google.erreur?S.google.erreur.at:0);
+  if(document.visibilityState==='visible'&&Date.now()-dernier>150000)appel('site-lire').catch(()=>{});
+  majTemoin();
 },15000);
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -552,7 +614,7 @@ function vNav(){
       h+='<button data-go="'+p.id+'"'+(S.page===p.id?' aria-current="page"':'')+'>'+pastille(p.ico,'s')+'<span class="t">'+p.nom+'</span>'+b+'</button>';
     });
   });
-  return h+'<div class="foot">Console en ligne · lecture seule<br>Les modifications se font encore sur le PC de l’atelier.</div></nav>';
+  return h+'<div class="foot">Console en ligne<br>Certains réglages se font encore sur le PC de l’atelier.</div></nav>';
 }
 function vTop(){
   const vis=secteursVisibles(),adm=S.moi.admin;
@@ -561,13 +623,13 @@ function vTop(){
   const ini=String(S.moi.nom||'?').split(/\s+/).map(x=>x.charAt(0)).join('').slice(0,2).toUpperCase();
   const h=S.maj?new Date(S.maj).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):'';
   return '<header class="top">'+sec+'<span class="grow"></span>'+
-    '<span class="sync '+(S.etat==='err'?'err':'ok')+'" id="sync">'+svg(S.etat==='err'?'alerte':'ok')+(S.etat==='err'?' Google ne répond pas':h?' À jour · '+h:'')+'</span>'+
+    temoinGoogle()+
     '<button class="btn" data-act="actualiser">'+svg('actualiser')+'Actualiser</button>'+
     '<div class="who"><span class="av">'+esc(ini)+'</span><div><b>'+esc(S.moi.nom)+'</b><span>'+(adm?'Administrateur · tout':'Manager')+'</span></div><button class="btn" data-act="sortir">'+svg('sortie')+'Se déconnecter</button></div></header>';
 }
 function enTete(id,texte,droite){
-  // Accès des managers : la seule partie déjà en modification (administrateur), 2026-10-15.
-  const p=P(id),ro=!p.lect&&!p.pc&&!(id==='acces'&&S.moi&&S.moi.admin);
+  // « Lecture seule » : sauf les parties modifiables avec le niveau « Modification » (lot 4, 2026-10-15).
+  const p=P(id),ro=!p.lect&&!p.pc&&!peutModif(id);
   return '<div class="ph">'+pastille(p.ico,'l')+'<div class="grow"><h1>'+p.nom+(ro?'<span class="ro">'+svg('oeil')+' Lecture seule</span>':'')+'</h1><p>'+texte+'</p></div>'+(droite||'')+'</div>';
 }
 function render(){
@@ -590,7 +652,7 @@ async function chargerPage(){
     S.etat='err';
     if(n===numChargement&&el())el().innerHTML='<div class="msg err">'+svg('alerte')+'<div><b>'+esc(e.message)+'</b></div></div>';
   }
-  const s=document.getElementById('sync');if(s&&S.jeton)s.outerHTML=vTop().match(/<span class="sync[\s\S]*?<\/span>/)[0];
+  majTemoin();
 }
 // Refus du script (partie ou secteur non autorisés) : message clair, sans détail.
 const refus=r=>'<div class="msg warn">'+svg('cadenas')+'<div><b>'+(r.status===403?'Vous n’avez pas accès à cette partie pour ce secteur.':esc(r.error||'Lecture impossible.'))+'</b></div></div>';
@@ -765,11 +827,15 @@ function pageContenu(id){
     if(!r.ok)return h+refus(r);
     const st=r.data.state;
     if(!st)return h+'<div class="card vide">Aucune donnée pour ce secteur : les tablettes du secteur ne les ont pas encore envoyées.</div>';
+    const mod=peutModif(id),cle=id+'|'+sec,E=S.edit&&S.edit.cle===cle?S.edit:null;
+    if(S.msgCont)h+='<div class="msg '+S.msgCont[0]+'" role="status">'+svg(S.msgCont[0]==='ok'?'ok':'alerte')+'<div>'+S.msgCont[1]+'</div></div>';
+    if(mod&&!E)h+='<div class="row" style="margin-bottom:12px"><button class="btn pri" data-ed="nouveau">'+svg('plus')+'Nouveau</button><span class="hint">Les modifications partent tout de suite vers les tablettes du secteur '+esc(secNom(sec))+'.</span></div>';
     const l=(st[A.liste]||[]).filter(o=>!o.archived).sort((a,b)=>String(a[A.titre]).localeCompare(String(b[A.titre]),'fr',{numeric:true}));
-    if(!l.length)return h+'<div class="card vide">Rien pour l’instant dans ce secteur.</div>';
-    const cle=id+'|'+sec,sel=l.find(o=>o.id===S.sel[cle])||l[0];
+    if(!l.length&&!E)return h+'<div class="card vide">Rien pour l’instant dans ce secteur.</div>';
+    const sel=E?(l.find(o=>o.id===E.item.id)||null):l.find(o=>o.id===S.sel[cle])||l[0];
     h+='<div class="cont"><div class="liste" role="list">'+l.map(o=>'<button class="it" role="listitem" data-item="'+esc(cle)+'" data-id="'+esc(o.id)+'"'+(o===sel?' aria-current="true"':'')+'>'+pastille(p.ico,'s')+'<span>'+esc(o[A.titre]||'(sans titre)')+'<small>'+esc(A.sous(o))+'</small></span></button>').join('')+'</div>'+
-      '<section class="card det"><h2>'+esc(sel[A.titre]||'')+'</h2>'+A.detail(sel)+'</section></div>';
+      (E?vueFormulaire(p,st):'<section class="card det"><h2>'+esc(sel[A.titre]||'')+(mod?'<span class="grow"></span><button class="btn" data-ed="modifier" data-id="'+esc(sel.id)+'">'+svg('crayon')+'Modifier</button>'+
+        (S.suppr===sel.id?'<button class="btn dan plein" data-ed="supprimer-ok">Oui, supprimer</button><button class="btn" data-ed="supprimer-non">Annuler</button>':'<button class="btn dan" data-ed="supprimer" data-id="'+esc(sel.id)+'">Supprimer</button>'):'')+'</h2>'+A.detail(sel)+'</section>')+'</div>';
     if(p.app==='taches'&&(st.postes||[]).length)h+='<p class="hint">Postes : '+esc(st.postes.map(x=>x.name+(x.start?' ('+x.start+')':'')).join(' · '))+'</p>';
     return h;
   };
@@ -790,15 +856,20 @@ PAGES.lancements=async()=>{
   const r=await lire('lancements-lire');
   let h=enTete('lancements','Les machines du frittage, leur état et leur file d’attente. Actualisé toutes les minutes.');
   if(!r.ok)return h+refus(r);
-  const st=r.data.state||{},lm=machinesLancement(st),noms=Object.keys(lm).sort((a,b)=>a.localeCompare(b,'fr',{numeric:true}));
+  const st=r.data.state||{},lm=machinesLancement(st),mod=peutModif('lancements');
+  // Modification : aussi les machines du frittage du parc (pour mettre un premier fichier sur une machine libre).
+  if(mod&&droit('parc')){const pc=await lire('parc-lire');if(pc.ok&&pc.data.parc){const zs={};(pc.data.zones||[]).forEach(z=>zs[z.id]=z);
+    pc.data.parc.machines.filter(x=>x.secteur==='frittage'&&x.actif!==false&&(!x.zone||((zs[x.zone]||{}).applis||[]).some(a=>a==='releve'||a==='lancements'))).forEach(x=>{if(!lm[x.nom])lm[x.nom]={etat:'libre'}})}}
+  const noms=Object.keys(lm).sort((a,b)=>a.localeCompare(b,'fr',{numeric:true}));
+  if(S.msgLanc)h+='<div class="msg '+S.msgLanc[0]+'" role="status">'+svg(S.msgLanc[0]==='ok'?'ok':'alerte')+'<div>'+S.msgLanc[1]+'</div></div>';
   if(!noms.length)return h+'<div class="card vide">Aucune machine en lancement pour l’instant.</div>';
-  h+='<div class="mgrid">'+noms.map(n=>{const m=lm[n],f=(st.files||{})[n]||[];
+  h+='<div class="mgrid'+(mod?' lanc':'')+'">'+noms.map(n=>{const m=lm[n],f=(st.files||{})[n]||[];
     return '<section class="card"><h2>'+esc(n)+'<span class="grow"></span><span class="st st-'+esc(m.etat)+'">'+ETATS_LANC[m.etat]+'</span></h2>'+
       (m.fichier?'<p style="margin:0 0 6px"><b>En cours : '+esc(m.fichier.num)+'</b>'+(m.fichier.note?' <span class="hint">· '+esc(m.fichier.note)+'</span>':'')+'</p>'+boutonPhoto(m.fichier.photo):'')+
       (m.depuis?'<p class="hint" style="margin:0 0 6px">Depuis '+heureFr(m.depuis)+(m.par?' · '+esc(m.par):'')+'</p>':'')+
-      '<h3 style="font-size:15px;margin:10px 0 4px">File d’attente ('+f.length+')</h3>'+(f.length?'<ol style="margin:0;padding-left:22px">'+f.map(x=>'<li><b>'+esc(x.num)+'</b>'+(x.note?' · '+esc(x.note):'')+(x.photo?' '+boutonPhoto(x.photo):'')+'</li>').join('')+'</ol>':'<p class="hint" style="margin:0">Vide</p>')+'</section>'}).join('')+'</div>';
+      '<h3 style="font-size:15px;margin:10px 0 4px">File d’attente ('+f.length+')</h3>'+(mod?vueLancEdition(n,f):f.length?'<ol style="margin:0;padding-left:22px">'+f.map(x=>'<li><b>'+esc(x.num)+'</b>'+(x.note?' · '+esc(x.note):'')+(x.photo?' '+boutonPhoto(x.photo):'')+'</li>').join('')+'</ol>':'<p class="hint" style="margin:0">Vide</p>')+'</section>'}).join('')+'</div>';
   const hi=(st.histo||[]).slice(-15).reverse();
-  if(hi.length)h+='<section class="card" style="margin-top:16px"><h2>Derniers fichiers fabriqués</h2><table><thead><tr><th>Machine</th><th>Fichier</th><th>Fin</th></tr></thead><tbody>'+hi.map(x=>'<tr><td>'+esc(x.machine)+'</td><td>'+esc(x.num)+'</td><td>'+(x.fin?dateFr(x.fin)+' '+heureFr(x.fin):'')+'</td></tr>').join('')+'</tbody></table></section>';
+  if(hi.length)h+='<section class="card" style="margin-top:16px"><h2>Derniers fichiers fabriqués'+(mod?'<span class="grow"></span>'+(S.viderHisto?'<button class="btn dan plein" data-lan="vider-ok">Oui, effacer l’historique</button><button class="btn" data-lan="vider-non">Annuler</button>':'<button class="btn dan" data-lan="vider">Effacer l’historique</button>'):'')+'</h2><table><thead><tr><th>Machine</th><th>Fichier</th><th>Fin</th></tr></thead><tbody>'+hi.map(x=>'<tr><td>'+esc(x.machine)+'</td><td>'+esc(x.num)+'</td><td>'+(x.fin?dateFr(x.fin)+' '+heureFr(x.fin):'')+'</td></tr>').join('')+'</tbody></table></section>';
   return h;
 };
 
@@ -859,6 +930,7 @@ PAGES.calendrier=async()=>{
   });
   h+='</div>';
   if(!machines.length)h+='<div class="card vide">Aucune machine dans ce calendrier.</div>';
+  if(peutModif('calendrier'))h+=vueConges(st,sec);
   return h;
 };
 
@@ -931,7 +1003,7 @@ PAGES.acces=async()=>{
         '<div class="tri" role="radiogroup" aria-label="'+esc(p.nom)+'">'+[['','v0','masque','Masqué'],['lecture','v1','oeil','Lecture'],['modif','v2','crayon','Modification']].map(([k,cl,ic,l])=>
         '<button class="'+cl+'" role="radio" data-acc="droit" data-p="'+p.id+'" data-v="'+k+'" aria-checked="'+(v===k)+'" aria-pressed="'+(v===k)+'"'+(k==='modif'&&(p.lect||sp.lect)?' disabled title="Cette partie se consulte seulement"':'')+'>'+svg(ic)+l+'</button>').join('')+'</div>';
       return '<tr><td><span class="nm">'+pastille(p.ico,'s')+p.nom+'</span></td><td>'+cell+'</td></tr>'}).join('')).join('')+'</tbody></table>'+
-    '<p class="hint" style="margin:10px 0 0">Pour l’instant, la console en ligne ne fait que montrer : « Modification » servira quand les pages de modification seront prêtes.</p></section>';
+    '<p class="hint" style="margin:10px 0 0">« Modification » : contenus des applis, calendrier (congés) et lancements se modifient déjà depuis la console en ligne.</p></section>';
   // Code de la console.
   if(c)h+='<section class="card"><h2>'+svg('cadenas')+'Code de la console <span class="tag '+(c.codeDefini?'ok">✓ défini':'warn">pas encore défini')+'</span></h2>'+
     '<div class="row"><label class="lbl" style="margin:0;min-width:240px">Nouveau code<input class="in" type="password" id="accCode" autocomplete="new-password" minlength="8"></label>'+
@@ -939,9 +1011,12 @@ PAGES.acces=async()=>{
     '<button class="btn pri" data-acc="code" style="align-self:flex-end">'+(c.codeDefini?'Changer le code':'Définir le code')+'</button></div>'+
     '<p class="hint" style="margin:10px 0 0">8 caractères au moins (sans compter les espaces), différent du code des tablettes. Le code n’est jamais réaffiché : donnez-le vous-même à la personne. Changer le code déconnecte ses sessions ouvertes.</p></section>';
   else h+='<section class="card"><div class="hint">Enregistrez d’abord cet accès, puis définissez son code de la console.</div></section>';
-  // Journal : pas encore d'opération de lecture du journal (onglet « Console — journal » de la Google Sheet).
-  if(c)h+='<section class="card"><h2>'+svg('horloge')+'Dernières connexions</h2><p style="margin:0">'+(c.vuLe?'Dernière connexion réussie : <b>'+dateFr(c.vuLe)+' à '+heureFr(c.vuLe)+'</b>.':'Jamais connecté.')+'</p>'+
-    '<p class="hint" style="margin:6px 0 0">Le journal complet (connexions réussies et refusées, modifications) est dans la Google Sheet, onglet « Console — journal ».</p></section>';
+  // Journal de la personne (journal-lire, lot 4) : connexions réussies et refusées, modifications.
+  if(c){const jr=await lire('journal-lire',{id:c.id,limite:20}),jl=jr.ok?jr.data.lignes:[];
+    h+='<section class="card"><h2>'+svg('horloge')+'Dernières connexions et actions</h2>'+(jl.length?'<table><thead><tr><th>Quand</th><th>Quoi</th><th>Résultat</th></tr></thead><tbody>'+
+      jl.map(x=>'<tr><td style="white-space:nowrap">'+esc(x.date)+'</td><td>'+esc(x.operation)+(x.secteur?' <span class="tag">'+esc(secNom(x.secteur))+'</span>':'')+'</td><td>'+(/^(refus|bloqu)/.test(x.resultat)?'<span class="tag err">✕</span> ':'')+esc(x.resultat)+'</td></tr>').join('')+'</tbody></table>'
+      :'<p class="hint" style="margin:0">'+(jr.ok?'Rien dans le journal pour cette personne.':'Journal illisible pour le moment.')+'</p>')+
+      '<p class="hint" style="margin:6px 0 0">Le journal complet est dans la Google Sheet, onglet « Console — journal ».</p></section>'}
   // Couper l'accès tout de suite (avec confirmation).
   if(c&&!soi)h+='<section class="card" style="border-color:#f0c2c4"><div class="row"><div style="flex:1;min-width:260px"><b>Couper l’accès tout de suite</b><div class="hint">La personne est déconnectée à sa prochaine action, sur tous ses appareils. Rien n’est effacé.</div></div>'+
     (!c.actif?'<span class="tag err">✕ Accès coupé</span>':a.couper?'<button class="btn dan plein" data-acc="couper-ok">'+svg('cadenas')+'Oui, couper l’accès de '+esc(nom)+'</button><button class="btn" data-acc="couper-non">Annuler</button>':'<button class="btn dan" data-acc="couper">'+svg('cadenas')+'Couper l’accès</button>')+'</div></section>';
@@ -997,7 +1072,187 @@ async function actionAcces(b){
   }
 }
 
-// Parties qui se font sur le PC de l'atelier.
+
+// ===============================================================================================================
+// Lot 4 (2026-10-15) : MODIFICATIONS depuis la console en ligne. Les boutons n'apparaissent qu'avec le niveau
+// « Modification » de la partie ; le script Google vérifie de toute façon chaque écriture (partie, secteur, version).
+// Brouillon en mémoire seulement (jamais dans le navigateur) ; rien de secret dedans.
+const EDITABLES={acces:1,'c-maint':1,'c-fiches':1,'c-proc':1,'c-taches':1,lancements:1,calendrier:1};
+const peutModif=id=>droit(id)==='modif'&&!!EDITABLES[id];
+// Identifiant tiré au hasard (crypto) : photos, fichiers des lancements, nouveaux éléments.
+function alea(n){const a=new Uint8Array(n);crypto.getRandomValues(a);return [...a].map(x=>'abcdefghijklmnopqrstuvwxyz0123456789'[x%36]).join('')}
+// Photo choisie sur ce PC : réduite (1600 px, JPEG), envoyée à Google (photo-ecrire), puis son nom est rangé.
+async function envoyerPhoto(fichier){
+  if(!fichier||!/^image\//.test(fichier.type))throw new Error('Choisissez une image.');
+  const bmp=await createImageBitmap(fichier),k=Math.min(1,1600/Math.max(bmp.width,bmp.height)),cv=document.createElement('canvas');
+  cv.width=Math.round(bmp.width*k);cv.height=Math.round(bmp.height*k);cv.getContext('2d').drawImage(bmp,0,0,cv.width,cv.height);
+  let data=cv.toDataURL('image/jpeg',.85);if(data.length>2900000)data=cv.toDataURL('image/jpeg',.6);
+  const id='p'+alea(24),j=await appel('photo-ecrire',{id,data});
+  if(j.status!==200)throw new Error((j.data&&j.data.error)||'Photo refusée.');
+  if(/^data:image\/jpeg;base64,[A-Za-z0-9+\/=]+$/.test(data))S.photos[id]=data;
+  return id;
+}
+const vignette=id=>id?(S.photos[id]?'<img class="photo" alt="Photo" style="max-width:220px" src="'+S.photos[id]+'">':boutonPhoto(id)):'';
+
+// --- Formulaires des contenus (mêmes champs que l'éditeur « Contenus » de la console du PC) ---------------------
+const FORMS={
+  maintenance:{nouveau:id=>({id:'m'+id,title:'',machines:[],tools:[],safety:[],steps:[],checks:[]}),champs:[
+    {k:'title',t:'texte',l:'Nom de l’opération',req:1},{k:'machines',t:'machines',l:'Machines (aucune cochée = toutes les machines)'},
+    {k:'tools',t:'lignes',l:'Matériel (une ligne par élément)'},{k:'safety',t:'lignes',l:'Sécurité (une ligne par consigne)'},
+    {k:'steps',t:'etapes',l:'Étapes',nouveau:()=>({title:'',detail:'',photo:null,axes:false}),sous:[{k:'title',t:'texte',l:'Étape'},{k:'detail',t:'zone',l:'Détail'},{k:'photo',t:'photo',l:'Photo'},{k:'axes',t:'case',l:'À faire sur chaque broche'}]},
+    {k:'checks',t:'lignes',l:'Contrôles à la fin (une ligne par contrôle)'}]},
+  fiches:{nouveau:id=>({id:'f'+id,title:'',intro:'',signs:[],before:'',reflexes:[],checks:[],rappel:''}),champs:[
+    {k:'title',t:'texte',l:'Titre de la fiche',req:1},{k:'intro',t:'zone',l:'Introduction'},{k:'signs',t:'lignes',l:'Signes du problème (une ligne par signe)'},
+    {k:'before',t:'zone',l:'Avant de commencer'},
+    {k:'reflexes',t:'etapes',l:'Réflexes',nouveau:()=>({title:'',items:[]}),sous:[{k:'title',t:'texte',l:'Réflexe'},{k:'items',t:'lignes',l:'Gestes (une ligne par geste)'}]},
+    {k:'checks',t:'lignes',l:'Vérifications'},{k:'rappel',t:'zone',l:'Rappel'}]},
+  procedures:{nouveau:id=>({id:'pr'+id,titre:'',categorie:'',statut:'brouillon',objectif:'',quand:'',responsable:'',duree:'',machines:[],materiel:[],securite:[],etapes:[],controles:[],probleme:''}),champs:[
+    {k:'titre',t:'texte',l:'Titre',req:1},{k:'categorie',t:'liste',l:'Catégorie',de:st=>st.categories||[]},
+    {k:'statut',t:'choix',l:'Statut',choix:[['brouillon','Brouillon (pas visible des opérateurs)'],['validee','Validée (visible des opérateurs)']]},
+    {k:'objectif',t:'zone',l:'Objectif'},{k:'quand',t:'zone',l:'Quand'},{k:'responsable',t:'texte',l:'Responsable'},{k:'duree',t:'texte',l:'Durée'},
+    {k:'machines',t:'machines',l:'Machines'},{k:'materiel',t:'lignes',l:'Matériel'},{k:'securite',t:'lignes',l:'Sécurité'},
+    {k:'etapes',t:'etapes',l:'Étapes',nouveau:()=>({titre:'',detail:'',attention:'',photo:null}),sous:[{k:'titre',t:'texte',l:'Étape'},{k:'detail',t:'zone',l:'Détail'},{k:'attention',t:'texte',l:'Point d’attention'},{k:'photo',t:'photo',l:'Photo'}]},
+    {k:'controles',t:'lignes',l:'Contrôles'},{k:'probleme',t:'zone',l:'En cas de problème'}]},
+  taches:{nouveau:id=>({id:'t'+id,name:'',cat:'Général'}),champs:[
+    {k:'name',t:'texte',l:'Nom de la tâche',req:1},{k:'cat',t:'liste',l:'Catégorie',de:st=>[...new Set((st.tasks||[]).map(x=>x.cat).filter(Boolean))]},
+    {k:'aide',t:'zone',l:'Comment faire'}]}
+};
+const lireChemin=(o,c)=>c.split('.').reduce((x,k)=>x==null?x:x[k],o);
+function ecrireChemin(o,c,v){const p=c.split('.'),d=p.pop();const x=p.reduce((y,k)=>y[k],o);x[d]=v}
+function champ(f,v,chemin,st){
+  const id='f-'+chemin.replace(/\./g,'-'),lab=t=>'<label class="lbl" for="'+id+'">'+t+'</label>';
+  if(f.t==='texte')return '<div>'+lab(f.l)+'<input class="in" id="'+id+'" data-f="'+chemin+'" value="'+esc(v||'')+'"'+(f.req?' required':'')+'></div>';
+  if(f.t==='zone')return '<div>'+lab(f.l)+'<textarea class="in" id="'+id+'" rows="3" data-f="'+chemin+'">'+esc(v||'')+'</textarea></div>';
+  if(f.t==='lignes')return '<div>'+lab(f.l)+'<textarea class="in" id="'+id+'" rows="3" data-f="'+chemin+'" data-lignes="1">'+esc((v||[]).join('\n'))+'</textarea></div>';
+  if(f.t==='liste'){const l=f.de(st);return '<div>'+lab(f.l)+'<input class="in" id="'+id+'" data-f="'+chemin+'" list="'+id+'-l" value="'+esc(v||'')+'"><datalist id="'+id+'-l">'+l.map(x=>'<option value="'+esc(x)+'">').join('')+'</datalist></div>'}
+  if(f.t==='choix')return '<div>'+lab(f.l)+'<select class="in" id="'+id+'" data-f="'+chemin+'">'+f.choix.map(([k,t])=>'<option value="'+k+'"'+(v===k?' selected':'')+'>'+t+'</option>').join('')+'</select></div>';
+  if(f.t==='case')return '<label class="row" style="gap:8px;min-height:44px"><input type="checkbox" style="width:22px;height:22px" data-f="'+chemin+'"'+(v?' checked':'')+'>'+f.l+'</label>';
+  if(f.t==='machines'){const l=st.machines||[];return '<fieldset class="fs"><legend>'+f.l+'</legend><div class="row">'+(l.length?l.map(m=>'<label class="chip"><input type="checkbox" data-fm="'+chemin+'" value="'+esc(m)+'"'+((v||[]).includes(m)?' checked':'')+'>'+esc(m)+'</label>').join(''):'<span class="hint">Aucune machine dans ce secteur.</span>')+'</div></fieldset>'}
+  if(f.t==='photo')return '<div><span class="lbl" style="margin-bottom:4px">'+f.l+'</span><div class="row">'+vignette(v)+
+    '<label class="btn">'+svg('image')+(v?'Remplacer':'Ajouter une photo')+'<input type="file" accept="image/*" hidden data-fphoto="'+chemin+'"></label>'+(v?'<button class="btn" data-ed="photo-retirer" data-c="'+chemin+'">Retirer</button>':'')+'</div></div>';
+  if(f.t==='etapes'){const l=v||[];return '<fieldset class="fs"><legend>'+f.l+' ('+l.length+')</legend>'+l.map((x,i)=>'<div class="etape"><div class="row"><b>'+(i+1)+'.</b><span class="grow"></span>'+
+      '<button class="btn" data-ed="etape-haut" data-k="'+chemin+'" data-i="'+i+'"'+(i?'':' disabled')+' aria-label="Monter">↑</button><button class="btn" data-ed="etape-bas" data-k="'+chemin+'" data-i="'+i+'"'+(i<l.length-1?'':' disabled')+' aria-label="Descendre">↓</button>'+
+      '<button class="btn" data-ed="etape-moins" data-k="'+chemin+'" data-i="'+i+'">Retirer</button></div>'+f.sous.map(s=>champ(s,x[s.k],chemin+'.'+i+'.'+s.k,st)).join('')+'</div>').join('')+
+    '<button class="btn" data-ed="etape-plus" data-k="'+chemin+'">'+svg('plus')+'Ajouter</button></fieldset>'}
+  return '';
+}
+function vueFormulaire(p,st){
+  const E=S.edit,F=FORMS[p.app],titre=CONTENUS[p.app].titre;
+  return '<section class="card det edition"><h2>'+(E.nouveau?'Nouveau':'Modifier')+' : '+esc(E.item[titre]||'(sans titre)')+'</h2>'+
+    (E.msg?'<div class="msg '+E.msg[0]+'">'+svg('alerte')+'<div>'+E.msg[1]+'</div></div>':'')+
+    '<div class="form">'+F.champs.map(f=>champ(f,E.item[f.k],f.k,st)).join('')+'</div>'+
+    '<div class="savebar" style="position:sticky;left:auto;right:auto;bottom:12px"><span class="st">'+(E.sale?'<b style="color:var(--warn)">• Modifications à envoyer.</b>':'Rien de modifié.')+' Les tablettes les reçoivent à leur prochain échange.</span>'+
+    '<button class="btn" data-ed="annuler">Annuler</button><button class="btn pri" data-ed="enregistrer">Enregistrer et envoyer</button></div></section>';
+}
+// Élément à envoyer : les lignes et étapes vides sont retirées (comme la console du PC).
+function itemPropre(app,x){
+  const o=JSON.parse(JSON.stringify(x)),vide=s=>!Object.keys(s).some(k=>k!=='axes'&&s[k]&&(Array.isArray(s[k])?s[k].length:true));
+  ['steps','etapes','reflexes'].forEach(k=>{if(Array.isArray(o[k]))o[k]=o[k].filter(s=>!vide(s))});
+  return o;
+}
+async function actionEdition(b){
+  const E=S.edit,act=b.dataset.ed;
+  if(act==='nouveau'||act==='modifier'){
+    if(S.edit&&S.edit.sale){S.edit.msg=['warn','Enregistrez ou annulez d’abord la modification en cours.'];return chargerPage()}
+    const p=P(S.page),sec=unSecteur(),r=await lire('contenu-lire',{app:p.app,secteur:sec}),st=r.data.state||{},A=CONTENUS[p.app];
+    if(act==='nouveau'){S.edit={cle:S.page+'|'+sec,app:p.app,sec,nouveau:true,item:FORMS[p.app].nouveau(alea(10)),base:null,sale:true}}
+    else{const o=(st[A.liste]||[]).find(x=>x.id===b.dataset.id);if(!o)return;S.edit={cle:S.page+'|'+sec,app:p.app,sec,nouveau:false,item:JSON.parse(JSON.stringify(o)),base:JSON.stringify(o),updated:o.updated||0,sale:false}}
+    S.msgCont=null;return chargerPage();
+  }
+  if(!E&&!/^supprimer/.test(act))return;
+  if(act==='annuler'){S.edit=null;S.msgCont=null;return chargerPage()}
+  if(act==='etape-plus'){const f=FORMS[E.app].champs.find(x=>x.k===b.dataset.k);E.item[b.dataset.k]=(E.item[b.dataset.k]||[]).concat(f.nouveau());E.sale=true;return chargerPage()}
+  if(/^etape-/.test(act)){const l=E.item[b.dataset.k],i=+b.dataset.i;
+    if(act==='etape-moins')l.splice(i,1);else{const j=act==='etape-haut'?i-1:i+1;if(j<0||j>=l.length)return;[l[i],l[j]]=[l[j],l[i]]}
+    E.sale=true;return chargerPage()}
+  if(act==='photo-retirer'){ecrireChemin(E.item,b.dataset.c,null);E.sale=true;return chargerPage()}
+  if(act==='enregistrer'){
+    const A=CONTENUS[E.app],F=FORMS[E.app],item=itemPropre(E.app,E.item);
+    if(!String(item[A.titre]||'').trim()){E.msg=['err','<b>Donnez un titre.</b>'];return chargerPage()}
+    if(E.app==='procedures'&&item.statut==='validee'&&!(item.etapes||[]).some(s=>s.titre||s.detail)){E.msg=['err','<b>Ajoutez au moins une étape avant de valider.</b>'];return chargerPage()}
+    const bases=E.nouveau?{}:{[item.id]:E.app==='taches'?{empreinte:E.base}:{updated:E.updated}};
+    b.disabled=true;
+    const j=await appel('contenu-ecrire',{app:E.app,secteur:E.sec,items:[item],bases});
+    S.charge={};
+    if(j.status===200){S.sel[E.cle]=item.id;S.edit=null;S.msgCont=['ok','Enregistré et envoyé : les tablettes le reçoivent à leur prochain échange.']}
+    else if(j.status===409)E.msg=['err','<b>'+esc(j.data.error||'Modifié ailleurs.')+'</b> '+esc((j.data.refuses||[]).map(x=>x.titre+' : '+x.raison).join(' ; '))+' <button class="btn" data-ed="annuler">Recharger (abandonner mes changements)</button>'];
+    else E.msg=['err','<b>'+esc((j.data&&j.data.error)||'Enregistrement refusé.')+'</b>'];
+    void F;return chargerPage();
+  }
+  if(act==='supprimer'){S.suppr=b.dataset.id;return chargerPage()}
+  if(act==='supprimer-non'){S.suppr=null;return chargerPage()}
+  if(act==='supprimer-ok'){
+    const p=P(S.page),sec=unSecteur(),A=CONTENUS[p.app],r=await lire('contenu-lire',{app:p.app,secteur:sec}),o=((r.data.state||{})[A.liste]||[]).find(x=>x.id===S.suppr);
+    if(!o){S.suppr=null;return chargerPage()}
+    const j=await appel('contenu-ecrire',{app:p.app,secteur:sec,supprimer:o.id,bases:{[o.id]:p.app==='taches'?{empreinte:JSON.stringify(o)}:{updated:o.updated||0}}});
+    S.charge={};S.suppr=null;
+    S.msgCont=j.status===200?['ok','« '+esc(o[A.titre])+' » est retiré'+(p.app==='taches'?' (archivé : les jours déjà enregistrés le gardent).':' des tablettes.')]:['err','<b>'+esc((j.data&&j.data.error)||'Suppression refusée.')+'</b>'];
+    return chargerPage();
+  }
+}
+function champSaisi(el){
+  const E=S.edit;if(!E)return;
+  if(el.dataset.f){const v=el.type==='checkbox'?el.checked:el.dataset.lignes?el.value.split('\n').map(x=>x.trim()).filter(Boolean):el.value;ecrireChemin(E.item,el.dataset.f,v);E.sale=true;const st=document.querySelector('.edition .savebar .st');if(st)st.innerHTML='<b style="color:var(--warn)">• Modifications à envoyer.</b> Les tablettes les reçoivent à leur prochain échange.'}
+  if(el.dataset.fm){const l=[...document.querySelectorAll('[data-fm="'+el.dataset.fm+'"]:checked')].map(x=>x.value);ecrireChemin(E.item,el.dataset.fm,l);E.sale=true}
+}
+
+// --- Lancements (bureau) : mêmes gestes que l'onglet Lancements de la console du PC ---------------------------
+async function envoyerLancements(actions,msgOk){
+  // Identifiant de chaque action tiré ici : un double envoi n'est appliqué qu'une fois par le script.
+  const j=await appel('lancements-actions',{actions:actions.map(a=>Object.assign({id:alea(16)},a))});S.charge={};
+  const refus=j.status===200?Object.values(j.data.refus||{}):[];
+  S.msgLanc=j.status!==200?['err','<b>'+esc((j.data&&j.data.error)||'Refusé.')+'</b>']:refus.length?['warn','En partie refusé : '+esc(refus.join(', '))]:msgOk?['ok',msgOk]:null;
+  return chargerPage();
+}
+async function actionLancements(b){
+  const act=b.dataset.lan,m=b.dataset.m;
+  if(act==='ajouter'){
+    const carte=b.closest('section'),num=carte.querySelector('[data-lan-num]'),note=carte.querySelector('[data-lan-note]');
+    const nums=String(num.value).split(/[,;]/).map(x=>x.trim()).filter(Boolean);
+    if(!nums.length){S.msgLanc=['err','<b>Tapez un numéro de fichier.</b>'];return chargerPage()}
+    return envoyerLancements(nums.map(n=>({type:'ajouter',machine:m,fid:'f'+alea(12),num:n,note:note.value.trim()})),nums.length+' fichier(s) ajouté(s) pour '+esc(m)+'.');
+  }
+  if(act==='haut'||act==='bas')return envoyerLancements([{type:'deplacer',machine:m,fid:b.dataset.fid,pos:Math.max(0,+b.dataset.pos+(act==='haut'?-1:1))}]);
+  if(act==='retirer')return envoyerLancements([{type:'retirer',machine:m,fid:b.dataset.fid}],'Fichier retiré de la file.');
+  if(act==='plan-retirer')return envoyerLancements([{type:'modifier',machine:m,fid:b.dataset.fid,photo:''}],'Plan retiré.');
+  if(act==='vider'){S.viderHisto=true;return chargerPage()}
+  if(act==='vider-non'){S.viderHisto=false;return chargerPage()}
+  if(act==='vider-ok'){S.viderHisto=false;return envoyerLancements([{type:'vider-histo',avant:Date.now()}],'Historique effacé.')}
+}
+function vueLancEdition(n,f){
+  return '<div class="row" style="margin-top:10px"><input class="in" data-lan-num placeholder="N° de fichier (plusieurs : séparés par des virgules)" style="flex:2;min-width:160px"><input class="in" data-lan-note placeholder="Note (facultatif)" style="flex:1;min-width:110px"><button class="btn pri" data-lan="ajouter" data-m="'+esc(n)+'">'+svg('plus')+'Ajouter</button></div>'+
+    (f.length?'<ol class="file">'+f.map((x,i)=>'<li><div class="row" style="gap:6px"><b>'+esc(x.num)+'</b>'+(x.note?'<span class="hint">· '+esc(x.note)+'</span>':'')+'<span class="grow"></span>'+
+      '<button class="btn" data-lan="haut" data-m="'+esc(n)+'" data-fid="'+esc(x.id)+'" data-pos="'+i+'"'+(i?'':' disabled')+' aria-label="Monter">↑</button><button class="btn" data-lan="bas" data-m="'+esc(n)+'" data-fid="'+esc(x.id)+'" data-pos="'+i+'"'+(i<f.length-1?'':' disabled')+' aria-label="Descendre">↓</button>'+
+      '<button class="btn" data-lan="retirer" data-m="'+esc(n)+'" data-fid="'+esc(x.id)+'" aria-label="Retirer">✕</button></div>'+
+      '<div class="row" style="gap:6px;margin-top:4px">'+(x.photo?vignette(x.photo)+'<button class="btn" data-lan="plan-retirer" data-m="'+esc(n)+'" data-fid="'+esc(x.id)+'">Retirer le plan</button>':'')+
+      '<label class="btn">'+svg('image')+(x.photo?'Remplacer le plan':'Joindre le plan du plateau')+'<input type="file" accept="image/*" hidden data-lan-photo="'+esc(n)+'" data-fid="'+esc(x.id)+'"></label></div></li>').join('')+'</ol>':'<p class="hint" style="margin:6px 0 0">File d’attente vide.</p>');
+}
+
+// --- Calendrier : congés (le reste des réglages se fait dans l'appli Maintenance) -----------------------------
+function vueConges(st,sec){
+  const cal=st.cal,l=(cal.conges||[]).slice().sort((a,b)=>String(a.du).localeCompare(String(b.du)));
+  return '<section class="card" style="margin-top:16px"><h2>'+pastille('calendrier','s')+'Congés et absences — '+esc(secNom(sec))+'</h2>'+
+    (S.msgCal?'<div class="msg '+S.msgCal[0]+'">'+svg('alerte')+'<div>'+S.msgCal[1]+'</div></div>':'')+
+    (l.length?'<table><thead><tr><th>Personne</th><th>Du</th><th>Au</th><th>Remplacée par</th><th></th></tr></thead><tbody>'+l.map(c=>'<tr><td><b>'+esc(c.nom)+'</b></td><td>'+esc(dFr(c.du))+'</td><td>'+esc(dFr(c.au))+'</td><td>'+esc((cal.rempl||{})[c.id]||'proposé automatiquement')+'</td>'+
+      '<td style="text-align:right"><button class="btn" data-cg="retirer" data-id="'+esc(c.id)+'">Retirer</button></td></tr>').join('')+'</tbody></table>':'<p class="hint">Aucun congé noté.</p>')+
+    '<div class="row" style="margin-top:12px;align-items:flex-end"><label class="lbl" style="margin:0;min-width:200px">Personne<select class="in" id="cgNom">'+(st.operators||[]).map(n=>'<option>'+esc(n)+'</option>').join('')+'</select></label>'+
+    '<label class="lbl" style="margin:0">Du<input class="in" type="date" id="cgDu"></label><label class="lbl" style="margin:0">Au<input class="in" type="date" id="cgAu"></label>'+
+    '<button class="btn pri" data-cg="ajouter">'+svg('plus')+'Ajouter le congé</button></div>'+
+    '<p class="hint" style="margin:8px 0 0">Les autres réglages (roulement, règles, jours fermés) se font dans l’appli Maintenance.</p></section>';
+}
+async function actionConges(b){
+  const sec=unSecteur(),r=await lire('calendrier-lire',{secteur:sec}),cal=r.data&&r.data.cal;if(!cal)return;
+  const n=JSON.parse(JSON.stringify(cal));n.conges=n.conges||[];n.rempl=n.rempl||{};let resume='';
+  if(b.dataset.cg==='ajouter'){
+    const nom=document.getElementById('cgNom').value,du=document.getElementById('cgDu').value,au=document.getElementById('cgAu').value||du;
+    if(!nom||!/^\d{4}-\d\d-\d\d$/.test(du)||au<du){S.msgCal=['err','<b>Choisissez la personne et les dates (la fin après le début).</b>'];return chargerPage()}
+    n.conges.push({id:'c'+alea(10),nom,du,au});resume='congé ajouté : '+nom+' du '+du+' au '+au;
+  }else{const c=n.conges.find(x=>x.id===b.dataset.id);n.conges=n.conges.filter(x=>x.id!==b.dataset.id);delete n.rempl[b.dataset.id];resume='congé retiré'+(c?' : '+c.nom:'')}
+  const j=await appel('calendrier-ecrire',{secteur:sec,cal:n,depuis:cal.maj||0,resume});S.charge={};
+  S.msgCal=j.status===200?['ok','Calendrier enregistré : les tablettes le reçoivent à leur prochain échange.']:j.status===409?['err','<b>Le calendrier a été modifié ailleurs entre-temps.</b> Il vient d’être rechargé : refaites la modification.']:['err','<b>'+esc((j.data&&j.data.error)||'Refusé.')+'</b>'];
+  return chargerPage();
+}
+
 function vPC(){
   const p=P(S.page);
   if(p.id==='aide')return enTete('aide','Comment se servir de la console en ligne.')+'<section class="card det">'+
@@ -1020,28 +1275,50 @@ document.addEventListener('submit',e=>{
 document.addEventListener('click',async e=>{
   const b=e.target.closest('button');if(!b)return;
   if(b.dataset.acc){S.dernierGeste=Date.now();actionAcces(b).catch(x=>{if(x.message!=='session'){A().msg=['err','<b>'+esc(x.message)+'</b>'];chargerPage()}});return}
+  // Modification en cours dans un contenu : on ne la perd pas en changeant de page sans le vouloir.
+  if((b.dataset.go||b.dataset.sec!==undefined||b.dataset.item)&&S.edit&&S.edit.sale){S.edit.msg=['warn','Enregistrez ou annulez d’abord la modification en cours.'];chargerPage();return}
+  if(b.dataset.ed){S.dernierGeste=Date.now();actionEdition(b).catch(x=>{if(x.message!=='session'){S.msgCont=['err','<b>'+esc(x.message)+'</b>'];chargerPage()}});return}
+  if(b.dataset.lan){actionLancements(b).catch(x=>{if(x.message!=='session'){S.msgLanc=['err','<b>'+esc(x.message)+'</b>'];chargerPage()}});return}
+  if(b.dataset.cg){actionConges(b).catch(x=>{if(x.message!=='session'){S.msgCal=['err','<b>'+esc(x.message)+'</b>'];chargerPage()}});return}
+  if(b.dataset.go||b.dataset.sec!==undefined){S.edit=null;S.suppr=null;S.msgCont=S.msgLanc=S.msgCal=null;S.viderHisto=false}
   if(b.dataset.go){S.page=b.dataset.go;try{history.replaceState(null,'','#'+S.page)}catch(x){}render();scrollTo(0,0);return}
   if(b.dataset.sec!==undefined){S.secteur=b.dataset.sec;S.semaine='';render();return}
   if(b.dataset.act==='sortir'){seDeconnecter();return}
+  if(b.dataset.act==='google'){ouvrirPanneauGoogle();return}
+  if(b.dataset.act==='google-fermer'){const p=document.getElementById('panneauGoogle');if(p)p.remove();return}
   if(b.dataset.act==='actualiser'){S.charge={};render();return}
   if(b.dataset.parc!==undefined){S.sel.parc=b.dataset.parc;chargerPage();return}
-  if(b.dataset.item){S.sel[b.dataset.item]=b.dataset.id;chargerPage();return}
+  if(b.dataset.item){S.sel[b.dataset.item]=b.dataset.id;S.edit=null;S.suppr=null;S.msgCont=null;chargerPage();return}
   if(b.dataset.semaine!==undefined){S.semaine=b.dataset.semaine;chargerPage();return}
   if(b.dataset.photo){
     const id=b.dataset.photo,zone=b.nextElementSibling;
     b.disabled=true;b.textContent='Chargement…';
     try{
-      if(!S.photos[id]){const r=await appel('photo-lire',{id});if(r.status!==200)throw new Error(r.status===429?'Trop de photos demandées : réessayez plus tard.':(r.data&&r.data.error)||'Photo absente.');S.photos[id]=r.data.data}
-      if(!/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+\/=]+$/.test(S.photos[id]))throw new Error('Photo illisible.');
+      if(!S.photos[id]){const r=await appel('photo-lire',{id});if(r.status!==200)throw new Error(r.status===429?'Trop de photos demandées : réessayez plus tard.':(r.data&&r.data.error)||'Photo absente.');
+        // Contrôlée AVANT d'être gardée (relecture 2026-10-15) : seulement une image en base64.
+        if(!/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+\/=]+$/.test(String(r.data.data||'')))throw new Error('Photo illisible.');
+        S.photos[id]=r.data.data}
       if(zone){zone.innerHTML='<img class="photo" alt="Photo" src="'+S.photos[id]+'">'}
       b.remove();
     }catch(x){if(x.message==='session')return;b.disabled=false;b.textContent=x.message}
   }
 });
-document.addEventListener('change',e=>{if(e.target.id==='accFin'){const v=e.target.value;changeBrouillon(x=>{x.fin=/^\d{4}-\d\d-\d\d$/.test(v)?v:''})}});
-document.addEventListener('input',e=>{if(e.target.id==='parcQ'){S.parcQ=e.target.value;clearTimeout(S.tq);S.tq=setTimeout(async()=>{await chargerPage();const q=document.getElementById('parcQ');if(q){q.focus();q.setSelectionRange(q.value.length,q.value.length)}},250)}});
+document.addEventListener('change',async e=>{const el=e.target;
+  if(el.dataset&&el.dataset.fm)return champSaisi(el);
+  if(el.dataset&&(el.dataset.f&&(el.type==='checkbox'||el.tagName==='SELECT')))return champSaisi(el);
+  // Photo d'une étape (contenus) ou plan d'un fichier (lancements) : envoyée tout de suite à Google.
+  if(el.dataset&&(el.dataset.fphoto||el.dataset.lanPhoto)&&el.files&&el.files[0]){
+    const lab=el.closest('label');if(lab)lab.firstChild&&(lab.lastChild.previousSibling.textContent=' Envoi…');
+    try{const id=await envoyerPhoto(el.files[0]);
+      if(el.dataset.fphoto&&S.edit){ecrireChemin(S.edit.item,el.dataset.fphoto,id);S.edit.sale=true;chargerPage()}
+      else if(el.dataset.lanPhoto)envoyerLancements([{type:'modifier',machine:el.dataset.lanPhoto,fid:el.dataset.fid,photo:id}],'Plan joint.');
+    }catch(x){if(x.message==='session')return;if(el.dataset.fphoto&&S.edit){S.edit.msg=['err','<b>'+esc(x.message)+'</b>']}else S.msgLanc=['err','<b>'+esc(x.message)+'</b>'];chargerPage()}
+    return;
+  }
+  if(e.target.id==='accFin'){const v=e.target.value;changeBrouillon(x=>{x.fin=/^\d{4}-\d\d-\d\d$/.test(v)?v:''})}});
+document.addEventListener('input',e=>{if(e.target.dataset&&e.target.dataset.f&&e.target.type!=='checkbox'&&e.target.tagName!=='SELECT'){champSaisi(e.target);return}if(e.target.id==='parcQ'){S.parcQ=e.target.value;clearTimeout(S.tq);S.tq=setTimeout(async()=>{await chargerPage();const q=document.getElementById('parcQ');if(q){q.focus();q.setSelectionRange(q.value.length,q.value.length)}},250)}});
 
-addEventListener('hashchange',()=>{const h=decodeURIComponent(location.hash.slice(1));if(P(h)&&S.moi&&h!==S.page){S.page=h;render()}});
+addEventListener('hashchange',()=>{const h=decodeURIComponent(location.hash.slice(1));if(P(h)&&h!==S.page&&!(S.edit&&S.edit.sale)){S.page=h;S.edit=null;if(S.moi)render()}});
 // Démarrage : session de cet onglet encore valable ? (le script le dit)
 (async()=>{
   S.jeton=lireJeton();
