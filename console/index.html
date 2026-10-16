@@ -216,6 +216,7 @@ textarea.in{min-height:84px;resize:vertical;font:inherit}
 .fs .chip input{width:18px;height:18px}
 .etape{border:1px dashed #c9d3d7;border-radius:10px;padding:10px 12px;margin:0 0 10px;display:grid;gap:10px;background:#fbfdfd}
 ol.file{margin:8px 0 0;padding-left:22px}
+.row.etape{display:flex;align-items:flex-end}
 .mgrid.lanc{grid-template-columns:repeat(auto-fill,minmax(380px,1fr))}ol.file li{margin:0 0 8px}
 .det .row .btn{min-width:44px}
 @media (max-width:1280px){.g3{grid-template-columns:1fr}.parc.ouvert{grid-template-columns:minmax(0,1fr) 340px}}
@@ -229,6 +230,8 @@ ol.file{margin:8px 0 0;padding-left:22px}
 'use strict';
 // Adresse du script Google : rangée ici par construire-unique.mjs à la publication (l'adresse seulement, JAMAIS de code).
 var GOOGLE_URL_PUBLIE="https://script.google.com/macros/s/AKfycbze1gObxtHz27INigV6AM_PSkjHxhT3uRpDEusERH9wzZkoowbF93iVKCtuGz02x5pBog/exec";
+// true quand la page est servie par la console du PC (serveur.mjs, lot 7) : construire-unique.mjs assemblerConsole.
+var CONSOLE_PC=false;
 
 // ---------------------------------------------------------------------------------------------------------------
 // Moteur du calendrier de maintenance : recopié de l'appli Maintenance (bloc <calendrier>) par construire-unique.mjs.
@@ -372,6 +375,8 @@ var CalMaint=(function(){
 // Essai sur ce PC (page servie par localhost) : seule une adresse locale (imitation de Google) est acceptée, donnée par
 // ?google=… ; jamais le vrai Google pendant un essai (règle n° 1 du socle). Page publiée : l'adresse rangée ci-dessus.
 function adresseScript(){
+  // Console du PC : l'adresse rangée dans ses Réglages (imitation pendant les essais, vraie Google Sheet sinon).
+  if(CONSOLE_PC)return /^https?:\/\/[^\s"'<>]+$/.test(GOOGLE_URL_PUBLIE)?GOOGLE_URL_PUBLIE:'';
   const local=/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)||location.protocol==='file:';
   if(local){
     try{const u=new URL(new URLSearchParams(location.search).get('google')||'');if(/^(localhost|127\.0\.0\.1)$/.test(u.hostname)&&/^https?:$/.test(u.protocol))return u.href}catch(e){}
@@ -498,6 +503,7 @@ function ouvrirPanneauGoogle(maj){
   const g=S.google,t=typeGoogle()||'ancien',x=TEXTES_GOOGLE[t];
   p.innerHTML='<h2>'+esc(x[0])+'</h2><p style="margin:0 0 8px">'+esc(x[1])+'</p>'+(g.erreur&&g.erreur.message?'<p style="margin:0 0 8px"><b>Message :</b> '+esc(g.erreur.message)+'</p>':'')+
     '<p class="hint" style="margin:0 0 12px">'+(g.ok?'Dernière réponse de Google : '+esc(dateFr(g.ok)+' '+heureFr(g.ok)):'Pas encore de réponse de Google.')+'</p>'+
+    (CONSOLE_PC?'<p style="margin:0 0 12px"><a href="/que-faire-si" target="_blank" rel="noopener">Ouvrir la fiche « Que faire si… »</a></p>':'')+
     '<div class="row" style="justify-content:flex-end"><button class="btn" type="button" data-act="google-fermer">Fermer</button></div>';
 }
 // Appels au script Google : POST en text/plain (pas de demande préalable du navigateur), sans cookie.
@@ -531,13 +537,14 @@ function vLogin(){
   return '<div class="login"><form class="box" id="fLogin" autocomplete="off">'+
     '<div class="row" style="gap:12px">'+pastille('logo','l')+'<div><div style="font-weight:800;font-size:15px;color:var(--accent-dark)">Dent All Group</div><div class="hint">Pack Tablettes</div></div></div>'+
     '<h1>Console de l’atelier</h1><p class="sub">Entrez votre nom et votre code de la console (différent du code des tablettes).</p>'+
-    (URL_SCRIPT?'':'<div class="msg err">'+svg('alerte')+'<div><b>Console pas encore reliée à Google.</b><br>'+(/^(localhost|127\.0\.0\.1)$/.test(location.hostname)?'Essai sur ce PC : ajoutez l’adresse de l’imitation de Google (?google=http://localhost:…). Le vrai Google n’est jamais utilisé pendant un essai.':'Prévenez le responsable d’atelier.')+'</div></div>')+
+    (URL_SCRIPT?'':'<div class="msg err">'+svg('alerte')+'<div><b>Console pas encore reliée à Google.</b><br>'+(CONSOLE_PC?'Console du PC : l’adresse de la Google Sheet n’est pas réglée. Ouvrez l’ancienne console (/ancienne) › Réglages.':/^(localhost|127\.0\.0\.1)$/.test(location.hostname)?'Essai sur ce PC : ajoutez l’adresse de l’imitation de Google (?google=http://localhost:…). Le vrai Google n’est jamais utilisé pendant un essai.':'Prévenez le responsable d’atelier.')+'</div></div>')+
     (S.err?'<div class="msg err" role="alert">'+svg('alerte')+'<div><b>'+esc(S.err)+'</b></div></div>':'')+
     (S.info?'<div class="msg info" role="status">'+svg('horloge')+'<div>'+esc(S.info)+'</div></div>':'')+
     '<label class="lbl">Votre nom<input class="in" id="lNom" name="nom" autocomplete="off" autocapitalize="words" spellcheck="false" required value="'+esc(S.nomTape||'')+'"></label>'+
     '<label class="lbl">Code de la console<input class="in" id="lCode" name="code" type="password" autocomplete="off" required minlength="8"></label>'+
     '<button class="btn pri big" type="submit"'+(URL_SCRIPT&&!S.occupe?'':' disabled')+'>'+(S.occupe?'Connexion…':'Se connecter')+'</button>'+
     '<p class="hint" style="margin:14px 0 0;text-align:center">Code oublié ou accès coupé : contactez le responsable d’atelier.</p>'+
+    (CONSOLE_PC?'<p class="hint" style="margin:10px 0 0;text-align:center">Console du PC. Premier code administrateur : Google Sheet › menu Atelier › « Console : code de l’administrateur ». En secours : <a href="/ancienne">ancienne console</a>.</p><p class="hint" style="margin:6px 0 0;text-align:center">Sur ce PC, la session Windows reste la protection : verrouillez le PC quand vous le quittez.</p>':'')+
     '</form></div>';
 }
 async function seConnecter(nom,code){
@@ -563,7 +570,7 @@ async function demarrer(){
   if(!droit(S.page))S.page=premierePartie();
 }
 function finSession(message){
-  S.jeton='';S.moi=null;S.site=null;S.charge={};S.photos={};S.sel={};S.acc=null;S.edit=null;S.msgCont=S.msgLanc=S.msgCal=null;ecrireJeton('');
+  S.jeton='';S.moi=null;S.site=null;S.charge={};S.photos={};S.sel={};S.acc=null;S.edit=null;S.types=null;S.calEd=null;S.dr=null;S.adm=null;S.msgAdm=null;S.suppr=null;S.msgCont=S.msgLanc=S.msgCal=S.msgParc=S.msgPers=S.msgMsg=S.msgDr=S.msgTab=null;ecrireJeton('');
   S.info=message||'';S.err='';render();
 }
 async function seDeconnecter(message){
@@ -614,7 +621,7 @@ function vNav(){
       h+='<button data-go="'+p.id+'"'+(S.page===p.id?' aria-current="page"':'')+'>'+pastille(p.ico,'s')+'<span class="t">'+p.nom+'</span>'+b+'</button>';
     });
   });
-  return h+'<div class="foot">Console en ligne<br>Certains réglages se font encore sur le PC de l’atelier.</div></nav>';
+  return h+'<div class="foot">'+(CONSOLE_PC?'Console du PC<br><a href="/ancienne" style="color:#cfe3e8">Ancienne console (secours)</a>':'Console en ligne<br>Certains réglages se font encore sur le PC de l’atelier.')+'</div></nav>';
 }
 function vTop(){
   const vis=secteursVisibles(),adm=S.moi.admin;
@@ -671,7 +678,7 @@ async function calendrierDe(sec){
   const r=await lire('calendrier-lire',{secteur:sec});
   if(!r.ok)return null;
   const d=r.data;
-  return {cal:d.cal,ops:d.ops||[],journal:d.journal||[],machines:d.machines||[],operators:d.operators||[]};
+  return etatCalendrier(d); // règles « par type » comprises (lot 6)
 }
 function compterMaint(st){
   const n={retard:0,jour:0,bientot:0,liste:[]};
@@ -734,60 +741,330 @@ PAGES.accueil=async()=>{
   return h;
 };
 
+// Parc machines : lecture, et en « Modification » la fiche comme la console du PC (lot 5, 2026-10-15).
+// Le script vérifie tout (nom unique, échange de noms, secteurs autorisés, version) ; ici, seulement l'aide à la saisie.
+function machineVersBrouillon(m){return Object.assign({nom:'',secteur:'',zone:'',type:'',marque:'',modele:'',serie:'',mes:'',sav:'',broches:0,photo:'',plaque:'',notes:'',anciens:[]},JSON.parse(JSON.stringify(m)),{horsService:m.actif===false,broches:String(m.broches||0)})}
+function brouillonVersMachine(b){const m=JSON.parse(JSON.stringify(b));m.actif=!m.horsService;delete m.horsService;m.broches=m.secteur==='fraisage'?Math.max(0,Math.min(6,Math.round(Number(m.broches)||0))):0;return m}
+function vueFicheMachine(r){
+  const E=S.edit,b=E.item,vis=r.data.secteurs||[],zs=(r.data.zones||[]).filter(z=>z.secteur===b.secteur),types=((r.data.parc||{}).types||[]).map(y=>y.nom);
+  const f=[{k:'nom',t:'texte',l:'Nom (unique sur tout le site)',req:1},
+    {k:'secteur',t:'choix',l:'Secteur',rerender:1,choix:vis.map(s=>[s,secNom(s)])},
+    {k:'zone',t:'choix',l:'Zone',choix:[['','Tout le secteur']].concat(zs.map(z=>[z.id,z.nom]))},
+    {k:'type',t:'liste',l:'Type de machine',de:()=>types},{k:'marque',t:'texte',l:'Marque'},{k:'modele',t:'texte',l:'Modèle'},{k:'serie',t:'texte',l:'N° de série'},
+    {k:'mes',t:'date',l:'Mise en service'},{k:'sav',t:'texte',l:'SAV (contact)'},
+    // Broches : seulement les machines du fraisage (demande de l'utilisateur, 2026-10-16) ; ailleurs 0.
+    b.secteur==='fraisage'?{k:'broches',t:'choix',l:'Broches (pour les étapes « sur chaque broche »)',choix:[0,1,2,3,4,5,6].map(n=>[String(n),String(n)])}:null,
+    {k:'photo',t:'photo',l:'Photo de la machine'},{k:'plaque',t:'photo',l:'Photo de la plaque'},{k:'notes',t:'zone',l:'Notes'},{k:'horsService',t:'case',l:'Hors service'}];
+  return '<aside class="card fiche edition"><h2>'+pastille('parc','s')+(E.nouveau?'Nouvelle machine':'Modifier « '+esc(E.nomAvant)+' »')+'</h2>'+
+    (E.msg?'<div class="msg '+E.msg[0]+'">'+svg('alerte')+'<div>'+E.msg[1]+'</div></div>':'')+
+    '<div class="form">'+f.filter(Boolean).map(x=>champ(x,b[x.k],x.k,{})).join('')+
+    ((b.anciens||[]).length?'<p class="hint" style="margin:0">Anciens noms : '+esc(b.anciens.join(', '))+'</p>':'')+'</div>'+
+    '<div class="row" style="margin-top:14px"><button class="btn" data-pe="annuler">Annuler</button><button class="btn pri" data-pe="enregistrer">Enregistrer</button></div></aside>';
+}
+function vueTypes(r){
+  const T=S.types;if(!T)return '<section class="card" style="margin-top:16px"><h2>Types de machine<span class="grow"></span><button class="btn" data-pe="types">'+svg('crayon')+'Modifier les types</button></h2>'+
+    '<p style="margin:0">'+esc(((r.data.parc||{}).types||[]).map(y=>y.nom+(y.broches?' ('+y.broches+' broches)':'')).join(' · ')||'Aucun type.')+'</p></section>';
+  return '<section class="card edition" style="margin-top:16px"><h2>Types de machine</h2>'+(T.msg?'<div class="msg '+T.msg[0]+'">'+svg('alerte')+'<div>'+T.msg[1]+'</div></div>':'')+
+    T.liste.map((y,i)=>'<div class="row" style="margin-bottom:8px"><input class="in" style="flex:2;min-width:180px" data-ty="'+i+'" data-tk="nom" value="'+esc(y.nom)+'" aria-label="Nom du type">'+
+      '<select class="in" style="flex:1;min-width:120px" data-ty="'+i+'" data-tk="broches" aria-label="Broches">'+[0,1,2,3,4,5,6].map(n=>'<option value="'+n+'"'+(Number(y.broches)===n?' selected':'')+'>'+n+' broche(s)</option>').join('')+'</select>'+
+      '<button class="btn" data-pe="type-moins" data-i="'+i+'">Retirer</button></div>').join('')+
+    '<div class="row"><button class="btn" data-pe="type-plus">'+svg('plus')+'Ajouter un type</button><span class="grow"></span><button class="btn" data-pe="types-annuler">Annuler</button><button class="btn pri" data-pe="types-enregistrer">Enregistrer les types</button></div>'+
+    '<p class="hint" style="margin:8px 0 0">Un type renommé garde son ancien nom (versions des opérations, règles du calendrier).</p></section>';
+}
 PAGES.parc=async()=>{
-  const r=await lire('parc-lire');
+  const r=await lire('parc-lire'),mod=peutModif('parc');
   let h=enTete('parc','Les machines de vos secteurs, comme dans le parc du pack. Touchez une machine pour voir sa fiche.');
   if(!r.ok)return h+refus(r);
+  if(S.msgParc)h+='<div class="msg '+S.msgParc[0]+'" role="status">'+svg(S.msgParc[0]==='ok'?'ok':'alerte')+'<div>'+S.msgParc[1]+'</div></div>';
   if(!r.data.parc)return h+'<div class="card vide">Le parc machines n’est pas encore rempli.</div>';
   const zones={};(r.data.zones||[]).forEach(z=>zones[z.id]=z.nom);
-  const q=S.parcQ.trim().toLowerCase();
+  const q=S.parcQ.trim().toLowerCase(),E=S.edit&&S.edit.cle==='parc'?S.edit:null;
   const ms=r.data.parc.machines.filter(m=>secteursAffiches().includes(m.secteur)&&(!q||[m.nom,m.type,m.marque,m.modele,m.serie].join(' ').toLowerCase().includes(q)))
     .sort((a,b)=>String(a.nom).localeCompare(String(b.nom),'fr',{numeric:true}));
-  const sel=ms.find(m=>m.id===S.sel.parc);
-  h+='<div class="tb"><input class="in" id="parcQ" type="search" placeholder="Chercher une machine, un type, un n° de série…" value="'+esc(S.parcQ)+'"><span class="hint">'+ms.length+' machine(s)</span></div>';
-  h+='<div class="parc'+(sel?' ouvert':'')+'"><div class="mgrid">'+(ms.length?ms.map(m=>{
+  const sel=E?null:ms.find(m=>m.id===S.sel.parc);
+  h+='<div class="tb"><input class="in" id="parcQ" type="search" placeholder="Chercher une machine, un type, un n° de série…" value="'+esc(S.parcQ)+'"><span class="hint">'+ms.length+' machine(s)</span>'+
+    (mod&&!E?'<span class="grow"></span><button class="btn pri" data-pe="nouveau">'+svg('plus')+'Nouvelle machine</button>':'')+'</div>';
+  h+='<div class="parc'+(sel||E?' ouvert':'')+'"><div class="mgrid">'+(ms.length?ms.map(m=>{
     const manque=!m.serie||!m.type;
-    return '<button class="mac'+(m.actif===false?' off':'')+'" data-parc="'+esc(m.id)+'"'+(sel&&sel.id===m.id?' aria-current="true"':'')+'><span class="sec-t">'+esc(secNom(m.secteur))+'</span><div class="vis">'+svg('parc')+'</div><div class="bd"><b>'+esc(m.nom)+'</b>'+
+    return '<button class="mac'+(m.actif===false?' off':'')+'" data-parc="'+esc(m.id)+'"'+((sel&&sel.id===m.id)||(E&&E.item.id===m.id)?' aria-current="true"':'')+'><span class="sec-t">'+esc(secNom(m.secteur))+'</span><div class="vis">'+svg('parc')+'</div><div class="bd"><b>'+esc(m.nom)+'</b>'+
       '<span class="l">'+esc(m.type||'type à préciser')+(m.zone?' · '+esc(zones[m.zone]||m.zone):' · tout le secteur')+'</span>'+
       '<span class="row" style="gap:6px">'+(m.actif===false?'<span class="tag">Hors service</span>':'<span class="tag ok">✓ En service</span>')+(manque?'<span class="tag warn">! Fiche à compléter</span>':'')+'</span></div></button>'}).join(''):'<div class="vide">Aucune machine.</div>')+'</div>';
-  if(sel){
+  if(E)h+=vueFicheMachine(r);
+  else if(sel){
     const ligne=(l,v)=>v?'<dt>'+l+'</dt><dd>'+esc(v)+'</dd>':'';
-    h+='<aside class="card fiche"><h2>'+pastille('parc','s')+esc(sel.nom)+'<span class="grow"></span><button class="btn" data-parc="">Fermer</button></h2><dl>'+
+    h+='<aside class="card fiche"><h2>'+pastille('parc','s')+esc(sel.nom)+'<span class="grow"></span>'+(mod?'<button class="btn" data-pe="modifier" data-id="'+esc(sel.id)+'">'+svg('crayon')+'Modifier</button>':'')+'<button class="btn" data-parc="">Fermer</button></h2><dl>'+
       ligne('Secteur',secNom(sel.secteur))+ligne('Zone',sel.zone?zones[sel.zone]||sel.zone:'Tout le secteur')+ligne('Type',sel.type)+ligne('Marque',sel.marque)+ligne('Modèle',sel.modele)+
-      ligne('N° de série',sel.serie)+ligne('Mise en service',sel.mes)+ligne('SAV',sel.sav)+ligne('Broches',sel.broches)+ligne('État',sel.actif===false?'Hors service':'En service')+
+      ligne('N° de série',sel.serie)+ligne('Mise en service',sel.mes)+ligne('SAV',sel.sav)+ligne('Broches',sel.secteur==='fraisage'&&sel.broches?sel.broches:'')+ligne('État',sel.actif===false?'Hors service':'En service')+
       ligne('Anciens noms',liste(sel.anciens))+ligne('Notes',sel.notes)+'</dl>'+
-      (sel.photo?'<h3 style="margin:14px 0 4px;font-size:16px">Photo</h3>'+boutonPhoto(sel.photo):'')+(sel.plaque?'<h3 style="margin:14px 0 4px;font-size:16px">Plaque</h3>'+boutonPhoto(sel.plaque):'')+'</aside>';
+      (sel.photo?'<h3 style="margin:14px 0 4px;font-size:16px">Photo</h3>'+boutonPhoto(sel.photo):'')+(sel.plaque?'<h3 style="margin:14px 0 4px;font-size:16px">Plaque</h3>'+boutonPhoto(sel.plaque):'')+
+      (mod?'<div class="row" style="margin-top:14px">'+(S.suppr===sel.id?'<button class="btn dan plein" data-pe="supprimer-ok">Oui, supprimer « '+esc(sel.nom)+' »</button><button class="btn" data-pe="supprimer-non">Annuler</button>':'<button class="btn dan" data-pe="supprimer" data-id="'+esc(sel.id)+'">Supprimer la machine</button>')+'</div>'+
+        '<p class="hint" style="margin:8px 0 0">Une machine qui ne sert plus : préférez « Hors service » (son historique reste lisible).</p>':'')+'</aside>';
   }
-  return h+'</div>';
+  h+='</div>';
+  if(mod&&r.data.typesModifiables)h+=vueTypes(r);
+  return h;
 };
+// Envoi au script : TOUTES les machines visibles (la page les a toutes), avec la version lue (depuis).
+async function envoyerParc(r,machines,types,msgOk,supprimer){
+  // supprimer : suppressions EXPLICITES (le script refuse une machine simplement absente de la liste).
+  const j=await appel('parc-ecrire',Object.assign({machines,depuis:r.data.maj},types?{types}:{},supprimer?{supprimer}:{}));S.charge={};
+  if(j.status===200){S.edit=null;S.types=null;S.suppr=null;S.msgParc=['ok',msgOk];return true}
+  const rech=' <button class="btn" data-pe="recharger">Recharger</button>';
+  const m=['err','<b>'+esc((j.data&&j.data.error)||'Refusé.')+'</b>'+(j.status===409&&/changé entre-temps/.test(j.data.error||'')?rech:'')];
+  if(S.types&&types)S.types.msg=m;else if(S.edit)S.edit.msg=m;else S.msgParc=m;
+  return false;
+}
+async function actionParc(b){
+  const act=b.dataset.pe,r=await lire('parc-lire');if(!r.ok)return chargerPage();
+  const toutes=r.data.parc?r.data.parc.machines:[];
+  if(act==='nouveau'){S.edit={cle:'parc',nouveau:true,item:machineVersBrouillon({secteur:unSecteur()||(r.data.secteurs||[])[0]||'',actif:true}),sale:true};S.msgParc=null;return chargerPage()}
+  if(act==='modifier'){const m=toutes.find(x=>x.id===b.dataset.id);if(m){S.edit={cle:'parc',nouveau:false,item:machineVersBrouillon(m),nomAvant:m.nom,sale:false};S.msgParc=null}return chargerPage()}
+  if(act==='annuler'||act==='recharger'){S.edit=null;S.types=null;S.charge={};S.msgParc=act==='recharger'?['info','Parc rechargé.']:null;return chargerPage()}
+  if(act==='enregistrer'){
+    const m=brouillonVersMachine(S.edit.item);
+    if(!String(m.nom).trim()){S.edit.msg=['err','<b>Donnez un nom à la machine.</b>'];return chargerPage()}
+    // Renommage : l'ancien nom est gardé (le script le fait aussi).
+    if(!S.edit.nouveau&&S.edit.nomAvant&&S.edit.nomAvant.toLocaleLowerCase('fr')!==String(m.nom).trim().toLocaleLowerCase('fr'))m.anciens=(m.anciens||[]).concat(S.edit.nomAvant);
+    const l=S.edit.nouveau?toutes.concat(m):toutes.map(x=>x.id===m.id?m:x);
+    b.disabled=true;
+    if(await envoyerParc(r,l,null,'Machine « '+esc(m.nom)+' » enregistrée : les tablettes la reçoivent à leur prochain échange.')&&m.id)S.sel.parc=m.id;
+    return chargerPage();
+  }
+  if(act==='supprimer'){S.suppr=b.dataset.id;return chargerPage()}
+  if(act==='supprimer-non'){S.suppr=null;return chargerPage()}
+  if(act==='supprimer-ok'){const m=toutes.find(x=>x.id===S.suppr);await envoyerParc(r,toutes.filter(x=>x.id!==S.suppr),null,'Machine « '+esc(m?m.nom:'')+' » supprimée.',[S.suppr]);S.sel.parc='';return chargerPage()}
+  if(act==='types'){S.types={liste:JSON.parse(JSON.stringify((r.data.parc||{}).types||[])),avant:{}};S.types.liste.forEach(y=>S.types.avant[y.id]=y.nom);return chargerPage()}
+  if(act==='types-annuler'){S.types=null;return chargerPage()}
+  if(act==='type-plus'){S.types.liste.push({nom:'',broches:0});return chargerPage()}
+  if(act==='type-moins'){S.types.liste.splice(+b.dataset.i,1);return chargerPage()}
+  if(act==='types-enregistrer'){
+    const l=S.types.liste.filter(y=>String(y.nom).trim()).map(y=>{const a=y.id&&S.types.avant[y.id];return Object.assign({},y,{broches:Number(y.broches)||0,anciens:(y.anciens||[]).concat(a&&a!==y.nom?[a]:[])})});
+    await envoyerParc(r,toutes,l,'Types de machine enregistrés.');return chargerPage();
+  }
+}
 
+// Personnes : lecture, et en « Modification » comme l'onglet Personnes de la console du PC (lot 5, 2026-10-15).
+// Le code tablette tapé part une seule fois, chiffré par le script ; il n'est jamais réaffiché.
+const ROLES_NOMS={operateur:'Opérateur',chef:'Chef d’équipe',responsable:'Responsable',admin:'Administrateur'};
+function vueFichePersonne(r){
+  const E=S.edit,b=E.item,vis=r.data.secteurs||[],zs=r.data.zones||[];
+  return '<section class="card edition" style="margin-bottom:16px"><h2>'+pastille('personnes','s')+(E.nouveau?'Nouvelle personne':'Modifier « '+esc(E.nomAvant)+' »')+'</h2>'+
+    (E.msg?'<div class="msg '+E.msg[0]+'">'+svg('alerte')+'<div>'+E.msg[1]+'</div></div>':'')+
+    '<div class="form">'+champ({k:'nom',t:'texte',l:'Nom (unique sur le site)',req:1},b.nom,'nom',{})+
+    (E.nomAvant&&E.nomAvant===S.moi.nom?'<p class="hint" style="margin:0">Votre propre rôle ne se change pas ici.</p>':champ({k:'role',t:'choix',l:'Rôle',rerender:1,choix:(r.data.roles||[]).map(x=>[x.id,x.nom])},b.role,'role',{}))+
+    (b.role==='admin'?'<p class="hint" style="margin:0">Administrateur : toutes les zones.</p>':
+      '<fieldset class="fs"><legend>Rattachement (secteur entier ou zones)</legend><div class="row">'+vis.map(s=>'<label class="chip"><input type="checkbox" data-fm="secteurs" value="'+esc(s)+'"'+(b.secteurs.includes(s)?' checked':'')+'>Tout le secteur '+esc(secNom(s))+'</label>').join('')+'</div>'+
+      '<div class="row" style="margin-top:8px">'+zs.map(z=>'<label class="chip"><input type="checkbox" data-fm="zones" value="'+esc(z.id)+'"'+(b.zones.includes(z.id)?' checked':'')+'>'+esc(z.nom)+'</label>').join('')+'</div>'+
+      (S.moi.admin?'<p class="hint" style="margin:8px 0 0">Rien de coché : la personne voit tout le site.</p>':'')+'</fieldset>')+
+    // Code tablette : réservé aux administrateurs (décision de l'utilisateur, 2026-10-15) ; le script refuse sinon.
+    (S.moi.admin?'<div><label class="lbl" for="f-nouveauCode">'+(E.codeDefini?'Changer le code tablette':'Définir le code tablette')+' (4 à 8 chiffres ; vide = inchangé)</label><input class="in" id="f-nouveauCode" type="password" inputmode="numeric" autocomplete="new-password" maxlength="8" data-f="nouveauCode" value=""></div>':
+      '<p class="hint" style="margin:0">Code tablette : '+(E.codeDefini?'défini':'pas encore défini')+'. Seul un administrateur le définit ou le change.</p>')+'</div>'+
+    '<div class="row" style="margin-top:14px"><button class="btn" data-pp="annuler">Annuler</button><button class="btn pri" data-pp="enregistrer">Enregistrer</button></div></section>';
+}
 PAGES.personnes=async()=>{
-  const r=await lire('personnes-lire');
+  const r=await lire('personnes-lire'),mod=peutModif('personnes');
   let h=enTete('personnes','Les personnes de vos secteurs. Les codes ne sont jamais affichés : seulement s’ils sont définis.');
   if(!r.ok)return h+refus(r);
+  if(S.msgPers)h+='<div class="msg '+S.msgPers[0]+'" role="status">'+svg(S.msgPers[0]==='ok'?'ok':'alerte')+'<div>'+S.msgPers[1]+'</div></div>';
   const zones={};(r.data.zones||[]).forEach(z=>zones[z.id]=z.nom);
-  const ROLES={operateur:'Opérateur',chef:'Chef d’équipe',responsable:'Responsable',admin:'Administrateur'};
+  const E=S.edit&&S.edit.cle==='personnes'?S.edit:null;
+  if(mod&&!E)h+='<div class="row" style="margin-bottom:12px"><button class="btn pri" data-pp="nouveau">'+svg('plus')+'Ajouter une personne</button>'+(S.moi.admin?'':'<span class="hint">Vous pouvez modifier les personnes rattachées seulement à vos secteurs.</span>')+'</div>';
+  if(E)h+=vueFichePersonne(r);
   const l=r.data.personnes.slice().sort((a,b)=>a.nom.localeCompare(b.nom,'fr'));
-  return h+'<section class="card">'+(l.length?'<table><thead><tr><th>Nom</th><th>Rôle</th><th>Rattachement</th><th>Code tablette</th></tr></thead><tbody>'+
-    l.map(p=>'<tr><td><b>'+esc(p.nom)+'</b></td><td>'+esc(ROLES[p.role]||p.role)+'</td><td>'+esc(p.role==='admin'?'Toutes les zones':(p.secteurs.map(s=>'Tout le secteur '+secNom(s)).concat(p.zones.map(z=>zones[z]||z)).join(', ')||'Tout le site'))+'</td><td>'+(p.codeDefini?'<span class="tag ok">✓ défini</span>':'<span class="tag warn">pas encore</span>')+'</td></tr>').join('')+'</tbody></table>'
+  return h+'<section class="card">'+(l.length?'<table><thead><tr><th>Nom</th><th>Rôle</th><th>Rattachement</th><th>Code tablette</th>'+(mod?'<th></th>':'')+'</tr></thead><tbody>'+
+    l.map(p=>'<tr><td><b>'+esc(p.nom)+'</b></td><td>'+esc(ROLES_NOMS[p.role]||p.role)+'</td><td>'+esc(p.role==='admin'?'Toutes les zones':(p.secteurs.map(s=>'Tout le secteur '+secNom(s)).concat(p.zones.map(z=>zones[z]||z)).join(', ')||'Tout le site'))+'</td><td>'+(p.codeDefini?'<span class="tag ok">✓ défini</span>':'<span class="tag warn">pas encore</span>')+'</td>'+
+      (mod?'<td style="text-align:right;white-space:nowrap">'+(p.modifiable&&!E?'<button class="btn" data-pp="modifier" data-id="'+esc(p.id)+'">'+svg('crayon')+'Modifier</button> '+(p.nom===S.moi.nom?'':S.suppr===p.id?'<button class="btn dan plein" data-pp="supprimer-ok">Oui, retirer</button><button class="btn" data-pp="supprimer-non">Non</button>':'<button class="btn dan" data-pp="supprimer" data-id="'+esc(p.id)+'">Retirer</button>'):p.modifiable?'':'<span class="hint">hors de vos secteurs</span>')+'</td>':'')+'</tr>').join('')+'</tbody></table>'
     :'<div class="vide">Aucune personne dans vos secteurs.</div>')+'</section>';
 };
+// Envoi : les personnes MODIFIABLES par ce compte (le script garde les autres telles quelles), avec la version lue.
+async function envoyerPersonnes(r,liste,msgOk,supprimer){
+  const j=await appel('personnes-ecrire',Object.assign({personnes:liste,depuis:r.data.maj},supprimer?{supprimer}:{}));S.charge={};
+  if(j.status===200){S.edit=null;S.suppr=null;S.msgPers=['ok',msgOk];return true}
+  const m=['err','<b>'+esc((j.data&&j.data.error)||'Refusé.')+'</b>'+(j.status===409&&/changé entre-temps/.test(j.data.error||'')?' <button class="btn" data-pp="recharger">Recharger</button>':'')];
+  if(S.edit)S.edit.msg=m;else S.msgPers=m;
+  return false;
+}
+async function actionPersonnes(b){
+  const act=b.dataset.pp,r=await lire('personnes-lire');if(!r.ok)return chargerPage();
+  const mods=r.data.personnes.filter(p=>p.modifiable).map(p=>({id:p.id,nom:p.nom,role:p.role,zones:p.zones,secteurs:p.secteurs}));
+  if(act==='nouveau'){S.edit={cle:'personnes',nouveau:true,item:{nom:'',role:'operateur',zones:[],secteurs:S.moi.admin?[]:[unSecteur()].filter(Boolean),nouveauCode:''},sale:true};S.msgPers=null;return chargerPage()}
+  if(act==='modifier'){const p=r.data.personnes.find(x=>x.id===b.dataset.id);if(p){S.edit={cle:'personnes',nouveau:false,item:{id:p.id,nom:p.nom,role:p.role,zones:p.zones.slice(),secteurs:p.secteurs.slice(),nouveauCode:''},nomAvant:p.nom,codeDefini:p.codeDefini,sale:false};S.msgPers=null}return chargerPage()}
+  if(act==='annuler'||act==='recharger'){S.edit=null;S.charge={};S.msgPers=act==='recharger'?['info','Liste rechargée.']:null;return chargerPage()}
+  if(act==='enregistrer'){
+    const x=JSON.parse(JSON.stringify(S.edit.item)),c=String(x.nouveauCode||'').trim();
+    const champCode=document.getElementById('f-nouveauCode');if(champCode)champCode.value='';
+    if(!String(x.nom).trim()){S.edit.msg=['err','<b>Donnez un nom.</b>'];return chargerPage()}
+    if(c&&!/^\d{4,8}$/.test(c)){S.edit.item.nouveauCode='';S.edit.msg=['err','<b>Le code tablette doit faire 4 à 8 chiffres.</b>'];return chargerPage()}
+    if(!c||!S.moi.admin)delete x.nouveauCode;
+    S.edit.item.nouveauCode=''; // jamais gardé dans la page
+    const l=S.edit.nouveau?mods.concat(x):mods.map(p=>p.id===x.id?x:p);
+    b.disabled=true;
+    await envoyerPersonnes(r,l,'« '+esc(x.nom)+' » enregistré'+(c?' (nouveau code tablette chiffré, jamais réaffiché)':'')+' : les tablettes le reçoivent à leur prochain échange.');
+    return chargerPage();
+  }
+  if(act==='supprimer'){S.suppr=b.dataset.id;return chargerPage()}
+  if(act==='supprimer-non'){S.suppr=null;return chargerPage()}
+  if(act==='supprimer-ok'){const p=r.data.personnes.find(x=>x.id===S.suppr);await envoyerPersonnes(r,mods.filter(x=>x.id!==S.suppr),'« '+esc(p?p.nom:'')+' » retiré de la liste.',[S.suppr]);return chargerPage()}
+}
 
+// Message d'accueil (lot 7b, 2026-10-15) : lecture, et en « Modification » comme la console du PC. Manager : seulement
+// les messages rattachés à ses zones (jamais un message de tout le site) ; le script le vérifie de toute façon.
 PAGES['c-message']=async()=>{
-  const r=await lire('messages-lire');
+  const r=await lire('messages-lire'),mod=peutModif('c-message');
   let h=enTete('c-message','Les annonces affichées sur l’accueil des tablettes de vos secteurs.');
   if(!r.ok)return h+refus(r);
   const zones={};(r.data.zones||[]).forEach(z=>zones[z.id]=z.nom);
-  const l=r.data.messages||[];
-  return h+(l.length?'<div class="stack">'+l.map(m=>'<section class="card"><h2>'+pastille('message','s')+esc(m.titre||'(sans titre)')+'<span class="grow"></span>'+(m.niveau==='important'?'<span class="tag err">! Important</span>':'<span class="tag acc">Info</span>')+'</h2>'+
-    '<p style="margin:0 0 8px;white-space:pre-wrap">'+esc(m.texte||'')+'</p><p class="hint" style="margin:0">'+(m.zones&&m.zones.length?'Zones : '+esc(m.zones.map(z=>zones[z]||z).join(', ')):'Toutes les tablettes')+(m.du||m.au?' · du '+esc(m.du||'…')+' au '+esc(m.au||'…'):'')+'</p>'+
+  const l=r.data.messages||[],E=S.edit&&S.edit.cle==='c-message'?S.edit:null;
+  if(S.msgMsg)h+='<div class="msg '+S.msgMsg[0]+'" role="status">'+svg(S.msgMsg[0]==='ok'?'ok':'alerte')+'<div>'+S.msgMsg[1]+'</div></div>';
+  if(mod&&!E)h+='<div class="row" style="margin-bottom:12px"><button class="btn pri" data-msg="nouveau">'+svg('plus')+'Nouveau message</button><span class="hint">'+(S.moi.admin?'Les tablettes le reçoivent à leur prochain échange.':'Vous pouvez modifier les messages rattachés seulement à vos zones.')+'</span></div>';
+  if(E)h+=vueFicheMessage(r);
+  return h+(l.length?'<div class="stack">'+l.map(m=>'<section class="card"><h2>'+pastille('message','s')+esc(m.titre||'(sans titre)')+'<span class="grow"></span>'+(m.niveau==='important'?'<span class="tag err">! Important</span>':'<span class="tag acc">Info</span>')+
+    (mod&&m.modifiable&&!E?' <button class="btn" data-msg="modifier" data-id="'+esc(m.id)+'">'+svg('crayon')+'Modifier</button>'+(S.suppr===m.id?'<button class="btn dan plein" data-msg="supprimer-ok">Oui, retirer</button><button class="btn" data-msg="supprimer-non">Non</button>':'<button class="btn dan" data-msg="supprimer" data-id="'+esc(m.id)+'">Retirer</button>'):'')+'</h2>'+
+    '<p style="margin:0 0 8px;white-space:pre-wrap">'+esc(m.texte||'')+'</p><p class="hint" style="margin:0">'+(m.zones&&m.zones.length?'Zones : '+esc(m.zones.map(z=>zones[z]||z).join(', ')):'Toutes les tablettes')+(m.du||m.au?' · du '+esc(m.du||'…')+' au '+esc(m.au||'…'):'')+(mod&&!m.modifiable?' · <span class="tag">modifiable par l’administrateur</span>':'')+'</p>'+
     (m.images||[]).map(i=>boutonPhoto(i.photo)).join('')+'</section>').join('')+'</div>':'<div class="card vide">Aucun message.</div>');
 };
+function vueFicheMessage(r){
+  const E=S.edit,b=E.item,zs=r.data.zones||[];
+  return '<section class="card edition" style="margin-bottom:16px"><h2>'+pastille('message','s')+(E.nouveau?'Nouveau message':'Modifier le message')+'</h2>'+
+    (E.msg?'<div class="msg '+E.msg[0]+'">'+svg('alerte')+'<div>'+E.msg[1]+'</div></div>':'')+
+    '<div class="form">'+champ({k:'titre',t:'texte',l:'Titre (120 caractères au plus)'},b.titre,'titre',{})+champ({k:'texte',t:'zone',l:'Texte'},b.texte,'texte',{})+
+    champ({k:'niveau',t:'choix',l:'Niveau',choix:[['info','Info'],['important','! Important']]},b.niveau,'niveau',{})+
+    '<fieldset class="fs"><legend>Tablettes qui l’affichent</legend><div class="row">'+zs.map(z=>'<label class="chip"><input type="checkbox" data-fm="zones" value="'+esc(z.id)+'"'+(b.zones.includes(z.id)?' checked':'')+'>'+esc(z.nom)+'</label>').join('')+'</div>'+
+      '<p class="hint" style="margin:8px 0 0">'+(S.moi.admin?'Aucune zone cochée : toutes les tablettes du site.':'Cochez au moins une de vos zones.')+'</p></fieldset>'+
+    '<div class="row">'+champ({k:'du',t:'date',l:'Affiché à partir du (facultatif)'},b.du,'du',{})+champ({k:'au',t:'date',l:'Jusqu’au (facultatif)'},b.au,'au',{})+'</div>'+
+    '<fieldset class="fs"><legend>Images ('+b.images.length+' sur 3)</legend>'+b.images.map((im,i)=>'<div class="etape"><div class="row">'+vignette(im.photo)+'<span class="grow"></span><button class="btn" data-msg="img-moins" data-i="'+i+'">Retirer</button></div>'+champ({k:'texte',t:'texte',l:'Légende'},im.texte,'images.'+i+'.texte',{})+'</div>').join('')+
+      (b.images.length<3?'<label class="btn">'+svg('image')+'Ajouter une image<input type="file" accept="image/*" hidden data-fphoto="images+"></label>':'')+'</fieldset></div>'+
+    '<div class="row" style="margin-top:14px"><button class="btn" data-msg="annuler">Annuler</button><button class="btn pri" data-msg="enregistrer">Enregistrer</button></div></section>';
+}
+// Envoi : les messages MODIFIABLES par ce compte (le script garde les autres), avec la version lue ; retrait explicite.
+async function envoyerMessages(r,liste,msgOk,supprimer){
+  const j=await appel('messages-ecrire',Object.assign({messages:liste,depuis:r.data.maj},supprimer?{supprimer}:{}));S.charge={};
+  if(j.status===200){S.edit=null;S.suppr=null;S.msgMsg=['ok',msgOk];return true}
+  const m=['err','<b>'+esc((j.data&&j.data.error)||'Refusé.')+'</b>'+(j.status===409?' <button class="btn" data-msg="recharger">Recharger</button>':'')];
+  if(S.edit&&S.edit.cle==='c-message')S.edit.msg=m;else S.msgMsg=m;
+  return false;
+}
+async function actionMessages(b){
+  const act=b.dataset.msg,r=await lire('messages-lire');if(!r.ok)return chargerPage();
+  const mods=(r.data.messages||[]).filter(m=>m.modifiable).map(m=>{const x=Object.assign({},m);delete x.modifiable;return x});
+  if(act==='nouveau'){const zv=r.data.zones||[],z=!S.moi.admin&&zv.length===1?[zv[0].id]:[];
+    S.edit={cle:'c-message',nouveau:true,item:{id:'m'+alea(12),titre:'',texte:'',niveau:'info',zones:z,du:'',au:'',images:[]},sale:true};S.msgMsg=null;return chargerPage()}
+  if(act==='modifier'){const m=mods.find(x=>x.id===b.dataset.id);if(m){S.edit={cle:'c-message',nouveau:false,item:Object.assign({titre:'',texte:'',niveau:'info',zones:[],du:'',au:''},JSON.parse(JSON.stringify(m)),{images:(m.images||[]).map(i=>({photo:i.photo,texte:i.texte||''}))}),sale:false};S.msgMsg=null}return chargerPage()}
+  if(act==='annuler'||act==='recharger'){S.edit=null;S.charge={};S.msgMsg=act==='recharger'?['info','Messages rechargés.']:null;return chargerPage()}
+  if(act==='img-moins'){S.edit.item.images.splice(+b.dataset.i,1);S.edit.sale=true;return chargerPage()}
+  if(act==='enregistrer'){
+    const x=JSON.parse(JSON.stringify(S.edit.item));
+    if(!String(x.titre).trim()&&!String(x.texte).trim()){S.edit.msg=['err','<b>Écrivez un titre ou un texte.</b>'];return chargerPage()}
+    if(!S.moi.admin&&!x.zones.length){S.edit.msg=['err','<b>Cochez au moins une de vos zones.</b>'];return chargerPage()}
+    if(x.du&&x.au&&x.au<x.du){S.edit.msg=['err','<b>La date de fin est avant la date de début.</b>'];return chargerPage()}
+    b.disabled=true;
+    await envoyerMessages(r,S.edit.nouveau?mods.concat(x):mods.map(m=>m.id===x.id?x:m),'Message enregistré : les tablettes le reçoivent à leur prochain échange.');
+    return chargerPage();
+  }
+  if(act==='supprimer'){S.suppr=b.dataset.id;return chargerPage()}
+  if(act==='supprimer-non'){S.suppr=null;return chargerPage()}
+  if(act==='supprimer-ok'){await envoyerMessages(r,mods.filter(x=>x.id!==S.suppr),'Message retiré des tablettes.',[S.suppr]);return chargerPage()}
+}
 
+// Qui voit quoi (lot 7b, 2026-10-15) : mêmes réglages que l'éditeur de la console du PC (commun/pack.js : droitsPour).
+// Listes = ce qui est MASQUÉ ; pour une personne ou un secteur, une partie absente = comme le rôle. Rôles : administrateur
+// seulement ; manager : ses secteurs et les personnes qu'il peut modifier (le script le vérifie).
+const D_ROLES=[['operateur','Opérateur'],['chef','Chef d’équipe'],['responsable','Responsable'],['admin','Administrateur']];
+const D_APPLIS=[['releve','Relève d’équipe'],['taches','Tâches à faire'],['fiches','Fiches réflexes'],['maintenance','Maintenance niveau 1'],['procedures','Procédures'],['lancements','Lancements machines'],['tableau','Tableau de bord']];
+const D_ONGLETS={
+  releve:[['atelier','L’atelier'],['releve','Faire la relève'],['historique','Historique'],['reglages','Réglages']],
+  taches:[['saisie','Je coche mes tâches'],['board','Historique'],['reglages','Réglages']],
+  fiches:[['aide','J’ai un problème'],['journal','Journal'],['reglages','Réglages']],
+  maintenance:[['faire','Je fais une maintenance'],['suivi','Suivi'],['calendrier','Calendrier'],['ecran','Écran télé'],['reglages','Réglages']],
+  procedures:[['consulter','Consulter'],['suivi','Suivi'],['reglages','Réglages']],
+  lancements:[['atelier','À lancer · Machines'],['ecran','Écran atelier'],['historique','Historique']],
+  tableau:[['now','Maintenant'],['personnes','Personnes'],['personne','Une personne'],['fil','Fil d’activité'],['depannages','Dépannages & maint.'],['procedures','Procédures'],['machines','Machines'],['equipes','Équipes'],['taches','Qui fait quoi'],['releves','Relèves'],['donnees','Données']]
+};
+const D_CONTENUS=[['taches','Tâches à faire'],['fiches','Fiches réflexes'],['maintenance','Opérations de maintenance'],['procedures','Procédures']];
+function drCibles(r){
+  const l=[];
+  if(r.data.rolesModifiables)D_ROLES.forEach(([id,n])=>l.push(['r:'+id,'Tous les « '+n+' »']));
+  (r.data.secteurs||[]).forEach(s=>l.push(['s:'+s,'Secteur « '+secNom(s)+' » (tout le monde)']));
+  (r.data.personnes||[]).filter(p=>p.modifiable).sort((a,b)=>a.nom.localeCompare(b.nom,'fr')).forEach(p=>l.push(['p:'+p.id,p.nom+' ('+((D_ROLES.find(x=>x[0]===p.role)||['',p.role])[1])+')']));
+  return l;
+}
+function drCible(r){const c=S.dr.cible,k=c[0],id=c.slice(2);return {type:k,id,p:k==='p'?(r.data.personnes||[]).find(x=>x.id===id):null}}
+function drObjet(b,c,creer){const t=c.type==='r'?(b.roles=b.roles||{}):c.type==='p'?(b.personnes=b.personnes||{}):(b.secteurs=b.secteurs||{});if(!t[c.id]&&creer)t[c.id]={};return t[c.id]||null}
+function drListe(b,c,partie,app){
+  const lireP=o=>!o?null:app==null?(Array.isArray(o[partie])?o[partie]:null):(o[partie]&&Array.isArray(o[partie][app])?o[partie][app]:null);
+  if(c.type==='s')return lireP((b.secteurs||{})[c.id])||[];
+  const ro=(b.roles||{})[c.type==='p'?(c.p&&c.p.role):c.id]||{},x=c.type==='p'?(b.personnes||{})[c.id]||{}:null;
+  return (x&&x[partie]!==undefined?lireP(x):lireP(ro))||[];
+}
+// Lot 7d (décision de l'utilisateur, 2026-10-16) : pour un manager, ce que l'administrateur masque pour un rôle reste
+// masqué (verrouillé). Secteur : ce que masque n'importe quel rôle ; personne : son rôle et ses secteurs. Le script vérifie.
+function drVerrou(r,b,c,partie,app){
+  if(S.moi.admin||c.type==='r')return [];
+  const lireP=o=>!o?[]:app==null?(Array.isArray(o[partie])?o[partie]:[]):(o[partie]&&Array.isArray(o[partie][app])?o[partie][app]:[]);
+  const src=c.type==='s'?Object.values(b.roles||{}):[(b.roles||{})[c.p&&c.p.role]].concat(((c.p&&c.p.secteurs)||[]).map(x=>(b.secteurs||{})[x]));
+  return [...new Set(src.flatMap(lireP))];
+}
+function vueDroitsEdition(r){
+  const D=S.dr,b=D.b,cibles=drCibles(r);
+  if(!cibles.some(x=>x[0]===D.cible))D.cible=cibles.length?cibles[0][0]:'';
+  if(!D.cible)return '<div class="card vide">Rien que vous puissiez régler ici.</div>';
+  const c=drCible(r),perso=partie=>c.type!=='r'&&((drObjet(b,c,false)||{})[partie]!==undefined),inactif=partie=>c.type!=='r'&&!perso(partie);
+  const [nonP,ouiP]=c.type==='s'?['Comme chaque rôle','Propre à ce secteur']:['Comme son rôle','Personnalisé'];
+  const nomApp=(id,def)=>((r.data.tuiles||{})[id]||{}).nom||def;
+  const chips=(items,masques,partie,app)=>{const v=drVerrou(r,b,c,partie,app||null);return '<div class="row">'+items.map(([id,nom])=>v.includes(id)?
+    '<button class="chip" disabled aria-pressed="false" title="Masqué par l’administrateur pour ce rôle">'+svg('cadenas')+esc(nom)+' <small>(masqué par l’administrateur)</small></button>':
+    '<button class="chip" data-dr="tog" data-partie="'+partie+'" data-app="'+(app||'')+'" data-id="'+esc(id)+'" aria-pressed="'+!masques.includes(id)+'"'+(inactif(partie)?' disabled':'')+'>'+esc(nom)+'</button>').join('')+'</div>'};
+  const entete=(titre,partie)=>'<h2>'+titre+(c.type!=='r'?'<span class="grow"></span><button class="chip" data-dr="perso" data-partie="'+partie+'" data-v="0" aria-pressed="'+!perso(partie)+'">'+nonP+'</button><button class="chip" data-dr="perso" data-partie="'+partie+'" data-v="1" aria-pressed="'+perso(partie)+'">'+ouiP+'</button>':'')+'</h2>';
+  let h='<section class="card edition" style="margin-bottom:16px"><h2>Régler « Qui voit quoi »</h2>'+(D.msg?'<div class="msg '+D.msg[0]+'">'+svg('alerte')+'<div>'+D.msg[1]+'</div></div>':'')+
+    '<p class="hint" style="margin-top:0">Bouton coloré = visible, gris = masqué. Une personne « Personnalisé » garde son réglage ; « Propre à ce secteur » remplace celui des rôles pour tout le monde sur les tablettes du secteur.'+(r.data.rolesModifiables?'':' Les réglages par rôle sont communs à tout le site : seul l’administrateur les change.')+'</p>'+
+    '<label class="lbl" style="max-width:480px">Régler pour<select class="in" data-dr-cible="1">'+cibles.map(([v,t])=>'<option value="'+esc(v)+'"'+(v===D.cible?' selected':'')+'>'+esc(t)+'</option>').join('')+'</select></label></section>';
+  h+='<section class="card" style="margin-bottom:16px">'+entete('Applications (tuiles de l’accueil)','applis')+chips(D_APPLIS.map(([id,n])=>[id,nomApp(id,n)]),drListe(b,c,'applis'),'applis')+'</section>';
+  h+='<section class="card" style="margin-bottom:16px">'+entete('Onglets dans les applications','onglets')+D_APPLIS.map(([id,n])=>'<h3 style="margin:12px 0 6px;font-size:15px">'+esc(nomApp(id,n))+'</h3>'+chips(D_ONGLETS[id],drListe(b,c,'onglets',id),'onglets',id)).join('')+'</section>';
+  const cont=r.data.contenus||{};
+  h+='<section class="card" style="margin-bottom:16px">'+entete('Tâches, fiches, maintenances et procédures','contenus')+'<p class="hint">Un élément ajouté plus tard est visible par défaut.</p>'+
+    D_CONTENUS.map(([app,n])=>{const l=(cont[app]||[]).filter(x=>c.type!=='s'||x.secteur===c.id);return '<h3 style="margin:12px 0 6px;font-size:15px">'+n+'</h3>'+(l.length?chips(l.map(x=>[x.id,x.nom+(c.type!=='s'&&(r.data.secteurs||[]).length>1?' ('+secNom(x.secteur)+')':'')]),drListe(b,c,'contenus',app),'contenus',app):'<p class="hint">Rien dans Google pour l’instant.</p>')}).join('')+'</section>';
+  return h+'<div class="savebar" style="position:sticky;left:auto;right:auto;bottom:12px"><span class="st">'+(D.sale?'<b style="color:var(--warn)">• Modifications à envoyer.</b>':'Rien de modifié.')+' Les tablettes les reçoivent à leur prochain échange.</span><button class="btn" data-dr="annuler">Annuler</button><button class="btn pri" data-dr="enregistrer">Enregistrer et envoyer</button></div>';
+}
+async function actionDroits(b){
+  const act=b.dataset.dr;if(act==='modifier')S.charge={}; // version fraîche avant de modifier
+  const r=await lire('droits-lire');if(!r.ok)return chargerPage();
+  if(act==='modifier'){S.dr={b:JSON.parse(JSON.stringify(r.data.droits||{})),orig:JSON.parse(JSON.stringify(r.data.droits||{})),cible:'',sale:false,maj:r.data.maj};S.msgDr=null;return chargerPage()}
+  const D=S.dr;if(!D)return;
+  if(act==='annuler'||act==='recharger'){S.dr=null;S.charge={};S.msgDr=act==='recharger'?['info','Réglages rechargés.']:null;return chargerPage()}
+  const c=drCible(r);
+  if(act==='tog'){const {partie,app,id}=b.dataset,ap=app||null,herite=drListe(D.b,c,partie,ap).slice(),verrou=drVerrou(r,D.b,c,partie,ap),o=drObjet(D.b,c,true);let l;
+    // Liste créée ici : elle part de ce qui est affiché (hérité) et garde ce que l'administrateur a masqué (lot 7d).
+    const depart=()=>[...new Set(herite.concat(verrou))];
+    if(partie==='applis')l=o.applis=o.applis||depart();else{o[partie]=o[partie]||{};l=o[partie][app]=o[partie][app]||depart()}
+    if(verrou.includes(id))return chargerPage();
+    verrou.forEach(x=>{if(!l.includes(x))l.push(x)}); // ancien réglage : ce que masque l'administrateur y est remis
+    const i=l.indexOf(id);if(i<0)l.push(id);else l.splice(i,1);D.sale=true;return chargerPage()}
+  if(act==='perso'){const partie=b.dataset.partie,on=b.dataset.v==='1',o=drObjet(D.b,c,true);
+    if(!on)delete o[partie];
+    else if(o[partie]===undefined){const ro=c.type==='p'&&c.p?((D.b.roles||{})[c.p.role]||{})[partie]:null;o[partie]=ro?JSON.parse(JSON.stringify(ro)):(partie==='applis'?[]:{});
+      // Manager (lot 7d) : la partie propre part de tout ce que l'administrateur masque (rôles, secteurs).
+      if(!S.moi.admin){if(partie==='applis')o.applis=[...new Set(o.applis.concat(drVerrou(r,D.b,c,'applis',null)))];
+        else D_APPLIS.forEach(([a])=>{const v=drVerrou(r,D.b,c,partie,a);if(v.length)o[partie][a]=[...new Set((o[partie][a]||[]).concat(v))]})}}
+    if(!Object.keys(o).length)delete (c.type==='p'?D.b.personnes:D.b.secteurs)[c.id];
+    D.sale=true;return chargerPage()}
+  if(act==='enregistrer'){
+    b.disabled=true;
+    // Retraits explicites (lot 7c) : les réglages lus puis retirés ici (le script n'efface rien d'autre).
+    const o=D.orig||{},supprimer=[];
+    [['r','roles'],['p','personnes'],['s','secteurs']].forEach(([t,k])=>Object.keys(o[k]||{}).forEach(id=>{if(!(D.b[k]||{})[id])supprimer.push(t+':'+id)}));
+    const j=await appel('droits-ecrire',{droits:D.b,depuis:D.maj,supprimer});S.charge={};
+    if(j.status===200){S.dr=null;S.msgDr=['ok','« Qui voit quoi » enregistré : les tablettes le reçoivent à leur prochain échange.']}
+    else D.msg=['err','<b>'+esc((j.data&&j.data.error)||'Refusé.')+'</b>'+(j.status===409?' <button class="btn" data-dr="recharger">Recharger (abandonner mes changements)</button>':'')];
+    return chargerPage();
+  }
+}
 PAGES.droits=async()=>{
-  const r=await lire('droits-lire');
+  const r=await lire('droits-lire'),mod=peutModif('droits');
   let h=enTete('droits','Ce qui est masqué sur les tablettes, par rôle, par secteur et par personne.');
   if(!r.ok)return h+refus(r);
+  if(S.msgDr)h+='<div class="msg '+S.msgDr[0]+'" role="status">'+svg(S.msgDr[0]==='ok'?'ok':'alerte')+'<div>'+S.msgDr[1]+'</div></div>';
+  if(mod&&S.dr)return h+vueDroitsEdition(r);
+  if(mod)h+='<div class="row" style="margin-bottom:12px"><button class="btn pri" data-dr="modifier">'+svg('crayon')+'Modifier « Qui voit quoi »</button>'+(S.moi.admin?'':'<span class="hint">Vos secteurs et les personnes rattachées seulement à vos secteurs.</span>')+'</div>';
   const d=r.data.droits||{},noms={};(r.data.personnes||[]).forEach(p=>noms[p.id]=p.nom);
   const ROLES={operateur:'Opérateurs',chef:'Chefs d’équipe',responsable:'Responsables',admin:'Administrateurs'};
   const bloc=b=>{const l=[];if(b.applis&&b.applis.length)l.push('Applis masquées : '+b.applis.join(', '));
@@ -801,7 +1078,7 @@ PAGES.droits=async()=>{
 const CONTENUS={
   maintenance:{liste:'ops',titre:'title',sous:o=>(o.machines||[]).filter(Boolean).join(', ')||'Toutes les machines',detail:o=>
     sect('Machines',liste(o.machines))+lst('Matériel',o.tools)+lst('Sécurité',o.safety)+(o.prep&&o.prep.length?'<h3>Avant de commencer</h3>'+o.prep.map(p=>'<p>'+esc(p.texte||'')+'</p>'+boutonPhoto(p.photo)).join(''):'')+
-    etapes((o.steps||[]).map(s=>({t:s.title,d:s.detail,p:s.photo,x:s.axes?'à faire sur chaque broche':''})))+lst('Contrôles',o.checks)+
+    etapes((o.steps||[]).map(s=>({t:s.title,d:s.detail,p:s.photo,x:s.axes&&unSecteur()==='fraisage'?'à faire sur chaque broche':''})))+lst('Contrôles',o.checks)+
     ((o.variantes||[]).length?'<h3>Versions par type de machine</h3><ul>'+o.variantes.map(v=>'<li>'+esc((v.types||[]).join(', '))+' : '+(v.steps||[]).length+' étape(s)</li>').join('')+'</ul>':'')},
   fiches:{liste:'fiches',titre:'title',sous:o=>(o.reflexes||[]).length+' réflexe(s)',detail:o=>
     (o.intro?'<p>'+esc(o.intro)+'</p>':'')+lst('Signes',o.signs)+(o.images||[]).map(i=>'<p class="hint">'+esc(i.texte||'')+'</p>'+boutonPhoto(i.photo)).join('')+(o.before?'<h3>Avant de commencer</h3><p>'+esc(o.before)+'</p>':'')+
@@ -873,15 +1150,82 @@ PAGES.lancements=async()=>{
   return h;
 };
 
+// Tablettes & alertes (lot 7b, 2026-10-15). Suppression d'un appareil : par le script (session, zones du manager).
+// Mises à jour normale / test / bloquée : réglage du site (GitHub), donc sur le PC seulement et pour l'administrateur.
+// Alertes (mêmes règles que l'ancienne console) ; « Ignorer » est gardé sur ce PC (/api/alertes-ignorees).
+const dateVu=v=>{const m=/(\d\d)\/(\d\d)\/(\d{4}) (\d\d):(\d\d)/.exec(v||'');return m?new Date(+m[3],m[2]-1,+m[1],+m[4],+m[5]).getTime():0};
+function alertesTablettes(l,site){
+  const a=[],H=3600000,now=Date.now();
+  for(const t of l.filter(t=>!!t.version&&t.version!=='fichier')){
+    const vu=dateVu(t.vu),age=vu?now-vu:Infinity,e=t.etat||'';
+    if(age>30*24*H)continue;
+    if(age>24*H)a.push({cle:t.id+'|vu|'+t.vu,niv:age>72*H?'err':'att',t,texte:'pas connectée depuis '+(age>48*H?Math.round(age/24/H)+' jours':Math.round(age/H)+' h')+' (vue le '+t.vu+')'});
+    if(/^à envoyer/.test(e))a.push({cle:t.id+'|attente|'+e.split(' · ')[0],niv:age>2*H?'err':'att',t,texte:'données pas encore envoyées à Google : '+e.split(' · ')[0].replace(/^à envoyer : /,'')+(age>2*H?' — et la tablette ne se connecte plus':'')});
+    if(/hors ligne NON prêt/.test(e))a.push({cle:t.id+'|hl',niv:'err',t,texte:'ne fonctionnera pas sans internet (copie hors ligne absente) : rouvrir le pack une fois avec internet'});
+    if(site&&site.id){const cn=(site.tablettes||{})[t.id],c=cn&&cn.canal==='bloquee'?null:cn&&cn.canal==='test'&&site.test?site.test.id:site.id;
+      if(c&&t.version!==c&&age<24*H)a.push({cle:t.id+'|version|'+c,niv:'att',t,texte:'pas encore sur la version '+c+' (a la '+t.version+')'})}
+    const pl=/· (\d+(?:,\d)?) (Ko|Mo|Go) \/ (\d+(?:,\d)?) (Ko|Mo|Go)/.exec(e);
+    if(pl){const o=(n,u)=>parseFloat(n.replace(',','.'))*{Ko:1e3,Mo:1e6,Go:1e9}[u];if(o(pl[1],pl[2])/o(pl[3],pl[4])>.8)a.push({cle:t.id+'|place',niv:'err',t,texte:'mémoire presque pleine ('+pl[1]+' '+pl[2]+' sur '+pl[3]+' '+pl[4]+')'})}
+  }
+  return a.sort((x,y)=>(x.niv==='err'?0:1)-(y.niv==='err'?0:1));
+}
 PAGES.tablettes=async()=>{
-  const r=await lire('tablettes-lire');
+  const r=await lire('tablettes-lire'),mod=peutModif('tablettes');
   let h=enTete('tablettes','Les tablettes de vos zones : dernière connexion, version du pack et état envoyé. Jamais les codes des Réglages.');
   if(!r.ok)return h+refus(r);
   const l=r.data.tablettes||[];
-  return h+'<section class="card">'+(l.length?'<table><thead><tr><th>Tablette</th><th>Zone</th><th>Dernière connexion</th><th>Version</th><th>État</th></tr></thead><tbody>'+
-    l.map(t=>'<tr><td><b>'+esc(t.nom||t.id)+'</b><br><span class="hint">'+esc(t.id)+'</span></td><td>'+esc(t.zone)+'</td><td>'+(vueAujourdhui(t.vu)?'<span class="tag ok">✓ '+esc(t.vu)+'</span>':'<span class="tag warn">! '+esc(t.vu||'jamais')+'</span>')+'</td><td>'+esc(t.version)+'</td><td>'+esc(t.etat)+'</td></tr>').join('')+'</tbody></table>'
-    :'<div class="vide">Aucune tablette dans vos zones.</div>')+'</section>';
+  // Sur le PC : réglages des mises à jour (administrateur) et alertes ignorées sur ce PC.
+  let site=null,ign={},avis='';
+  if(CONSOLE_PC){
+    if(S.moi.admin){try{const e=await apiPC('/api/etat');site=e.site||null;if(e.erreur)avis='GitHub : '+e.erreur}catch(x){if(x.message==='session')throw x;avis=x.message}}
+    try{ign=await apiPC('/api/alertes-ignorees')||{}}catch(x){if(x.message==='session')throw x}
+  }
+  if(S.msgTab)h+='<div class="msg '+S.msgTab[0]+'" role="status">'+svg(S.msgTab[0]==='ok'?'ok':'alerte')+'<div>'+S.msgTab[1]+'</div></div>';
+  if(avis)h+='<div class="msg warn">'+svg('alerte')+'<div>'+esc(avis)+'</div></div>';
+  const tout=alertesTablettes(l,site),vis=tout.filter(a=>!ign[a.cle]),nIgn=tout.length-vis.length,peutIgn=CONSOLE_PC&&mod;
+  h+='<section class="card" style="margin-bottom:16px"><h2>'+svg('alerte')+'Alertes <span class="tag '+(vis.length?'warn':'ok')+'">'+vis.length+'</span>'+(peutIgn&&vis.length>1?'<span class="grow"></span><button class="btn" data-tab="ign-tout">Tout ignorer</button>':'')+'</h2>'+
+    (vis.length?'<div class="als">'+vis.map(a=>'<div class="al"><span class="sy">'+(a.niv==='err'?'!':'·')+'</span><div class="tx"><b>'+esc(a.t.zone||a.t.id)+(a.t.nom?' ('+esc(a.t.nom)+')':'')+'</b>'+esc(a.texte)+'</div>'+(peutIgn?'<button class="btn" data-tab="ign" data-cle="'+esc(a.cle)+'">Ignorer</button>':'')+'</div>').join('')+'</div>'
+      :'<div class="msg ok" style="margin:0">'+svg('ok')+'<b>'+(nIgn?'Aucune alerte en cours.':'Aucune alerte : les tablettes se connectent et ont tout envoyé.')+'</b></div>')+
+    (nIgn?'<p class="hint" style="margin:10px 0 0">'+nIgn+' alerte(s) ignorée(s) sur ce PC. '+(peutIgn?'<button class="btn" data-tab="reaff">Les réafficher</button>':'')+'</p>':'')+
+    '<p class="hint" style="margin:10px 0 0">Une alerte ignorée revient si la situation change.'+(CONSOLE_PC?'':' « Ignorer » se fait sur le PC de l’atelier.')+'</p></section>';
+  const canal=t=>{const c=site&&site.tablettes&&site.tablettes[t.id];return c?c.canal:'normale'};
+  const regCanal=CONSOLE_PC&&S.moi.admin&&site&&site.id;
+  h+='<section class="card">'+(l.length?'<table><thead><tr><th>Tablette</th><th>Zone</th><th>Dernière connexion</th><th>Version</th><th>État</th>'+(regCanal?'<th>Mises à jour</th>':'')+(mod?'<th></th>':'')+'</tr></thead><tbody>'+
+    l.map(t=>'<tr><td><b>'+esc(t.nom||t.id)+'</b><br><span class="hint">'+esc(t.id)+'</span></td><td>'+esc(t.zone)+'</td><td>'+(vueAujourdhui(t.vu)?'<span class="tag ok">✓ '+esc(t.vu)+'</span>':'<span class="tag warn">! '+esc(t.vu||'jamais')+'</span>')+'</td><td>'+esc(t.version)+'</td><td>'+esc(t.etat)+'</td>'+
+      (regCanal?'<td><select class="in" data-canal="'+esc(t.id)+'" aria-label="Mises à jour de '+esc(t.nom||t.id)+'">'+[['normale','Normale'],['test','Tablette test'],['bloquee','Bloquée']].map(([k,n])=>'<option value="'+k+'"'+(canal(t)===k?' selected':'')+'>'+n+'</option>').join('')+'</select></td>':'')+
+      (mod?'<td style="text-align:right;white-space:nowrap">'+(S.suppr===t.id?'<button class="btn dan plein" data-tab="suppr-ok">Oui, retirer</button><button class="btn" data-tab="suppr-non">Non</button>':'<button class="btn dan" data-tab="suppr" data-id="'+esc(t.id)+'">Retirer</button>')+'</td>':'')+'</tr>').join('')+'</tbody></table>'
+    :'<div class="vide">Aucune tablette dans vos zones.</div>')+
+    (mod?'<p class="hint" style="margin:10px 0 0">« Retirer » enlève l’appareil de la liste (onglet Tablettes de la Google Sheet) ; s’il se reconnecte, il réapparaît.'+(regCanal?' Son réglage de mises à jour est aussi remis à « Normale ».':'')+'</p>':'')+
+    (CONSOLE_PC&&S.moi.admin&&!regCanal?'<p class="hint">Mises à jour normale / test / bloquée : publiez d’abord une version (« Nouvelle version du pack ») et réglez GitHub.</p>':'')+
+    (!CONSOLE_PC&&S.moi.admin?'<p class="hint">Mises à jour normale / test / bloquée : sur le PC de l’atelier (console du PC).</p>':'')+'</section>';
+  return h;
 };
+async function actionTablettes(b){
+  const act=b.dataset.tab;S.msgTab=null;
+  if(act==='suppr'){S.suppr=b.dataset.id;return chargerPage()}
+  if(act==='suppr-non'){S.suppr=null;return chargerPage()}
+  if(act==='suppr-ok'){
+    const id=S.suppr;S.suppr=null;b.disabled=true;
+    const j=await appel('tablettes-suppr',{ids:[id]});S.charge={};
+    if(j.status!==200)S.msgTab=['err','<b>'+esc((j.data&&j.data.error)||'Refusé.')+'</b>'];
+    else{S.msgTab=['ok','Appareil '+esc(id)+' retiré de la liste.'];
+      // Son réglage de mises à jour (site, GitHub) : retiré aussi, sur le PC et par l'administrateur.
+      if(CONSOLE_PC&&S.moi.admin){try{const e=await apiPC('/api/etat');if(e.site&&e.site.tablettes&&e.site.tablettes[id])await apiPC('/api/canal',{appareil:id,canal:'normale'})}catch(x){if(x.message==='session')throw x;S.msgTab=['warn','Appareil retiré ; son réglage de mises à jour n’a pas pu être remis à « Normale » : '+esc(x.message)]}}}
+    return chargerPage();
+  }
+  if(act==='ign'||act==='ign-tout'||act==='reaff'){
+    let corps={tout:true};
+    if(act==='ign')corps={ajouter:[b.dataset.cle]};
+    if(act==='ign-tout'){const cles=[...document.querySelectorAll('[data-tab="ign"]')].map(x=>x.dataset.cle);corps={ajouter:cles}}
+    await apiPC('/api/alertes-ignorees',corps);return chargerPage();
+  }
+}
+async function changerCanalTablette(el){
+  const id=el.dataset.canal,canal=el.value;el.disabled=true;S.msgTab=null;
+  try{await apiPC('/api/canal',{appareil:id,canal});S.msgTab=['ok','Tablette '+esc(id)+' : mises à jour « '+({normale:'normale',test:'tablette test',bloquee:'bloquée'}[canal])+' » (en ligne dans 1 à 2 minutes).']}
+  catch(x){if(x.message==='session')return;S.msgTab=['err','<b>'+esc(x.message)+'</b>']}
+  return chargerPage();
+}
 
 PAGES.tableau=async()=>{
   const r=await lire('releves-lire');
@@ -896,43 +1240,219 @@ PAGES.tableau=async()=>{
   return h;
 };
 
-// Calendrier : vue semaine machine × jour, calculée avec le moteur de l'appli Maintenance.
-PAGES.calendrier=async()=>{
-  const sec=unSecteur();
-  let h=enTete('calendrier','Maintenances prévues de la semaine, secteur '+esc(secNom(sec))+'. Les réglages du calendrier se font dans l’appli Maintenance.');
-  if(!sec)return h+'<div class="card vide">Aucun secteur visible.</div>';
-  h+=S.secteur==='tous'?choixSecteur():'';
-  const r=await lire('calendrier-lire',{secteur:sec});
-  if(!r.ok)return h+refus(r);
-  const st={cal:r.data.cal,ops:r.data.ops||[],journal:r.data.journal||[],machines:r.data.machines||[],operators:r.data.operators||[]};
-  if(!st.cal||!(st.cal.regles||[]).length||typeof CalMaint==='undefined')return h+'<div class="card vide">Aucun calendrier réglé pour ce secteur.</div>';
-  const C=CalMaint,auj=C.auj(),lun=S.semaine||C.lundi(auj);
-  const jours=[0,1,2,3,4,5,6].map(i=>C.ajoute(lun,i)).filter(d=>(st.cal.jours||[1,2,3,4,5]).indexOf(C.D(d).getDay())>=0||C.D(d).getDay()%6!==0);
-  // Occurrences sur une période plus large : une maintenance n'est « faite » que si elle a eu lieu entre l'occurrence
-  // précédente et la suivante de la même règle sur la même machine (même règle que l'écran télé : CalMaint.etats).
-  let large=[];try{large=C.occurrences(st,C.ajoute(lun,-28),C.ajoute(lun,35)).filter(o=>o.date)}catch(e){}
-  const occ=large.filter(o=>o.date>=jours[0]&&o.date<=jours[jours.length-1]);
+// Calendrier de maintenance (lot 6, 2026-10-15) : vue semaine, vue mois avec la charge de chacun, et TOUS les réglages
+// de l'onglet Calendrier de la console du PC (appli Maintenance) : jours travaillés et fermés, roulement, règles,
+// congés et remplaçants. Calculs : le moteur <calendrier> de l'appli (CalMaint), recopié dans cette page.
+// Règles « par type » : remplacées par les machines de ces types, comme l'appli (typeFiche / typesAct).
+function etatCalendrier(d,calAutre){
+  const cal=calAutre||d.cal;
+  const st={cal:cal?JSON.parse(JSON.stringify(cal)):null,ops:d.ops||[],journal:d.journal||[],machines:d.machines||[],operators:d.operators||[]};
+  if(st.cal&&Array.isArray(st.cal.regles)){
+    const tm=d.typesMachines||{},ren=d.typesRenommes||{},act=t=>ren[t]||t;
+    st.cal.regles=st.cal.regles.map(g=>{
+      if(!(g.types||[]).length)return g;
+      const f=st.ops.find(o=>o.id===g.op),cands=f&&(f.machines||[]).length?f.machines.filter(m=>st.machines.includes(m)):st.machines,ty=g.types.map(act);
+      const l=cands.filter(m=>ty.includes(act(tm[m]||'')));
+      return l.length?Object.assign({},g,{machines:l}):null}).filter(Boolean);
+  }
+  return st;
+}
+const CAL_VIDE=()=>({maj:0,jours:[1,2,3,4,5],periodes:[],fermes:[],roulement:{mode:'semaine',n:1,debut:'',equipes:[]},regles:[],conges:[],rempl:{},exc:{}});
+const JOURS_SEM=[[1,'Lun'],[2,'Mar'],[3,'Mer'],[4,'Jeu'],[5,'Ven'],[6,'Sam'],[0,'Dim']];
+const NOMS_JOURS=['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
+const QUAND=[['jour','Chaque jour travaillé'],['nj','Un jour travaillé sur N'],['semaine','Chaque semaine (ou toutes les N)'],['mois','Chaque mois']];
+function descQuand(q){
+  if(q.type==='jour')return 'chaque jour travaillé';
+  if(q.type==='nj')return 'un jour travaillé sur '+q.n;
+  if(q.type==='semaine')return (q.n>1?'toutes les '+q.n+' semaines':'chaque semaine')+' : '+(q.jours||[]).map(j=>NOMS_JOURS[j]).concat(q.dernier?['dernier jour travaillé']:[]).join(', ');
+  return 'chaque mois : '+(q.rang>=5?'le dernier':['','le 1er','le 2e','le 3e','le 4e'][q.rang])+' '+NOMS_JOURS[q.js];
+}
+// Occurrences d'une période, avec l'état (faite / en retard / aujourd'hui / prévue) de chaque machine.
+function occurrencesEtat(st,du,au){
+  const C=CalMaint;let large=[];try{large=C.occurrences(st,C.ajoute(du,-35),C.ajoute(au,35)).filter(o=>o.date)}catch(e){}
   const suite={};large.forEach(o=>o.machines.forEach(m=>{const k=o.regle.id+'|'+m;(suite[k]=suite[k]||[]).push(o)}));
-  const faiteSur=(o,m)=>{const l=suite[o.regle.id+'|'+m]||[],i=l.indexOf(o);try{return C.faite(st,o,m,l[i+1]?l[i+1].date:'',i>0?l[i-1].date:'')}catch(e){return null}};
+  const faite=(o,m)=>{const l=suite[o.regle.id+'|'+m]||[],i=l.indexOf(o);try{return C.faite(st,o,m,l[i+1]?l[i+1].date:'',i>0?l[i-1].date:'')}catch(e){return null}};
+  return {occ:large.filter(o=>o.date>=du&&o.date<=au),faite};
+}
+// Charge de chacun sur une période : machines à faire par personne (remplaçants compris, validés ou proposés).
+function chargePeriode(st,du,au){
+  const {occ}=occurrencesEtat(st,du,au),ch={},rempl=[];
+  occ.forEach(o=>{(o.noms||[]).forEach(n=>{ch[n]=(ch[n]||0)+o.machines.length});(o.rempl||[]).forEach(r=>rempl.push(Object.assign({date:o.date,op:o.op.title},r)))});
+  return {ch,rempl};
+}
+function vueCharge(st,du,au,titre){
+  const {ch,rempl}=chargePeriode(st,du,au),noms=Object.keys(ch).sort((a,b)=>ch[b]-ch[a]||a.localeCompare(b,'fr')),max=Math.max(1,...Object.values(ch));
+  const vus=new Set(),rl=rempl.filter(r=>{const k=r.absent+'|'+r.par+'|'+r.conge.id;if(vus.has(k))return false;vus.add(k);return true});
+  return '<section class="card" style="margin-top:16px"><h2>'+svg('personnes')+esc(titre)+'</h2>'+(noms.length?'<table><tbody>'+noms.map(n=>'<tr><td style="width:30%"><b>'+esc(n)+'</b></td><td><div style="background:var(--accent-soft);border-radius:6px;height:14px;width:'+Math.round(ch[n]/max*100)+'%"></div></td><td style="width:1%;white-space:nowrap">'+ch[n]+' machine(s)</td></tr>').join('')+'</tbody></table>':'<p class="hint">Rien de prévu sur la période.</p>')+
+    (rl.length?'<h3 style="font-size:16px;margin:14px 0 6px">Remplacements</h3><ul style="margin:0;padding-left:20px">'+rl.map(r=>'<li>'+esc(r.absent)+' (congé du '+esc(dFr(r.conge.du))+' au '+esc(dFr(r.conge.au))+') : '+(r.par?esc(r.par)+(r.valide?' <span class="tag ok">validé</span>':' <span class="tag warn">proposé</span>'):'<span class="tag err">personne de disponible</span>')+'</li>').join('')+'</ul>':'')+'</section>';
+}
+function vueSemaine(st,cal){
+  const C=CalMaint,auj=C.auj(),lun=S.semaine||C.lundi(auj);
+  const jours=[0,1,2,3,4,5,6].map(i=>C.ajoute(lun,i)).filter(d=>(cal.jours||[1,2,3,4,5]).indexOf(C.D(d).getDay())>=0||C.D(d).getDay()%6!==0);
+  const {occ,faite}=occurrencesEtat(st,jours[0],jours[jours.length-1]);
   const machines=st.machines.length?st.machines:[...new Set(occ.flatMap(o=>o.machines))];
-  h+='<div class="row" style="margin-bottom:10px"><button class="btn" data-semaine="'+C.ajoute(lun,-7)+'">‹ Semaine précédente</button><button class="btn" data-semaine="">Cette semaine</button><button class="btn" data-semaine="'+C.ajoute(lun,7)+'">Semaine suivante ›</button>'+
+  let h='<div class="row" style="margin-bottom:10px"><button class="btn" data-semaine="'+C.ajoute(lun,-7)+'">‹ Semaine précédente</button><button class="btn" data-semaine="">Cette semaine</button><button class="btn" data-semaine="'+C.ajoute(lun,7)+'">Semaine suivante ›</button>'+
     '<span class="hint">Semaine du '+esc(C.D(lun).toLocaleDateString('fr-FR',{day:'numeric',month:'long'}))+'</span></div>';
   h+='<div class="leg"><span><span class="op r" style="display:inline-flex">✕</span> en retard</span><span><span class="op a" style="display:inline-flex">•</span> aujourd’hui</span><span><span class="op f" style="display:inline-flex">✓</span> faite</span><span><span class="op p" style="display:inline-flex">○</span> prévue</span></div>';
-  h+='<div class="cal" style="grid-template-columns:200px repeat('+jours.length+',minmax(120px,1fr))"><div class="hd">Machine</div>'+jours.map(d=>'<div class="hd'+(d===auj?' auj':'')+'">'+esc(C.D(d).toLocaleDateString('fr-FR',{weekday:'short',day:'numeric'}))+(C.ferme(st.cal,d)?'<br><small>'+esc(C.ferme(st.cal,d))+'</small>':'')+'</div>').join('');
+  h+='<div class="cal" style="grid-template-columns:200px repeat('+jours.length+',minmax(120px,1fr))"><div class="hd">Machine</div>'+jours.map(d=>'<div class="hd'+(d===auj?' auj':'')+'">'+esc(C.D(d).toLocaleDateString('fr-FR',{weekday:'short',day:'numeric'}))+(C.ferme(cal,d)?'<br><small>'+esc(C.ferme(cal,d))+'</small>':'')+'</div>').join('');
   machines.forEach(m=>{
     h+='<div class="mn">'+esc(m)+'</div>';
     jours.forEach(d=>{
       h+='<div>'+occ.filter(o=>o.date===d&&o.machines.indexOf(m)>=0).map(o=>{
-        const f=faiteSur(o,m);
-        const c=f?'f':d<auj?'r':d===auj?'a':'p',sy={f:'✓',r:'✕',a:'•',p:'○'}[c];
+        const f=faite(o,m),c=f?'f':d<auj?'r':d===auj?'a':'p',sy={f:'✓',r:'✕',a:'•',p:'○'}[c];
         return '<span class="op '+c+'">'+sy+' '+esc(o.op.title||'')+'<small>'+esc(f?'faite par '+(f.op||'')+(f.end?' le '+dateFr(f.end):''):(o.noms||[]).join(' + '))+'</small></span>'}).join('')+'</div>';
     });
   });
   h+='</div>';
   if(!machines.length)h+='<div class="card vide">Aucune machine dans ce calendrier.</div>';
-  if(peutModif('calendrier'))h+=vueConges(st,sec);
+  return h;
+}
+function vueMois(st,cal){
+  const C=CalMaint,auj=C.auj(),premier=S.mois||auj.slice(0,8)+'01',d0=C.D(premier),dernier=C.S(new Date(d0.getFullYear(),d0.getMonth()+1,0,12));
+  const {occ,faite}=occurrencesEtat(st,premier,dernier),lun=C.lundi(premier),moisSuiv=C.S(new Date(d0.getFullYear(),d0.getMonth()+1,1,12)),moisPrec=C.S(new Date(d0.getFullYear(),d0.getMonth()-1,1,12));
+  let h='<div class="row" style="margin-bottom:10px"><button class="btn" data-mois="'+moisPrec+'">‹ Mois précédent</button><button class="btn" data-mois="">Ce mois-ci</button><button class="btn" data-mois="'+moisSuiv+'">Mois suivant ›</button>'+
+    '<span class="hint">'+esc(d0.toLocaleDateString('fr-FR',{month:'long',year:'numeric'}))+'</span></div>';
+  h+='<div class="cal" style="grid-template-columns:repeat(7,minmax(110px,1fr))">'+JOURS_SEM.map(j=>'<div class="hd">'+j[1]+'</div>').join('');
+  for(let d=lun;d<=dernier||C.D(d).getDay()!==1;d=C.ajoute(d,1)){
+    if(d>dernier&&C.D(d).getDay()===1)break;
+    const dans=d>=premier&&d<=dernier,l=dans?occ.filter(o=>o.date===d):[],ferme=dans&&C.ferme(cal,d),trav=dans&&C.travaille(cal,d);
+    let fait=0,ret=0,tot=0;l.forEach(o=>o.machines.forEach(m=>{tot++;if(faite(o,m))fait++;else if(d<auj)ret++}));
+    h+='<div style="'+(dans?'':'background:#f7f9fa;')+(d===auj?'outline:2px solid var(--accent);outline-offset:-2px;':'')+'"><b style="font-size:15px">'+(dans?Number(d.slice(8)):'')+'</b>'+
+      (ferme?'<br><small class="hint">'+esc(ferme)+'</small>':dans&&!trav?'<br><small class="hint">non travaillé</small>':'')+
+      (tot?'<br><span class="op '+(ret?'r':fait===tot?'f':d===auj?'a':'p')+'" style="margin-top:4px">'+tot+' machine(s)'+(fait?'<small>'+fait+' faite(s)</small>':ret?'<small>'+ret+' en retard</small>':'')+'</span>':'')+'</div>';
+  }
+  h+='</div>';
+  return h+vueCharge(st,premier,dernier,'Charge du mois par personne (remplaçants compris)');
+}
+// --- Réglages : brouillon S.calEd (une copie du calendrier), enregistré d'un bloc (calendrier-ecrire, depuis = maj).
+const ceCase=(c,v,l)=>'<label class="chip"><input type="checkbox" data-ce="'+c+'" data-t="bool"'+(v?' checked':'')+'>'+l+'</label>';
+const ceJours=(c,l)=>'<div class="row" style="gap:6px">'+JOURS_SEM.map(([n,t])=>'<label class="chip"><input type="checkbox" data-ce-l="'+c+'" data-t="num" value="'+n+'"'+((l||[]).includes(n)?' checked':'')+'>'+t+'</label>').join('')+'</div>';
+const ceTexte=(c,v,l,type,attr)=>'<label class="lbl" style="margin:0;min-width:140px">'+l+'<input class="in" type="'+(type||'text')+'" data-ce="'+c+'"'+(type==='number'?' data-t="num"':'')+' value="'+esc(v==null?'':v)+'"'+(attr||'')+'></label>';
+const ceChoix=(c,v,l,opts,rr,t)=>'<label class="lbl" style="margin:0;min-width:160px">'+l+'<select class="in" data-ce="'+c+'"'+(rr?' data-rr="1"':'')+(t?' data-t="'+t+'"':'')+'>'+opts.map(([k,x])=>'<option value="'+esc(k)+'"'+(String(v)===String(k)?' selected':'')+'>'+esc(x)+'</option>').join('')+'</select></label>';
+const ceListe=(c,v,choix)=>'<div class="row" style="gap:6px">'+(choix.length?choix.map(x=>'<label class="chip"><input type="checkbox" data-ce-l="'+c+'" value="'+esc(x)+'"'+((v||[]).includes(x)?' checked':'')+'>'+esc(x)+'</label>').join(''):'<span class="hint">Aucun choix possible.</span>')+'</div>';
+function vueReglages(d,sec){
+  const E=S.calEd,cal=E.cal,ops=(d.ops||[]).filter(o=>!o.archived),noms=d.operators||[],r=cal.roulement;
+  let h=(E.msg?'<div class="msg '+E.msg[0]+'">'+svg('alerte')+'<div>'+E.msg[1]+'</div></div>':'');
+  h+='<section class="card edition"><h2>1. Jours travaillés et jours fermés</h2><div class="hint" style="margin-bottom:6px">Semaine habituelle</div>'+ceJours('jours',cal.jours)+
+    '<h3 style="font-size:16px;margin:14px 0 6px">Périodes particulières (autres jours travaillés)</h3>'+cal.periodes.map((p,i)=>'<div class="row etape">'+ceTexte('periodes.'+i+'.du',p.du,'Du','date')+ceTexte('periodes.'+i+'.au',p.au,'Au','date')+ceJours('periodes.'+i+'.jours',p.jours)+'<button class="btn" data-cr="moins" data-k="periodes" data-i="'+i+'">Retirer</button></div>').join('')+
+    '<button class="btn" data-cr="plus" data-k="periodes">'+svg('plus')+'Ajouter une période</button>'+
+    '<h3 style="font-size:16px;margin:14px 0 6px">Jours fermés (fériés, fermetures)</h3>'+cal.fermes.map((p,i)=>'<div class="row etape">'+ceTexte('fermes.'+i+'.du',p.du,'Du','date')+ceTexte('fermes.'+i+'.au',p.au,'Au','date')+ceTexte('fermes.'+i+'.nom',p.nom,'Nom')+'<button class="btn" data-cr="moins" data-k="fermes" data-i="'+i+'">Retirer</button></div>').join('')+
+    '<button class="btn" data-cr="plus" data-k="fermes">'+svg('plus')+'Ajouter un jour fermé</button></section>';
+  h+='<section class="card edition" style="margin-top:16px"><h2>2. Roulement des personnes</h2><div class="row">'+ceChoix('roulement.mode',r.mode,'Change',[['semaine','par semaine'],['jour','par jour travaillé']])+ceTexte('roulement.n',r.n,'Toutes les','number',' min="1" max="12"')+ceTexte('roulement.debut',r.debut,'À partir du','date')+'</div>'+
+    '<p class="hint">Les binômes ou équipes ci-dessous se relaient dans cet ordre.</p>'+r.equipes.map((e,i)=>'<div class="etape"><div class="row">'+ceTexte('roulement.equipes.'+i+'.nom',e.nom,'Nom')+ceTexte('roulement.equipes.'+i+'.couleur',e.couleur||'#2F6FDB','Couleur','color')+'<span class="grow"></span>'+
+      '<button class="btn" data-cr="haut" data-k="roulement.equipes" data-i="'+i+'"'+(i?'':' disabled')+' aria-label="Monter">↑</button><button class="btn" data-cr="bas" data-k="roulement.equipes" data-i="'+i+'"'+(i<r.equipes.length-1?'':' disabled')+' aria-label="Descendre">↓</button><button class="btn" data-cr="moins" data-k="roulement.equipes" data-i="'+i+'">Retirer</button></div>'+
+      '<div class="hint">Personnes (6 au plus)</div>'+ceListe('roulement.equipes.'+i+'.personnes',e.personnes,noms)+'</div>').join('')+
+    '<button class="btn" data-cr="plus" data-k="roulement.equipes">'+svg('plus')+'Ajouter un binôme / une équipe</button></section>';
+  h+='<section class="card edition" style="margin-top:16px"><h2>3. Quand revient chaque opération</h2>'+(ops.length?'':'<p class="hint">Aucune opération dans ce secteur : créez-les d’abord (Opérations de maintenance).</p>')+
+    cal.regles.map((g,i)=>{const f=ops.find(o=>o.id===g.op),cands=f&&(f.machines||[]).length?f.machines.filter(m=>(d.machines||[]).includes(m)):(d.machines||[]),cib=g.cible||((g.types||[]).length?'type':(g.machines||[]).length?'liste':'tout'),q=g.quand,p='regles.'+i;
+      const types=[...new Set((d.types||[]).concat(g.types||[]))];
+      return '<div class="etape"><div class="row">'+ceChoix(p+'.op',g.op,'Opération',ops.map(o=>[o.id,o.title]).concat(f||!g.op?[]:[[g.op,'(opération retirée)']]),1)+
+        ceChoix(p+'.cible',cib,'Machines',[['tout','Toutes celles de l’opération'],['type','Par type de machine'],['liste','Liste précise']],1)+'<span class="grow"></span><button class="btn" data-cr="moins" data-k="regles" data-i="'+i+'">Retirer la règle</button></div>'+
+        (cib==='type'?'<div class="hint">Types</div>'+ceListe(p+'.types',g.types,types):cib==='liste'?'<div class="hint">Machines</div>'+ceListe(p+'.machines',g.machines,cands):'')+
+        '<div class="row">'+ceChoix(p+'.quand.type',q.type,'Quand',QUAND,1)+
+          (q.type==='nj'||q.type==='semaine'?ceTexte(p+'.quand.n',q.n,q.type==='nj'?'N (jours travaillés)':'Toutes les N semaines','number',' min="1" max="52"'):'')+
+          (q.type==='mois'?ceChoix(p+'.quand.rang',q.rang,'Le',[[1,'1er'],[2,'2e'],[3,'3e'],[4,'4e'],[5,'dernier']],0,'num')+ceChoix(p+'.quand.js',q.js,'Jour',JOURS_SEM.map(([n])=>[n,NOMS_JOURS[n]]),0,'num'):'')+
+          ceTexte(p+'.avant',g.avant,'À faire avant','time')+ceTexte(p+'.debut',g.debut,'À partir du','date')+'</div>'+
+        (q.type==='semaine'?'<div class="row" style="margin-top:6px">'+ceJours(p+'.quand.jours',q.jours)+ceCase(p+'.quand.dernier',q.dernier,'Dernier jour travaillé de la semaine')+'</div>':'')+
+        '<div class="row" style="margin-top:6px">'+ceChoix(p+'.qui.type',g.qui.type,'Qui',[['roulement','Le binôme / l’équipe du roulement'],['fixe','Des personnes fixes']],1)+ceCase(p+'.acc',g.acc,'Accompagnant obligatoire')+'</div>'+
+        (g.qui.type==='fixe'?'<div class="hint">Personnes (4 au plus)</div>'+ceListe(p+'.qui.noms',g.qui.noms,noms):'')+
+        '<p class="hint" style="margin:6px 0 0">'+esc(descQuand(q))+'</p></div>'}).join('')+
+    (ops.length?'<button class="btn" data-cr="plus" data-k="regles">'+svg('plus')+'Ajouter une règle</button>':'')+'</section>';
+  const cg=(cal.conges||[]).slice().sort((a,b)=>String(a.du).localeCompare(String(b.du)));
+  h+='<section class="card edition" style="margin-top:16px"><h2>4. Congés et remplaçants</h2>'+cg.map(c=>{const i=cal.conges.indexOf(c);
+      return '<div class="row etape">'+ceChoix('conges.'+i+'.nom',c.nom,'Personne',noms.map(n=>[n,n]))+ceTexte('conges.'+i+'.du',c.du,'Du','date')+ceTexte('conges.'+i+'.au',c.au,'Au','date')+
+        '<label class="lbl" style="margin:0;min-width:200px">Remplacée par<select class="in" data-ce="rempl.'+esc(c.id)+'" data-t="opt"><option value="">Proposé automatiquement</option>'+noms.filter(n=>n!==c.nom).map(n=>'<option'+((cal.rempl||{})[c.id]===n?' selected':'')+'>'+esc(n)+'</option>').join('')+'</select></label>'+
+        '<button class="btn" data-cr="moins-conge" data-id="'+esc(c.id)+'">Retirer</button></div>'}).join('')+
+    '<button class="btn" data-cr="plus" data-k="conges">'+svg('plus')+'Ajouter un congé</button>'+
+    '<p class="hint" style="margin:8px 0 0">Sans remplaçant choisi, la console propose une personne présente, formée à l’opération et la moins chargée (comme l’appli).</p></section>';
+  // Simulation : la charge du mois avec CES réglages (avant de les enregistrer).
+  const auj=CalMaint.auj(),premier=auj.slice(0,8)+'01',d0=CalMaint.D(premier),dernier=CalMaint.S(new Date(d0.getFullYear(),d0.getMonth()+1,0,12));
+  try{h+=vueCharge(etatCalendrier(d,brouillonCalPropre(cal)),premier,dernier,'Simulation : charge du mois avec ces réglages')}catch(e){}
+  h+='<div class="savebar"><span class="st">'+(E.sale?'<b style="color:var(--warn)">• Réglages à enregistrer.</b> Les tablettes du secteur les reçoivent à leur prochain échange.':'Rien de modifié.')+'</span>'+
+    '<button class="btn" data-cr="annuler">Annuler</button><button class="btn pri" data-cr="enregistrer">Enregistrer le calendrier</button></div>';
+  return h;
+}
+// Réglages en lecture (sans le droit de modifier) : le résumé des mêmes réglages.
+function vueReglagesLecture(d){
+  const cal=d.cal||CAL_VIDE(),ops=d.ops||[],r=cal.roulement||{equipes:[]};
+  return '<section class="card det"><h3 style="margin-top:0">Jours travaillés</h3><p>'+esc((cal.jours||[]).map(j=>NOMS_JOURS[j]).join(', ')||'aucun')+'</p>'+
+    ((cal.periodes||[]).length?'<p>Périodes particulières : '+esc(cal.periodes.map(p=>dFr(p.du)+' → '+dFr(p.au)+' ('+p.jours.map(j=>NOMS_JOURS[j]).join(', ')+')').join(' ; '))+'</p>':'')+
+    ((cal.fermes||[]).length?'<p>Jours fermés : '+esc(cal.fermes.map(p=>(p.nom||'Fermé')+' '+dFr(p.du)+(p.au!==p.du?' → '+dFr(p.au):'')).join(' ; '))+'</p>':'')+
+    '<h3>Roulement</h3><p>'+esc((r.mode==='jour'?'Par jour travaillé':'Par semaine')+(r.n>1?', toutes les '+r.n:'')+(r.debut?', à partir du '+dFr(r.debut):''))+'</p>'+
+    ((r.equipes||[]).length?'<ul>'+r.equipes.map(e=>'<li><b>'+esc(e.nom)+'</b> : '+esc(e.personnes.join(', '))+'</li>').join('')+'</ul>':'')+
+    '<h3>Règles</h3>'+((cal.regles||[]).length?'<ul>'+cal.regles.map(g=>{const f=ops.find(o=>o.id===g.op);return '<li><b>'+esc(f?f.title:'(opération retirée)')+'</b> : '+esc(descQuand(g.quand))+((g.types||[]).length?' · types '+g.types.join(', '):(g.machines||[]).length?' · '+g.machines.join(', '):'')+(g.avant?' · avant '+g.avant:'')+(g.qui.type==='fixe'?' · '+g.qui.noms.join(', '):' · roulement')+(g.acc?' · accompagnant obligatoire':'')+'</li>'}).join('')+'</ul>':'<p class="hint">Aucune règle.</p>')+'</section>';
+}
+// Brouillon nettoyé avant l'envoi : listes cohérentes (le script et l'appli le nettoient aussi : bloc <fusion>).
+function brouillonCalPropre(c){
+  const x=JSON.parse(JSON.stringify(c));
+  x.regles=(x.regles||[]).map(g=>{const cib=g.cible;delete g.cible;if(cib==='tout'){g.types=[];g.machines=[]}else if(cib==='type')g.machines=[];else if(cib==='liste')g.types=[];return g});
+  return x;
+}
+function erreurReglages(c){
+  for(const p of c.periodes.concat(c.fermes))if(!p.du||!p.au||p.au<p.du)return 'Une période ou un jour fermé n’a pas de dates valides (la fin après le début).';
+  for(const e of c.roulement.equipes){if(!String(e.nom||'').trim())return 'Donnez un nom à chaque binôme / équipe.';if(e.personnes.length>6)return '« '+e.nom+' » : 6 personnes au plus.'}
+  for(const g of c.regles){if(!g.op)return 'Chaque règle doit avoir une opération.';if(g.qui.type==='fixe'&&!(g.qui.noms.length>=1&&g.qui.noms.length<=4))return 'Règle avec des personnes fixes : choisissez de 1 à 4 personnes.';
+    if((g.cible==='type'&&!g.types.length)||(g.cible==='liste'&&!g.machines.length))return 'Règle « par type » ou « liste précise » : cochez au moins un élément.';
+    if(g.quand.type==='semaine'&&!g.quand.jours.length&&!g.quand.dernier)return 'Règle « chaque semaine » : choisissez au moins un jour.'}
+  for(const c2 of c.conges)if(!c2.nom||!c2.du||!c2.au||c2.au<c2.du)return 'Un congé n’a pas de personne ou de dates valides.';
+  return '';
+}
+PAGES.calendrier=async()=>{
+  const sec=unSecteur(),mod=peutModif('calendrier');
+  let h=enTete('calendrier','Maintenances prévues, secteur '+esc(secNom(sec))+'. '+(mod?'Vous pouvez régler le calendrier ici (comme dans l’appli Maintenance).':'Les réglages se lisent ici ; ils se modifient avec le droit « Modification ».'));
+  if(!sec)return h+'<div class="card vide">Aucun secteur visible.</div>';
+  h+=S.secteur==='tous'?choixSecteur():'';
+  const r=await lire('calendrier-lire',{secteur:sec});
+  if(!r.ok)return h+refus(r);
+  if(typeof CalMaint==='undefined')return h+'<div class="card vide">Moteur du calendrier absent.</div>';
+  const d=r.data,vue=S.calVue||'semaine',cal=d.cal||CAL_VIDE();S.calNoms=d.operators||[];
+  if(S.msgCal)h+='<div class="msg '+S.msgCal[0]+'" role="status">'+svg(S.msgCal[0]==='ok'?'ok':'alerte')+'<div>'+S.msgCal[1]+'</div></div>';
+  h+='<div class="row" role="group" aria-label="Vue" style="margin-bottom:12px">'+[['semaine','Semaine'],['mois','Mois'],['reglages','Réglages']].map(([k,t])=>'<button class="chip" data-calvue="'+k+'" aria-pressed="'+(vue===k)+'">'+t+'</button>').join('')+'</div>';
+  if(vue==='reglages'){
+    if(!mod)return h+vueReglagesLecture(d);
+    if(!S.calEd||S.calEd.sec!==sec){const c=JSON.parse(JSON.stringify(cal));c.regles.forEach(g=>{g.cible=(g.types||[]).length?'type':(g.machines||[]).length?'liste':'tout'});S.calEd={sec,cal:c,depuis:d.cal?d.cal.maj||0:0,sale:false}}
+    return h+vueReglages(d,sec);
+  }
+  const st=etatCalendrier(d);
+  if(!st.cal||!(st.cal.regles||[]).length)h+='<div class="card vide">Aucune règle dans le calendrier de ce secteur'+(mod?' : réglez-le dans « Réglages ».':'.')+'</div>';
+  else h+=vue==='mois'?vueMois(st,st.cal):vueSemaine(st,st.cal);
+  if(mod&&vue==='semaine'&&d.cal)h+=vueConges(st,sec);
   return h;
 };
+async function actionCalendrier(b){
+  const E=S.calEd,act=b.dataset.cr;if(!E)return;
+  const liste=k=>lireChemin(E.cal,k);
+  if(act==='plus'){
+    const k=b.dataset.k,auj=CalMaint.auj();
+    const neuf={periodes:{du:auj,au:auj,jours:[1,2,3,4,5]},fermes:{du:auj,au:auj,nom:''},'roulement.equipes':{id:'e'+alea(8),nom:'',personnes:[],couleur:'#2F6FDB'},
+      regles:{id:'r'+Date.now().toString(36)+alea(4),op:'',cible:'tout',machines:[],types:[],avant:'',acc:false,debut:'',quand:{type:'semaine',n:1,jours:[1],dernier:false,rang:1,js:1},qui:{type:'roulement',noms:[]}},
+      conges:{id:'c'+alea(10),nom:(S.calNoms||[])[0]||'',du:auj,au:auj}}[k];
+    liste(k).push(neuf);E.sale=true;return chargerPage();
+  }
+  if(act==='moins'){liste(b.dataset.k).splice(+b.dataset.i,1);E.sale=true;return chargerPage()}
+  if(act==='moins-conge'){E.cal.conges=E.cal.conges.filter(c=>c.id!==b.dataset.id);delete (E.cal.rempl||{})[b.dataset.id];E.sale=true;return chargerPage()}
+  if(act==='haut'||act==='bas'){const l=liste(b.dataset.k),i=+b.dataset.i,j=act==='haut'?i-1:i+1;if(j<0||j>=l.length)return;[l[i],l[j]]=[l[j],l[i]];E.sale=true;return chargerPage()}
+  if(act==='annuler'||act==='recharger'){S.calEd=null;S.charge={};S.msgCal=act==='recharger'?['info','Calendrier rechargé.']:null;return chargerPage()}
+  if(act==='enregistrer'){
+    const err=erreurReglages(E.cal);if(err){E.msg=['err','<b>'+esc(err)+'</b>'];return chargerPage()}
+    b.disabled=true;
+    const j=await appel('calendrier-ecrire',{secteur:E.sec,cal:brouillonCalPropre(E.cal),depuis:E.depuis,resume:'réglages du calendrier'});S.charge={};
+    if(j.status===200){S.calEd=null;S.msgCal=['ok','Calendrier enregistré : les tablettes du secteur le reçoivent à leur prochain échange.']}
+    else E.msg=['err','<b>'+esc((j.data&&j.data.error)||'Refusé.')+'</b>'+(j.status===409?' <button class="btn" data-cr="recharger">Recharger (abandonner mes changements)</button>':'')];
+    return chargerPage();
+  }
+}
+function saisieCalendrier(el){
+  const E=S.calEd;if(!E)return;
+  if(el.dataset.ce){
+    const c=el.dataset.ce,t=el.dataset.t;let v=t==='bool'?el.checked:t==='num'?Math.round(Number(el.value)||0):el.value;
+    if(t==='opt'&&!v){const k=c.split('.').slice(1).join('.');delete E.cal.rempl[k]}else ecrireChemin(E.cal,c,v);
+  }
+  if(el.dataset.ceL){const c=el.dataset.ceL,l=[...document.querySelectorAll('[data-ce-l="'+c+'"]:checked')].map(x=>x.dataset.t==='num'?Number(x.value):x.value);ecrireChemin(E.cal,c,l)}
+  E.sale=true;const st=document.querySelector('.savebar .st');if(st)st.innerHTML='<b style="color:var(--warn)">• Réglages à enregistrer.</b> Les tablettes du secteur les reçoivent à leur prochain échange.';
+  if(el.dataset.rr)chargerPage();
+}
+
 
 // Accès des managers (administrateur) : MODIFICATION (2026-10-15), d'après la maquette validée (page d).
 // Opérations du script : comptes-lire, compte-ecrire (contrôle 409 sur maj), compte-code, compte-couper. Le script
@@ -1077,7 +1597,7 @@ async function actionAcces(b){
 // Lot 4 (2026-10-15) : MODIFICATIONS depuis la console en ligne. Les boutons n'apparaissent qu'avec le niveau
 // « Modification » de la partie ; le script Google vérifie de toute façon chaque écriture (partie, secteur, version).
 // Brouillon en mémoire seulement (jamais dans le navigateur) ; rien de secret dedans.
-const EDITABLES={acces:1,'c-maint':1,'c-fiches':1,'c-proc':1,'c-taches':1,lancements:1,calendrier:1};
+const EDITABLES={acces:1,'c-maint':1,'c-fiches':1,'c-proc':1,'c-taches':1,lancements:1,calendrier:1,parc:1,personnes:1,'c-message':1,droits:1,tablettes:1};
 const peutModif=id=>droit(id)==='modif'&&!!EDITABLES[id];
 // Identifiant tiré au hasard (crypto) : photos, fichiers des lancements, nouveaux éléments.
 function alea(n){const a=new Uint8Array(n);crypto.getRandomValues(a);return [...a].map(x=>'abcdefghijklmnopqrstuvwxyz0123456789'[x%36]).join('')}
@@ -1099,7 +1619,7 @@ const FORMS={
   maintenance:{nouveau:id=>({id:'m'+id,title:'',machines:[],tools:[],safety:[],steps:[],checks:[]}),champs:[
     {k:'title',t:'texte',l:'Nom de l’opération',req:1},{k:'machines',t:'machines',l:'Machines (aucune cochée = toutes les machines)'},
     {k:'tools',t:'lignes',l:'Matériel (une ligne par élément)'},{k:'safety',t:'lignes',l:'Sécurité (une ligne par consigne)'},
-    {k:'steps',t:'etapes',l:'Étapes',nouveau:()=>({title:'',detail:'',photo:null,axes:false}),sous:[{k:'title',t:'texte',l:'Étape'},{k:'detail',t:'zone',l:'Détail'},{k:'photo',t:'photo',l:'Photo'},{k:'axes',t:'case',l:'À faire sur chaque broche'}]},
+    {k:'steps',t:'etapes',l:'Étapes',nouveau:()=>({title:'',detail:'',photo:null,axes:false}),sous:[{k:'title',t:'texte',l:'Étape'},{k:'detail',t:'zone',l:'Détail'},{k:'photo',t:'photo',l:'Photo'},{k:'axes',t:'case',l:'À faire sur chaque broche',fraisage:1}]},
     {k:'checks',t:'lignes',l:'Contrôles à la fin (une ligne par contrôle)'}]},
   fiches:{nouveau:id=>({id:'f'+id,title:'',intro:'',signs:[],before:'',reflexes:[],checks:[],rappel:''}),champs:[
     {k:'title',t:'texte',l:'Titre de la fiche',req:1},{k:'intro',t:'zone',l:'Introduction'},{k:'signs',t:'lignes',l:'Signes du problème (une ligne par signe)'},
@@ -1125,14 +1645,15 @@ function champ(f,v,chemin,st){
   if(f.t==='zone')return '<div>'+lab(f.l)+'<textarea class="in" id="'+id+'" rows="3" data-f="'+chemin+'">'+esc(v||'')+'</textarea></div>';
   if(f.t==='lignes')return '<div>'+lab(f.l)+'<textarea class="in" id="'+id+'" rows="3" data-f="'+chemin+'" data-lignes="1">'+esc((v||[]).join('\n'))+'</textarea></div>';
   if(f.t==='liste'){const l=f.de(st);return '<div>'+lab(f.l)+'<input class="in" id="'+id+'" data-f="'+chemin+'" list="'+id+'-l" value="'+esc(v||'')+'"><datalist id="'+id+'-l">'+l.map(x=>'<option value="'+esc(x)+'">').join('')+'</datalist></div>'}
-  if(f.t==='choix')return '<div>'+lab(f.l)+'<select class="in" id="'+id+'" data-f="'+chemin+'">'+f.choix.map(([k,t])=>'<option value="'+k+'"'+(v===k?' selected':'')+'>'+t+'</option>').join('')+'</select></div>';
+  if(f.t==='date')return '<div>'+lab(f.l)+'<input class="in" type="date" id="'+id+'" data-f="'+chemin+'" value="'+esc(v||'')+'"></div>';
+  if(f.t==='choix')return '<div>'+lab(f.l)+'<select class="in" id="'+id+'" data-f="'+chemin+'"'+(f.rerender?' data-rerender="1"':'')+'>'+f.choix.map(([k,t])=>'<option value="'+esc(k)+'"'+(String(v)===String(k)?' selected':'')+'>'+esc(t)+'</option>').join('')+'</select></div>';
   if(f.t==='case')return '<label class="row" style="gap:8px;min-height:44px"><input type="checkbox" style="width:22px;height:22px" data-f="'+chemin+'"'+(v?' checked':'')+'>'+f.l+'</label>';
   if(f.t==='machines'){const l=st.machines||[];return '<fieldset class="fs"><legend>'+f.l+'</legend><div class="row">'+(l.length?l.map(m=>'<label class="chip"><input type="checkbox" data-fm="'+chemin+'" value="'+esc(m)+'"'+((v||[]).includes(m)?' checked':'')+'>'+esc(m)+'</label>').join(''):'<span class="hint">Aucune machine dans ce secteur.</span>')+'</div></fieldset>'}
   if(f.t==='photo')return '<div><span class="lbl" style="margin-bottom:4px">'+f.l+'</span><div class="row">'+vignette(v)+
     '<label class="btn">'+svg('image')+(v?'Remplacer':'Ajouter une photo')+'<input type="file" accept="image/*" hidden data-fphoto="'+chemin+'"></label>'+(v?'<button class="btn" data-ed="photo-retirer" data-c="'+chemin+'">Retirer</button>':'')+'</div></div>';
   if(f.t==='etapes'){const l=v||[];return '<fieldset class="fs"><legend>'+f.l+' ('+l.length+')</legend>'+l.map((x,i)=>'<div class="etape"><div class="row"><b>'+(i+1)+'.</b><span class="grow"></span>'+
       '<button class="btn" data-ed="etape-haut" data-k="'+chemin+'" data-i="'+i+'"'+(i?'':' disabled')+' aria-label="Monter">↑</button><button class="btn" data-ed="etape-bas" data-k="'+chemin+'" data-i="'+i+'"'+(i<l.length-1?'':' disabled')+' aria-label="Descendre">↓</button>'+
-      '<button class="btn" data-ed="etape-moins" data-k="'+chemin+'" data-i="'+i+'">Retirer</button></div>'+f.sous.map(s=>champ(s,x[s.k],chemin+'.'+i+'.'+s.k,st)).join('')+'</div>').join('')+
+      '<button class="btn" data-ed="etape-moins" data-k="'+chemin+'" data-i="'+i+'">Retirer</button></div>'+f.sous.filter(s=>!s.fraisage||unSecteur()==='fraisage').map(s=>champ(s,x[s.k],chemin+'.'+i+'.'+s.k,st)).join('')+'</div>').join('')+
     '<button class="btn" data-ed="etape-plus" data-k="'+chemin+'">'+svg('plus')+'Ajouter</button></fieldset>'}
   return '';
 }
@@ -1215,6 +1736,7 @@ async function actionLancements(b){
   if(act==='haut'||act==='bas')return envoyerLancements([{type:'deplacer',machine:m,fid:b.dataset.fid,pos:Math.max(0,+b.dataset.pos+(act==='haut'?-1:1))}]);
   if(act==='retirer')return envoyerLancements([{type:'retirer',machine:m,fid:b.dataset.fid}],'Fichier retiré de la file.');
   if(act==='plan-retirer')return envoyerLancements([{type:'modifier',machine:m,fid:b.dataset.fid,photo:''}],'Plan retiré.');
+  if(act==='capture')return capturePlan(m,b.dataset.fid);
   if(act==='vider'){S.viderHisto=true;return chargerPage()}
   if(act==='vider-non'){S.viderHisto=false;return chargerPage()}
   if(act==='vider-ok'){S.viderHisto=false;return envoyerLancements([{type:'vider-histo',avant:Date.now()}],'Historique effacé.')}
@@ -1225,7 +1747,7 @@ function vueLancEdition(n,f){
       '<button class="btn" data-lan="haut" data-m="'+esc(n)+'" data-fid="'+esc(x.id)+'" data-pos="'+i+'"'+(i?'':' disabled')+' aria-label="Monter">↑</button><button class="btn" data-lan="bas" data-m="'+esc(n)+'" data-fid="'+esc(x.id)+'" data-pos="'+i+'"'+(i<f.length-1?'':' disabled')+' aria-label="Descendre">↓</button>'+
       '<button class="btn" data-lan="retirer" data-m="'+esc(n)+'" data-fid="'+esc(x.id)+'" aria-label="Retirer">✕</button></div>'+
       '<div class="row" style="gap:6px;margin-top:4px">'+(x.photo?vignette(x.photo)+'<button class="btn" data-lan="plan-retirer" data-m="'+esc(n)+'" data-fid="'+esc(x.id)+'">Retirer le plan</button>':'')+
-      '<label class="btn">'+svg('image')+(x.photo?'Remplacer le plan':'Joindre le plan du plateau')+'<input type="file" accept="image/*" hidden data-lan-photo="'+esc(n)+'" data-fid="'+esc(x.id)+'"></label></div></li>').join('')+'</ol>':'<p class="hint" style="margin:6px 0 0">File d’attente vide.</p>');
+      '<label class="btn">'+svg('image')+(x.photo?'Remplacer le plan':'Joindre le plan du plateau')+'<input type="file" accept="image/*" hidden data-lan-photo="'+esc(n)+'" data-fid="'+esc(x.id)+'"></label>'+(CONSOLE_PC?'<button class="btn" data-lan="capture" data-m="'+esc(n)+'" data-fid="'+esc(x.id)+'">'+svg('image')+'Capture d’écran</button>':'')+'</div></li>').join('')+'</ol>':'<p class="hint" style="margin:6px 0 0">File d’attente vide.</p>');
 }
 
 // --- Calendrier : congés (le reste des réglages se fait dans l'appli Maintenance) -----------------------------
@@ -1253,15 +1775,214 @@ async function actionConges(b){
   return chargerPage();
 }
 
+// ===============================================================================================================
+// Console du PC (lot 7, 2026-10-15) : cette même page, servie par serveur.mjs sur ce PC (CONSOLE_PC). Les données passent
+// par le script Google (connexion, droits, journal) ; les parties propres au PC (nouvelle version, réglages Google et
+// GitHub, écrans télé, capture du plateau) passent par le serveur local (/api/…, accessible seulement depuis ce PC).
+async function apiPC(chemin,corps){
+  if(!CONSOLE_PC)throw new Error('Seulement sur le PC de l’atelier.');
+  let r;
+  // Jeton de la session : le serveur du PC le vérifie auprès du script Google (relecture du lot 7, I1).
+  try{r=await fetch(chemin,{method:corps?'POST':'GET',headers:{'X-Console':'1','X-Console-Nouvelle':'1','X-Jeton':S.jeton||'','Content-Type':'application/json'},body:corps?JSON.stringify(corps):undefined,cache:'no-store'})}
+  catch(e){throw new Error('La console du PC ne répond plus : relancez le logiciel « Console Pack Tablettes ».')}
+  const j=await r.json().catch(()=>({erreur:'Réponse illisible'}));
+  if(r.status===401){finSession(j.erreur||'Session terminée : reconnectez-vous.');throw new Error('session')}
+  if(!r.ok)throw new Error(j.erreur||('Erreur '+r.status));
+  return j;
+}
+const vidPC=v=>v?(v.num?'Version '+v.num+' ':'')+'('+v.id+')':'—';
+const lienAncienne=(t,ancre)=>CONSOLE_PC?'<a class="btn" href="/ancienne'+(ancre||'')+'" target="_blank" rel="noopener">'+svg('lien')+esc(t||'Ouvrir l’ancienne console')+'</a>':'';
+const msgPC=()=>S.msgPC?'<div class="msg '+S.msgPC[0]+'" role="status">'+svg(S.msgPC[0]==='ok'?'ok':'alerte')+'<div>'+S.msgPC[1]+'</div></div>':'';
+// Nouvelle version du pack : construire, publier (test ou partout), diffuser, abandonner, historique, revenir.
+PAGES.version=async()=>{
+  let h=enTete('version','Construire une nouvelle version du pack sur ce PC, l’essayer sur la tablette test, puis la diffuser à toutes les tablettes.');
+  if(!CONSOLE_PC)return h+'<div class="msg info">'+svg('aide')+'<div>Cette partie se fait sur le PC de l’atelier (console du PC).</div></div>';
+  let e;try{e=await apiPC('/api/etat')}catch(x){return h+'<div class="msg err">'+svg('alerte')+'<div><b>'+esc(x.message)+'</b></div></div>'}
+  const s=e.site||{},loc=e.local,plusRecente=!!(e.enLigne&&e.enLigne.sources&&e.sources&&e.enLigne.sources>e.sources+5000),c=S.confirmPC;
+  h+=msgPC();
+  if(e.erreur)h+='<div class="msg warn">'+svg('alerte')+'<div><b>GitHub : '+esc(e.erreur)+'</b><br>Réglez le compte, le dépôt et le jeton dans « Liaisons Google & site ».</div></div>';
+  if(plusRecente)h+='<div class="msg err">'+svg('alerte')+'<div><b>La version en ligne contient des applications plus récentes que celles de ce PC.</b> Publier d’ici remettrait d’anciennes applications sur les tablettes.</div></div>';
+  const btn=(k,t,cls)=>c===k?'<button class="btn dan plein" data-pc="'+k+'-ok">Oui : '+t+'</button><button class="btn" data-pc="non">Annuler</button>':'<button class="btn '+(cls||'')+'" data-pc="'+k+'">'+t+'</button>';
+  h+='<div class="kpis"><div class="kpi k-acc"><small>Version diffusée</small><b>'+esc(s.id?(s.num?'n° '+s.num:s.id):'—')+'</b><span>'+esc(s.id||'pas encore publiée')+'</span></div>'+
+    '<div class="kpi k-warn"><small>Version en test</small><b>'+esc(s.test?(s.test.num?'n° '+s.test.num:s.test.id):'aucune')+'</b><span>'+esc(s.test?s.test.id:'—')+'</span></div>'+
+    '<div class="kpi k-ok"><small>Construite sur ce PC</small><b style="font-size:22px">'+esc(loc?loc.id:'—')+'</b><span>'+esc(loc&&loc.notes||'')+(loc&&loc.consoleErreur?' · console en ligne non construite':'')+'</span></div></div>';
+  h+='<section class="card"><h2>1. Construire</h2><div class="row"><input class="in" id="pcNotes" placeholder="Ce qui change (facultatif)" style="flex:1;min-width:260px"><button class="btn pri" data-pc="construire">Construire la version</button></div>'+
+    (S.journalPC?'<pre style="white-space:pre-wrap;background:#f5f8f9;border-radius:10px;padding:10px;margin:10px 0 0;font-size:14px">'+esc(S.journalPC)+'</pre>':'')+'</section>';
+  h+='<section class="card" style="margin-top:16px"><h2>2. Essayer puis diffuser</h2><div class="row">'+btn('test','envoyer sur la tablette test','pri')+(s.test?btn('diffuser','diffuser la version test à toutes les tablettes')+btn('abandon','abandonner le test'):'')+'</div>'+
+    '<p class="hint" style="margin:10px 0 0">Ou, sans tablette test : '+btn('partout','publier directement sur toutes les tablettes')+'</p>'+(e.url?'<p class="hint">Site : '+esc(e.url)+' · console en ligne : '+esc(e.url.replace(/\/?$/,'/'))+'console/</p>':'')+'</section>';
+  h+='<section class="card" style="margin-top:16px"><h2>3. Historique<span class="grow"></span><button class="btn" data-pc="historique">Afficher l’historique</button></h2>'+
+    (S.histoPC?'<table><tbody>'+S.histoPC.map(x=>'<tr><td style="white-space:nowrap">'+esc(dateFr(x.date)+' '+heureFr(x.date))+'</td><td>'+esc(String(x.message||'').split('\n')[0])+'</td><td style="text-align:right">'+(c==='revenir-'+x.sha?'<button class="btn dan plein" data-pc="revenir-ok" data-sha="'+esc(x.sha)+'">Oui, revenir</button><button class="btn" data-pc="non">Non</button>':'<button class="btn" data-pc="revenir" data-sha="'+esc(x.sha)+'">Revenir à cette version</button>')+'</td></tr>').join('')+'</tbody></table>':'')+'</section>';
+  return h;
+};
+// Liaisons : Google Sheet (adresse et code) et GitHub (compte, dépôt, branche, jeton). Codes jamais réaffichés.
+PAGES.liaisons=async()=>{
+  let h=enTete('liaisons','La Google Sheet de l’atelier et le site internet du pack (GitHub).');
+  if(!CONSOLE_PC)return h+'<div class="msg info">'+svg('aide')+'<div>Cette partie se fait sur le PC de l’atelier (console du PC).</div></div>';
+  let e;try{e=await apiPC('/api/etat')}catch(x){return h+'<div class="msg err">'+svg('alerte')+'<div><b>'+esc(x.message)+'</b></div></div>'}
+  const g=(e.reglages||{}).github||{},go=(e.reglages||{}).google||{};
+  h+=msgPC();
+  h+='<section class="card"><h2>Google Sheet</h2><div class="form"><label class="lbl">Adresse du script<input class="in" id="pcGoU" value="'+esc(go.url||'')+'" autocomplete="off"></label>'+
+    '<label class="lbl">Code d’accès de la Google Sheet '+(go.code?'<span class="tag ok">✓ défini</span>':'<span class="tag warn">pas défini</span>')+'<input class="in" type="password" id="pcGoC" placeholder="vide = inchangé" autocomplete="new-password"></label></div>'+
+    '<p class="hint">Après un changement d’adresse, rechargez cette page : la console se reconnecte à la nouvelle Google Sheet.</p></section>';
+  h+='<section class="card" style="margin-top:16px"><h2>Site internet (GitHub)</h2><div class="form"><label class="lbl">Nom du compte<input class="in" id="pcGhP" value="'+esc(g.proprietaire||'')+'" autocomplete="off"></label>'+
+    '<label class="lbl">Dépôt<input class="in" id="pcGhD" value="'+esc(g.depot||'')+'" autocomplete="off"></label><label class="lbl">Branche<input class="in" id="pcGhB" value="'+esc(g.branche||'main')+'" autocomplete="off"></label>'+
+    '<label class="lbl">Jeton '+(g.jeton?'<span class="tag ok">✓ défini</span>':'<span class="tag warn">pas défini</span>')+'<input class="in" type="password" id="pcGhJ" placeholder="vide = inchangé" autocomplete="new-password"></label></div>'+
+    '<div class="row" style="margin-top:12px"><button class="btn pri" data-pc="reglages">Enregistrer les liaisons</button><button class="btn" data-pc="tester">Tester GitHub</button>'+(g.jeton?(S.confirmPC==='oubli'?'<button class="btn dan plein" data-pc="oubli-ok">Oui, effacer le jeton</button><button class="btn" data-pc="non">Annuler</button>':'<button class="btn dan" data-pc="oubli">Effacer le jeton</button>'):'')+'</div></section>';
+  return h;
+};
+// Écrans télé : ouverts sur ce PC (plein écran depuis l'écran lui-même).
+PAGES.ecrans=async()=>{
+  let h=enTete('ecrans','Les écrans télé de l’atelier, ouverts sur ce PC.');
+  if(!CONSOLE_PC)return h+'<div class="msg info">'+svg('aide')+'<div>Les écrans télé s’ouvrent depuis le PC de l’atelier (console du PC).</div></div>';
+  return h+'<div class="secs"><section class="card"><h2>'+pastille('lancements','s')+'Écran de l’atelier (lancements)</h2><p class="hint">Plateaux à lancer, en temps réel.</p><a class="btn pri" href="/ecran" target="_blank" rel="noopener">Ouvrir l’écran</a></section>'+
+    secteursVisibles().map(s=>'<section class="card"><h2>'+pastille('maintenance','s')+'Maintenance — '+esc(secNom(s))+'</h2><p class="hint">Échéances des maintenances du secteur.</p><a class="btn pri" href="/ecran-maintenance?secteur='+encodeURIComponent(s)+'" target="_blank" rel="noopener">Ouvrir l’écran</a></section>').join('')+'</div>'+
+    '<p class="hint">Sur l’écran, le bouton « Plein écran » l’affiche en entier.</p>'+vueEcranAuto();
+};
+// Écran ouvert au démarrage de ce PC (lot 7b) : mêmes réglages que l'ancienne console (navigateur de ce PC) ; le bouton
+// « Quitter » de l'écran l'annule et revient à la console.
+function ecranAuto(){try{return localStorage.getItem('lancements-ecran-auto')==='1'?'atelier':localStorage.getItem('console-ecran-auto')==='maintenance:fraisage'?'fraisage':''}catch(e){return ''}}
+function vueEcranAuto(){
+  const v=ecranAuto(),o=[['','La console (normal)'],['atelier','L’écran de l’atelier (lancements)']].concat(secteursVisibles().includes('fraisage')||S.moi.admin?[['fraisage','L’écran maintenance du fraisage']]:[]);
+  return '<section class="card" style="margin-top:16px"><h2>Au démarrage de ce PC, ouvrir…</h2><div class="row" role="radiogroup" aria-label="Écran au démarrage">'+
+    o.map(([k,t])=>'<label class="chip"><input type="radio" name="ecranAuto" data-ecran-auto="'+k+'"'+(v===k?' checked':'')+'>'+t+'</label>').join('')+'</div>'+
+    '<p class="hint" style="margin:10px 0 0">Pour la télé de l’atelier : le logiciel ouvre directement cet écran. Le bouton « Quitter » de l’écran revient à la console.</p></section>';
+}
+// Apparence & administration : le pack intégré (code administrateur des tablettes) reste dans l'ancienne console.
+// Administration et apparence (lot 7c, 2026-10-15) : mêmes réglages que l'Administration des tablettes (Apparence,
+// Site et secteurs, Secteurs et zones), administrateur seulement, enregistrés par le script (administration-ecrire).
+// Personnes, Qui voit quoi et Parc machines ont leurs propres parties. L'ancienne console reste en secours (#gerer).
+const ADM_TEXTES={releve:'État des machines et consignes entre équipes',taches:'Je coche les tâches que je prends',fiches:'J’ai un problème sur une machine',maintenance:'Je fais une maintenance guidée',procedures:'Je consulte une procédure claire, étape par étape',lancements:'Fichiers à lancer et état des machines',tableau:'Suivi des relèves et du « qui fait quoi »'};
+const ADM_COULEURS=[['#0b8a96','Bleu-vert'],['#1f6fd1','Bleu'],['#1f7a3a','Vert'],['#6a4bc4','Violet'],['#c0262d','Rouge'],['#c27206','Orange'],['#2c3e46','Ardoise']];
+const ADM_INACTIVITE=[5,10,15,20,30,60,0];
+const admNomAppli=id=>(D_APPLIS.find(a=>a[0]===id)||[id,id])[1];
+function admOrdre(b){const t=b.apparence.tuiles||{};return D_APPLIS.map((a,i)=>({id:a[0],o:isFinite((t[a[0]]||{}).ordre)?Number(t[a[0]].ordre):i})).sort((x,y)=>x.o-y.o).map(x=>x.id)}
+PAGES.apparence=async()=>{
+  let h=enTete('apparence','Nom du site, couleur, logo et tuiles de l’accueil des tablettes ; secteurs et zones.');
+  const r=await lire('administration-lire');
+  if(!r.ok)return h+refus(r);
+  if(!S.adm)S.adm={b:JSON.parse(JSON.stringify(r.data)),sale:false,supprimerZones:[]};
+  const A=S.adm,b=A.b,ap=b.apparence,couleur=/^#[0-9a-f]{6}$/i.test(ap.couleur||'')?ap.couleur.toLowerCase():'#0b8a96',rel=r.data.secteursReleve||[];
+  if(S.msgAdm)h+='<div class="msg '+S.msgAdm[0]+'" role="status">'+svg(S.msgAdm[0]==='ok'?'ok':'alerte')+'<div>'+S.msgAdm[1]+'</div></div>';
+  if(A.msg)h+='<div class="msg '+A.msg[0]+'">'+svg('alerte')+'<div>'+A.msg[1]+'</div></div>';
+  h+='<p class="hint">Ces réglages partent vers toutes les tablettes par Google (moins d’une minute), sans nouvelle version. Personnes, « Qui voit quoi » et machines : leurs propres parties. '+lienAncienne('Secours : ancienne console','#gerer')+'</p>';
+  h+='<section class="card" style="margin-bottom:16px"><h2>Site</h2><div class="form"><label class="lbl">Nom affiché en haut de l’accueil<input class="in" data-adm="nom" maxlength="60" value="'+esc(b.nom)+'"></label>'+
+    '<label class="lbl">Déconnexion automatique sans activité<select class="in" data-adm="inactivite">'+ADM_INACTIVITE.map(m=>'<option value="'+m+'"'+(m===Number(b.inactivite)?' selected':'')+'>'+(m?'après '+m+' min':'jamais')+'</option>').join('')+'</select></label></div></section>';
+  h+='<section class="card" style="margin-bottom:16px"><h2>Couleur et logo</h2><div class="row">'+ADM_COULEURS.map(([v,n])=>'<button class="chip" data-ad="couleur" data-v="'+v+'" aria-pressed="'+(v===couleur)+'"><span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:'+v+'"></span>'+n+'</button>').join('')+
+    '<label class="chip">Autre <input type="color" data-adm="couleur" value="'+esc(couleur)+'" aria-label="Autre couleur" style="width:40px;height:32px;border:0;padding:0;background:none"></label></div>'+
+    '<h3 style="margin:14px 0 6px;font-size:15px">Logo (en haut de l’accueil)</h3><div class="row">'+(ap.logo?'<img src="'+esc(ap.logo)+'" alt="Logo actuel" style="height:48px;max-width:200px;object-fit:contain;border:1px solid var(--line);border-radius:8px;padding:4px;background:#fff">':'<span class="hint">Aucun logo.</span>')+
+    '<label class="btn">'+svg('image')+(ap.logo?'Changer':'Choisir une image')+'<input type="file" accept="image/*" hidden data-adm-logo="1"></label>'+(ap.logo?'<button class="btn" data-ad="logo-retirer">Retirer</button>':'')+'</div></section>';
+  const ordre=admOrdre(b);
+  h+='<section class="card" style="margin-bottom:16px"><h2>Tuiles des applications</h2><p class="hint">Nom, phrase d’explication et ordre des tuiles sur l’accueil. Vide = texte d’origine.</p>'+ordre.map((id,i)=>{const o=(ap.tuiles||{})[id]||{};
+    return '<div class="etape"><div class="row">'+pastille(id,'s')+'<input class="in" style="flex:1;min-width:160px" data-adm-tuile="'+id+'" data-k="nom" maxlength="40" placeholder="'+esc(admNomAppli(id))+'" value="'+esc(o.nom||'')+'" aria-label="Nom de la tuile">'+
+      '<button class="btn" data-ad="tuile-haut" data-id="'+id+'"'+(i?'':' disabled')+' aria-label="Monter">↑</button><button class="btn" data-ad="tuile-bas" data-id="'+id+'"'+(i<ordre.length-1?'':' disabled')+' aria-label="Descendre">↓</button></div>'+
+      '<input class="in" style="width:100%;margin-top:6px" data-adm-tuile="'+id+'" data-k="texte" maxlength="90" placeholder="'+esc(ADM_TEXTES[id]||'')+'" value="'+esc(o.texte||'')+'" aria-label="Phrase d’explication"></div>'}).join('')+
+    '<button class="btn" data-ad="tuiles-origine">Remettre les tuiles comme à l’origine</button></section>';
+  const secs=b.secteurs.slice();b.zones.forEach(z=>{if(!secs.includes(z.secteur))secs.push(z.secteur)});
+  h+='<section class="card" style="margin-bottom:16px"><h2>Secteurs</h2><p class="hint">Chaque secteur est un fichier du pack (dossier <code>secteurs</code>) : pour un nouveau secteur, déposez d’abord <code>secteurs/&lt;identifiant&gt;.js</code> sur le PC puis construisez une nouvelle version.</p>'+
+    b.secteurs.map(id=>'<div class="row"><b>'+esc(secNom(id))+'</b> <span class="hint">('+esc(id)+')</span><span class="grow"></span>'+(b.zones.some(z=>z.secteur===id)?'<span class="tag">utilisé</span>':'<button class="btn dan" data-ad="sec-moins" data-id="'+esc(id)+'">Retirer</button>')+'</div>').join('')+
+    '<div class="row" style="margin-top:8px"><input class="in" id="admNewSec" placeholder="Identifiant (ex. polissage)" maxlength="30" style="flex:1;min-width:180px"><button class="btn" data-ad="sec-plus">'+svg('plus')+'Ajouter le secteur</button></div></section>';
+  h+=secs.map(sec=>{const zs=b.zones.filter(z=>z.secteur===sec),releve=rel.includes(sec);
+    return '<section class="card" style="margin-bottom:16px"><h2>Zones du secteur « '+esc(secNom(sec))+' » ('+zs.length+')</h2>'+zs.map(z=>{const i=b.zones.indexOf(z),pers=(r.data.personnesParZone||{})[z.id]||0;
+      return '<div class="etape"><div class="row"><label class="lbl" style="flex:1;min-width:180px">Nom de la zone<input class="in" data-adm-zone="'+i+'" data-k="nom" maxlength="40" value="'+esc(z.nom)+'"></label>'+
+        '<label class="lbl">Secteur<select class="in" data-adm-zone="'+i+'" data-k="secteur">'+b.secteurs.map(x=>'<option value="'+esc(x)+'"'+(x===z.secteur?' selected':'')+'>'+esc(secNom(x))+'</option>').join('')+'</select></label>'+
+        (A.supprZ===z.id?'<button class="btn dan plein" data-ad="zone-moins-ok" data-i="'+i+'">Oui, retirer</button><button class="btn" data-ad="zone-moins-non">Non</button>':'<button class="btn dan" data-ad="zone-moins" data-id="'+esc(z.id)+'">Retirer</button>')+'</div>'+
+        (A.supprZ===z.id?(()=>{const seules=(r.data.seuleZone||{})[z.id]||[];return '<p class="hint" style="color:var(--warn)">Les tablettes installées sur cette zone devront être réinstallées'+(pers?' ; '+pers+' personne(s) y sont rattachées (elles perdent cette zone)':'')+'.'+
+          (seules.length?' <b>'+esc(seules.join(', '))+(seules.length>1?' seront rattachées':' sera rattachée')+' à tout le secteur '+esc(secNom(z.secteur))+'</b> (c’était leur seule zone).':'')+' Effectif à l’enregistrement.</p>'})():'')+
+        '<div class="row" style="margin-top:6px">'+D_APPLIS.map(([id,n])=>{const off=id==='releve'&&!releve;return '<button class="chip" data-ad="zone-appli" data-i="'+i+'" data-a="'+id+'" aria-pressed="'+(!off&&z.applis.includes(id))+'"'+(off?' disabled title="Réservée aux secteurs qui ont une relève (frittage)"':'')+'>'+esc(n)+'</button>'}).join('')+'</div>'+
+        (releve&&z.applis.includes('releve')?'<div class="row" style="margin-top:6px"><button class="chip" data-ad="zone-lien" data-i="'+i+'" aria-pressed="'+!!z.lienReleve+'">Les machines de la Relève sont dans cette zone</button></div>':'')+
+        (z.googlePropre?'<p class="hint" style="margin:6px 0 0">Cette zone a sa propre Google Sheet (réglée sur une tablette ou dans l’ancienne console ; gardée telle quelle).</p>':'')+'</div>'}).join('')+
+      '<div class="row" style="margin-top:8px"><input class="in" id="admNewZ-'+esc(sec)+'" placeholder="Nouvelle zone (ex. '+esc(secNom(sec))+' 2)" maxlength="40" style="flex:1;min-width:180px"><button class="btn" data-ad="zone-plus" data-s="'+esc(sec)+'">'+svg('plus')+'Ajouter la zone</button></div></section>'}).join('');
+  return h+'<div class="savebar" style="position:sticky;left:auto;right:auto;bottom:12px"><span class="st">'+(A.sale?'<b style="color:var(--warn)">• Modifications à envoyer.</b>':'Rien de modifié.')+'</span><button class="btn" data-ad="annuler">Annuler</button><button class="btn pri" data-ad="enregistrer"'+(A.sale?'':' disabled')+'>Enregistrer et envoyer</button></div>';
+};
+function admTuiles(fn){const ap=S.adm.b.apparence;ap.tuiles=ap.tuiles||{};fn(ap.tuiles);S.adm.sale=true}
+async function actionAdmin(b){
+  const A=S.adm,act=b.dataset.ad;if(!A)return;const B=A.b;S.msgAdm=null;A.msg=null;
+  const zone=()=>B.zones[+b.dataset.i];
+  if(act==='annuler'){S.adm=null;S.charge={};return chargerPage()}
+  if(act==='couleur'){B.apparence.couleur=b.dataset.v;A.sale=true}
+  else if(act==='logo-retirer'){B.apparence.logo='';A.sale=true}
+  else if(act==='tuile-haut'||act==='tuile-bas'){const l=admOrdre(B),i=l.indexOf(b.dataset.id),j=i+(act==='tuile-haut'?-1:1);if(j<0||j>=l.length)return;[l[i],l[j]]=[l[j],l[i]];admTuiles(t=>l.forEach((x,k)=>{t[x]=Object.assign({},t[x],{ordre:k})}))}
+  else if(act==='tuiles-origine'){B.apparence.tuiles={};A.sale=true}
+  else if(act==='sec-plus'){const el=document.getElementById('admNewSec'),id=String(el&&el.value||'').trim().toLowerCase();
+    if(!/^[a-z0-9-]{1,30}$/.test(id)){A.msg=['err','<b>Identifiant : minuscules, chiffres et tirets seulement.</b>']}else if(!B.secteurs.includes(id)){B.secteurs.push(id);A.sale=true}}
+  else if(act==='sec-moins'){B.secteurs=B.secteurs.filter(x=>x!==b.dataset.id);A.sale=true}
+  else if(act==='zone-plus'){const sec=b.dataset.s,el=document.getElementById('admNewZ-'+sec),n=String(el&&el.value||'').trim();
+    if(!n){A.msg=['err','<b>Écrivez un nom de zone.</b>']}else{B.zones.push({nom:n,secteur:sec,applis:['taches','fiches','maintenance','procedures'].concat((B.secteursReleve||[]).includes(sec)?['releve']:[])});A.sale=true}}
+  else if(act==='zone-moins'){A.supprZ=b.dataset.id}
+  else if(act==='zone-moins-non'){A.supprZ=null}
+  else if(act==='zone-moins-ok'){const z=zone();if(z){if(z.id)A.supprimerZones.push(z.id);B.zones.splice(+b.dataset.i,1);A.sale=true}A.supprZ=null}
+  else if(act==='zone-appli'){const z=zone(),i=z.applis.indexOf(b.dataset.a);if(i<0)z.applis.push(b.dataset.a);else z.applis.splice(i,1);if(!z.applis.includes('releve'))z.lienReleve=false;A.sale=true}
+  else if(act==='zone-lien'){const z=zone(),on=!z.lienReleve;B.zones.forEach(x=>{x.lienReleve=false});z.lienReleve=on;A.sale=true}
+  else if(act==='enregistrer'){
+    b.disabled=true;
+    const j=await appel('administration-ecrire',{depuis:B.maj,nom:B.nom,inactivite:Number(B.inactivite)||0,apparence:{couleur:B.apparence.couleur||'',logo:B.apparence.logo||'',tuiles:B.apparence.tuiles||{}},
+      secteurs:B.secteurs,zones:B.zones.map(z=>({id:z.id,nom:z.nom,secteur:z.secteur,applis:z.applis,lienReleve:!!z.lienReleve})),supprimerZones:A.supprimerZones});
+    S.charge={};
+    if(j.status===200){S.adm=null;S.msgAdm=['ok',j.data&&j.data.rien?'Rien à changer.':'Enregistré : les tablettes le reçoivent à leur prochain échange.']}
+    else A.msg=['err','<b>'+esc((j.data&&j.data.error)||'Refusé.')+'</b>'+(j.status===409?' <button class="btn" data-ad="annuler">Recharger (abandonner mes changements)</button>':'')];
+  }
+  return chargerPage();
+}
+// Logo réduit (240 × 120 px au plus, PNG), comme l'Administration des tablettes ; 150 000 caractères au plus.
+function admLogo(fichier){return new Promise((ok,ko)=>{if(!fichier||!/^image\//.test(fichier.type))return ko(new Error('Choisissez une image.'));
+  createImageBitmap(fichier).then(im=>{const k=Math.min(1,240/im.width,120/im.height),c=document.createElement('canvas');c.width=Math.max(1,Math.round(im.width*k));c.height=Math.max(1,Math.round(im.height*k));
+    c.getContext('2d').drawImage(im,0,0,c.width,c.height);const d=c.toDataURL('image/png');d.length>150000?ko(new Error('Image trop lourde, choisissez-en une plus simple.')):ok(d)},()=>ko(new Error('Cette image ne peut pas être lue.')))})}
+function saisieAdmin(el){
+  const A=S.adm;if(!A)return false;const B=A.b;
+  if(el.dataset.adm==='nom')B.nom=el.value;
+  else if(el.dataset.adm==='inactivite')B.inactivite=Number(el.value)||0;
+  else if(el.dataset.adm==='couleur'){if(!/^#[0-9a-f]{6}$/i.test(el.value))return true;B.apparence.couleur=el.value.toLowerCase()}
+  else if(el.dataset.admTuile){const id=el.dataset.admTuile,k=el.dataset.k;B.apparence.tuiles=B.apparence.tuiles||{};B.apparence.tuiles[id]=Object.assign({},B.apparence.tuiles[id],{[k]:el.value})}
+  else if(el.dataset.admZone!=null){const z=B.zones[+el.dataset.admZone];if(!z)return true;z[el.dataset.k]=el.value;if(el.dataset.k==='secteur'&&!(B.secteursReleve||[]).includes(el.value)){z.applis=z.applis.filter(a=>a!=='releve');z.lienReleve=false}}
+  else return false;
+  A.sale=true;const st=document.querySelector('.savebar .st'),bt=document.querySelector('[data-ad="enregistrer"]');if(st)st.innerHTML='<b style="color:var(--warn)">• Modifications à envoyer.</b>';if(bt)bt.disabled=false;
+  return true;
+}
+async function actionPC(b){
+  const act=b.dataset.pc;S.msgPC=null;
+  const oui=['test','partout','diffuser','abandon','oubli'];
+  if(oui.includes(act)){S.confirmPC=act;return chargerPage()}
+  if(act==='revenir'){S.confirmPC='revenir-'+b.dataset.sha;return chargerPage()}
+  if(act==='non'){S.confirmPC=null;return chargerPage()}
+  S.confirmPC=null;b.disabled=true;
+  try{
+    if(act==='construire'){const n=document.getElementById('pcNotes');S.msgPC=['info','Construction en cours…'];const r=await apiPC('/api/construire',{notes:n?n.value.trim():''});S.journalPC=(r.journal||[]).join('\n');S.msgPC=['ok','Version '+esc(r.version&&r.version.id)+' construite sur ce PC.']}
+    else if(act==='test-ok'||act==='partout-ok'){const r=await apiPC('/api/publier',{mode:act==='test-ok'?'test':'partout'});S.journalPC=(r.journal||[]).join('\n');S.msgPC=['ok',esc(vidPC(r.version))+' publiée '+(act==='test-ok'?'sur la tablette test.':'sur toutes les tablettes.')]}
+    else if(act==='diffuser-ok'){await apiPC('/api/diffuser',{});S.msgPC=['ok','Version test diffusée à toutes les tablettes.']}
+    else if(act==='abandon-ok'){await apiPC('/api/abandonner-test',{});S.msgPC=['ok','Test abandonné : les tablettes test reprennent la version diffusée.']}
+    else if(act==='historique'){S.histoPC=await apiPC('/api/historique')}
+    else if(act==='revenir-ok'){await apiPC('/api/revenir',{sha:b.dataset.sha});S.histoPC=null;S.msgPC=['ok','Retour fait : les tablettes reprennent cette version.']}
+    else if(act==='reglages'){const v=id=>{const x=document.getElementById(id);return x?x.value:''};
+      const go={url:v('pcGoU').trim()},gh={proprietaire:v('pcGhP'),depot:v('pcGhD'),branche:v('pcGhB')};if(v('pcGoC').trim())go.code=v('pcGoC').trim();if(v('pcGhJ').trim())gh.jeton=v('pcGhJ').trim();
+      await apiPC('/api/reglages',{github:gh,google:go});S.msgPC=['ok','Liaisons enregistrées.'+(go.url!==GOOGLE_URL_PUBLIE?' Rechargez la page pour utiliser la nouvelle adresse Google.':'')]}
+    else if(act==='tester'){const r=await apiPC('/api/tester',{});S.msgPC=['ok','GitHub répond : dépôt '+(r.prive?'privé':'public')+(r.url?' · site '+esc(r.url):'')+'.']}
+    else if(act==='oubli-ok'){await apiPC('/api/reglages',{github:{oublierJeton:true}});S.msgPC=['ok','Jeton GitHub effacé de ce PC.']}
+  }catch(x){S.msgPC=['err','<b>'+esc(x.message)+'</b>']}
+  return chargerPage();
+}
+// Capture d'écran du plan d'un plateau (outil de capture de Windows), puis envoyée à Google comme une photo.
+function imageVersPhoto(data){
+  return new Promise((ok,ko)=>{const im=new Image();im.onload=()=>{const k=Math.min(1,1600/Math.max(im.width,im.height)),cv=document.createElement('canvas');cv.width=Math.round(im.width*k);cv.height=Math.round(im.height*k);cv.getContext('2d').drawImage(im,0,0,cv.width,cv.height);let d=cv.toDataURL('image/jpeg',.85);if(d.length>2900000)d=cv.toDataURL('image/jpeg',.6);ok(d)};im.onerror=()=>ko(new Error('Capture illisible.'));im.src=data});
+}
+async function capturePlan(machine,fid){
+  S.msgLanc=['info','Entourez le plan du plateau à l’écran (outil de capture de Windows)…'];chargerPage();
+  const r=await apiPC('/api/capture',{outil:true});
+  if(!r||!/^data:image\/(png|jpeg);base64,[A-Za-z0-9+\/=]+$/.test(String(r.data||'')))throw new Error('Pas de capture reçue.');
+  const data=await imageVersPhoto(r.data),id='p'+alea(24),j=await appel('photo-ecrire',{id,data});
+  if(j.status!==200)throw new Error((j.data&&j.data.error)||'Photo refusée.');
+  if(/^data:image\/jpeg;base64,[A-Za-z0-9+\/=]+$/.test(data))S.photos[id]=data;
+  return envoyerLancements([{type:'modifier',machine,fid,photo:id}],'Capture jointe au fichier.');
+}
+
 function vPC(){
   const p=P(S.page);
   if(p.id==='aide')return enTete('aide','Comment se servir de la console en ligne.')+'<section class="card det">'+
     '<h3>Se connecter</h3><p>Votre nom et votre code de la console (8 caractères au moins, différent du code des tablettes). Le code est donné par le responsable d’atelier.</p>'+
-    '<h3>Ce que vous voyez</h3><p>Le menu ne montre que les parties ouvertes pour vous, et seulement vos secteurs. Pour l’instant, tout est en <b>lecture</b> : les modifications se font sur le PC de l’atelier.</p>'+
+    '<h3>Ce que vous voyez</h3><p>Le menu ne montre que les parties ouvertes pour vous, et seulement vos secteurs. Chaque partie est en <b>lecture</b> ou en <b>modification</b>, selon ce que le responsable d’atelier a ouvert pour vous.</p>'+
     '<h3>Sécurité</h3><ul><li>Déconnexion automatique après 10 minutes sans activité.</li><li>Après 5 codes faux, le compte est bloqué 15 minutes. Si votre compte est bloqué sans raison, prévenez le responsable d’atelier.</li><li>Sur un ordinateur partagé, touchez « Se déconnecter » en partant.</li></ul></section>';
   return enTete(p.id,'Cette partie se fait sur le PC de l’atelier (console du PC).')+'<div class="msg info">'+svg('aide')+'<div>La console en ligne ne fait pas encore cette partie : ouvrez la <b>console du PC</b> de l’atelier.</div></div>';
 }
-['ecrans','apparence','version','liaisons','aide'].forEach(id=>PAGES[id]=async()=>vPC());
+['aide'].forEach(id=>PAGES[id]=async()=>vPC());
 
 // ---------------------------------------------------------------------------------------------------------------
 // Événements
@@ -1276,18 +1997,31 @@ document.addEventListener('click',async e=>{
   const b=e.target.closest('button');if(!b)return;
   if(b.dataset.acc){S.dernierGeste=Date.now();actionAcces(b).catch(x=>{if(x.message!=='session'){A().msg=['err','<b>'+esc(x.message)+'</b>'];chargerPage()}});return}
   // Modification en cours dans un contenu : on ne la perd pas en changeant de page sans le vouloir.
-  if((b.dataset.go||b.dataset.sec!==undefined||b.dataset.item)&&S.edit&&S.edit.sale){S.edit.msg=['warn','Enregistrez ou annulez d’abord la modification en cours.'];chargerPage();return}
+  if((b.dataset.go||b.dataset.sec!==undefined||b.dataset.calvue)&&S.calEd&&S.calEd.sale){S.calEd.msg=['warn','Enregistrez ou annulez d’abord les réglages en cours.'];chargerPage();return}
+  if(b.dataset.cr){actionCalendrier(b).catch(x=>{if(x.message!=='session'&&S.calEd){S.calEd.msg=['err','<b>'+esc(x.message)+'</b>'];chargerPage()}});return}
+  if(b.dataset.calvue){S.calVue=b.dataset.calvue;S.msgCal=null;chargerPage();return}
+  if(b.dataset.mois!==undefined){S.mois=b.dataset.mois;chargerPage();return}
+  if((b.dataset.go||b.dataset.sec!==undefined||b.dataset.item||b.dataset.parc!==undefined)&&S.edit&&S.edit.sale){S.edit.msg=['warn','Enregistrez ou annulez d’abord la modification en cours.'];chargerPage();return}
+  if((b.dataset.go||b.dataset.sec!==undefined)&&S.dr&&S.dr.sale){S.dr.msg=['warn','Enregistrez ou annulez d’abord les réglages en cours.'];chargerPage();return}
+  if(b.dataset.go&&S.adm&&S.adm.sale){S.adm.msg=['warn','Enregistrez ou annulez d’abord les réglages en cours.'];chargerPage();return}
+  if(b.dataset.ad){S.dernierGeste=Date.now();actionAdmin(b).catch(x=>{if(x.message!=='session'&&S.adm){S.adm.msg=['err','<b>'+esc(x.message)+'</b>'];chargerPage()}});return}
   if(b.dataset.ed){S.dernierGeste=Date.now();actionEdition(b).catch(x=>{if(x.message!=='session'){S.msgCont=['err','<b>'+esc(x.message)+'</b>'];chargerPage()}});return}
   if(b.dataset.lan){actionLancements(b).catch(x=>{if(x.message!=='session'){S.msgLanc=['err','<b>'+esc(x.message)+'</b>'];chargerPage()}});return}
   if(b.dataset.cg){actionConges(b).catch(x=>{if(x.message!=='session'){S.msgCal=['err','<b>'+esc(x.message)+'</b>'];chargerPage()}});return}
-  if(b.dataset.go||b.dataset.sec!==undefined){S.edit=null;S.suppr=null;S.msgCont=S.msgLanc=S.msgCal=null;S.viderHisto=false}
+  if(b.dataset.pe){actionParc(b).catch(x=>{if(x.message!=='session'){S.msgParc=['err','<b>'+esc(x.message)+'</b>'];chargerPage()}});return}
+  if(b.dataset.pp){actionPersonnes(b).catch(x=>{if(x.message!=='session'){S.msgPers=['err','<b>'+esc(x.message)+'</b>'];chargerPage()}});return}
+  if(b.dataset.msg){actionMessages(b).catch(x=>{if(x.message!=='session'){S.msgMsg=['err','<b>'+esc(x.message)+'</b>'];chargerPage()}});return}
+  if(b.dataset.dr){actionDroits(b).catch(x=>{if(x.message!=='session'){if(S.dr)S.dr.msg=['err','<b>'+esc(x.message)+'</b>'];else S.msgDr=['err','<b>'+esc(x.message)+'</b>'];chargerPage()}});return}
+  if(b.dataset.tab){actionTablettes(b).catch(x=>{if(x.message!=='session'){S.msgTab=['err','<b>'+esc(x.message)+'</b>'];chargerPage()}});return}
+  if(b.dataset.go||b.dataset.sec!==undefined){S.edit=null;S.types=null;S.suppr=null;S.dr=null;if(b.dataset.go)S.adm=null;S.msgAdm=null;S.msgCont=S.msgLanc=S.msgCal=S.msgParc=S.msgPers=S.msgMsg=S.msgDr=S.msgTab=null;S.viderHisto=false}
   if(b.dataset.go){S.page=b.dataset.go;try{history.replaceState(null,'','#'+S.page)}catch(x){}render();scrollTo(0,0);return}
   if(b.dataset.sec!==undefined){S.secteur=b.dataset.sec;S.semaine='';render();return}
   if(b.dataset.act==='sortir'){seDeconnecter();return}
+  if(b.dataset.pc){actionPC(b);return}
   if(b.dataset.act==='google'){ouvrirPanneauGoogle();return}
   if(b.dataset.act==='google-fermer'){const p=document.getElementById('panneauGoogle');if(p)p.remove();return}
   if(b.dataset.act==='actualiser'){S.charge={};render();return}
-  if(b.dataset.parc!==undefined){S.sel.parc=b.dataset.parc;chargerPage();return}
+  if(b.dataset.parc!==undefined){S.sel.parc=b.dataset.parc;if(S.edit&&S.edit.cle==='parc')S.edit=null;S.suppr=null;S.msgParc=null;chargerPage();return}
   if(b.dataset.item){S.sel[b.dataset.item]=b.dataset.id;S.edit=null;S.suppr=null;S.msgCont=null;chargerPage();return}
   if(b.dataset.semaine!==undefined){S.semaine=b.dataset.semaine;chargerPage();return}
   if(b.dataset.photo){
@@ -1304,23 +2038,36 @@ document.addEventListener('click',async e=>{
   }
 });
 document.addEventListener('change',async e=>{const el=e.target;
+  if(el.dataset&&(el.dataset.ce||el.dataset.ceL))return saisieCalendrier(el);
+  if(el.dataset&&el.dataset.drCible&&S.dr){S.dr.cible=el.value;S.dr.msg=null;return chargerPage()}
+  if(el.dataset&&el.dataset.admLogo&&el.files&&el.files[0]&&S.adm){try{S.adm.b.apparence.logo=await admLogo(el.files[0]);S.adm.sale=true}catch(x){S.adm.msg=['err','<b>'+esc(x.message)+'</b>']}return chargerPage()}
+  if(el.dataset&&(el.dataset.adm||el.dataset.admTuile||el.dataset.admZone!=null)){saisieAdmin(el);if(el.tagName==='SELECT'||el.type==='color')chargerPage();return}
+  if(el.dataset&&el.dataset.canal&&CONSOLE_PC)return changerCanalTablette(el);
+  if(el.dataset&&el.dataset.ecranAuto!=null){const v=el.dataset.ecranAuto;
+    try{if(v==='atelier')localStorage.setItem('lancements-ecran-auto','1');else localStorage.removeItem('lancements-ecran-auto');if(v==='fraisage')localStorage.setItem('console-ecran-auto','maintenance:fraisage');else localStorage.removeItem('console-ecran-auto')}catch(x){}
+    return}
   if(el.dataset&&el.dataset.fm)return champSaisi(el);
-  if(el.dataset&&(el.dataset.f&&(el.type==='checkbox'||el.tagName==='SELECT')))return champSaisi(el);
+  if(el.dataset&&(el.dataset.f&&(el.type==='checkbox'||el.tagName==='SELECT'||el.type==='date'))){champSaisi(el);if(el.dataset.rerender)chargerPage();return}
+  // Types de machine (parc) : saisis dans S.types.
+  if(el.dataset&&el.dataset.ty&&S.types){S.types.liste[+el.dataset.ty][el.dataset.tk]=el.value;return}
   // Photo d'une étape (contenus) ou plan d'un fichier (lancements) : envoyée tout de suite à Google.
   if(el.dataset&&(el.dataset.fphoto||el.dataset.lanPhoto)&&el.files&&el.files[0]){
     const lab=el.closest('label');if(lab)lab.firstChild&&(lab.lastChild.previousSibling.textContent=' Envoi…');
     try{const id=await envoyerPhoto(el.files[0]);
-      if(el.dataset.fphoto&&S.edit){ecrireChemin(S.edit.item,el.dataset.fphoto,id);S.edit.sale=true;chargerPage()}
+      if(el.dataset.fphoto==='images+'&&S.edit){S.edit.item.images=(S.edit.item.images||[]).concat({photo:id,texte:''}).slice(0,3);S.edit.sale=true;chargerPage()}
+      else if(el.dataset.fphoto&&S.edit){ecrireChemin(S.edit.item,el.dataset.fphoto,id);S.edit.sale=true;chargerPage()}
       else if(el.dataset.lanPhoto)envoyerLancements([{type:'modifier',machine:el.dataset.lanPhoto,fid:el.dataset.fid,photo:id}],'Plan joint.');
     }catch(x){if(x.message==='session')return;if(el.dataset.fphoto&&S.edit){S.edit.msg=['err','<b>'+esc(x.message)+'</b>']}else S.msgLanc=['err','<b>'+esc(x.message)+'</b>'];chargerPage()}
     return;
   }
   if(e.target.id==='accFin'){const v=e.target.value;changeBrouillon(x=>{x.fin=/^\d{4}-\d\d-\d\d$/.test(v)?v:''})}});
-document.addEventListener('input',e=>{if(e.target.dataset&&e.target.dataset.f&&e.target.type!=='checkbox'&&e.target.tagName!=='SELECT'){champSaisi(e.target);return}if(e.target.id==='parcQ'){S.parcQ=e.target.value;clearTimeout(S.tq);S.tq=setTimeout(async()=>{await chargerPage();const q=document.getElementById('parcQ');if(q){q.focus();q.setSelectionRange(q.value.length,q.value.length)}},250)}});
+document.addEventListener('input',e=>{if(e.target.dataset&&(e.target.dataset.adm||e.target.dataset.admTuile||e.target.dataset.admZone!=null)&&e.target.tagName!=='SELECT'&&e.target.type!=='color'){saisieAdmin(e.target);return}if(e.target.dataset&&e.target.dataset.ce&&e.target.type!=='checkbox'&&e.target.tagName!=='SELECT'){saisieCalendrier(e.target);return}if(e.target.dataset&&e.target.dataset.ty&&S.types){S.types.liste[+e.target.dataset.ty][e.target.dataset.tk]=e.target.value;return}if(e.target.dataset&&e.target.dataset.f&&e.target.type!=='checkbox'&&e.target.tagName!=='SELECT'){champSaisi(e.target);return}if(e.target.id==='parcQ'){S.parcQ=e.target.value;clearTimeout(S.tq);S.tq=setTimeout(async()=>{await chargerPage();const q=document.getElementById('parcQ');if(q){q.focus();q.setSelectionRange(q.value.length,q.value.length)}},250)}});
 
 addEventListener('hashchange',()=>{const h=decodeURIComponent(location.hash.slice(1));if(P(h)&&h!==S.page&&!(S.edit&&S.edit.sale)){S.page=h;S.edit=null;if(S.moi)render()}});
 // Démarrage : session de cet onglet encore valable ? (le script le dit)
 (async()=>{
+  // Console du PC : écran télé ouvert au démarrage (réglé dans « Écrans télé »), comme l'ancienne console.
+  if(CONSOLE_PC&&!location.hash){const v=ecranAuto();if(v==='atelier'){location.replace('/ecran');return}if(v==='fraisage'){location.replace('/ecran-maintenance?secteur=fraisage');return}}
   S.jeton=lireJeton();
   // #parc, #calendrier… : la partie à ouvrir (le menu reste limité aux parties visibles).
   const h=decodeURIComponent(location.hash.slice(1));if(P(h))S.page=h;
