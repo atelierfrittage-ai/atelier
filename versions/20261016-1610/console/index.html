@@ -1031,6 +1031,15 @@ function droit(id){
 function premierePartie(){const p=PARTIES.find(x=>droit(x.id));return p?p.id:'aide'}
 const secteursVisibles=()=>(S.site&&S.site.secteurs)||[];
 const secteursAffiches=()=>S.secteur==='tous'?secteursVisibles():[S.secteur];
+// Sélecteur de secteur (correctif 2026-10-16) : chaque partie filtre ce qu'elle montre selon le secteur choisi.
+const filtreSecteur=()=>S.secteur!=='tous';
+const secteurDeZone=id=>{const z=((S.site&&S.site.zones)||[]).find(x=>x.id===id||x.nom===id);return z?z.secteur:''};
+// Personne : celles du secteur choisi, plus les administrateurs et les personnes de tout le site.
+const personneDuSecteur=p=>{if(!filtreSecteur())return true;const a=secteursAffiches(),ps=p.secteurs||[],pz=p.zones||[];
+  return p.role==='admin'||(!ps.length&&!pz.length)||ps.some(s=>a.includes(s))||pz.some(z=>a.includes(secteurDeZone(z)))};
+const noteFiltre=(n,quoi)=>filtreSecteur()?'<p class="hint" style="margin:0 0 10px">Secteur '+esc(secNom(S.secteur))+' : '+n+' '+quoi+'. « Tous les secteurs » en haut pour tout voir.</p>':'';
+// Parties du seul frittage (relève, lancements, tableau de bord) : un autre secteur choisi → message clair.
+const horsFrittage=()=>filtreSecteur()&&S.secteur!=='frittage'?'<div class="msg info">'+svg('aide')+'<div><b>Cette partie concerne le secteur Frittage.</b> Choisissez « Frittage » ou « Tous les secteurs » en haut.</div></div>':'';
 const NOMS_SECTEURS={frittage:'Frittage',fraisage:'Fraisage',grattage:'Grattage',resine:'Résine'};
 const secNom=id=>NOMS_SECTEURS[id]||(id?id.charAt(0).toUpperCase()+id.slice(1):'');
 // Pages qui ont besoin d'UN secteur : celui du sélecteur, sinon le premier visible.
@@ -1214,6 +1223,7 @@ PAGES.parc=async()=>{
   const ms=r.data.parc.machines.filter(m=>secteursAffiches().includes(m.secteur)&&(!q||[m.nom,m.type,m.marque,m.modele,m.serie].join(' ').toLowerCase().includes(q)))
     .sort((a,b)=>String(a.nom).localeCompare(String(b.nom),'fr',{numeric:true}));
   const sel=E?null:ms.find(m=>m.id===S.sel.parc);
+  h+=noteFiltre(ms.length,'machine(s)');
   h+='<div class="tb"><input class="in" id="parcQ" type="search" placeholder="Chercher une machine, un type, un n° de série…" value="'+esc(S.parcQ)+'"><span class="hint">'+ms.length+' machine(s)</span>'+
     (mod&&!E?'<span class="grow"></span><button class="btn pri" data-pe="nouveau">'+svg('plus')+'Nouvelle machine</button>':'')+'</div>';
   h+='<div class="parc'+(sel||E?' ouvert':'')+'"><div class="mgrid">'+(ms.length?ms.map(m=>{
@@ -1304,7 +1314,8 @@ PAGES.personnes=async()=>{
   const E=S.edit&&S.edit.cle==='personnes'?S.edit:null;
   if(mod&&!E)h+='<div class="row" style="margin-bottom:12px"><button class="btn pri" data-pp="nouveau">'+svg('plus')+'Ajouter une personne</button>'+(S.moi.admin?'':'<span class="hint">Vous pouvez modifier les personnes rattachées seulement à vos secteurs.</span>')+'</div>';
   if(E)h+=vueFichePersonne(r);
-  const l=r.data.personnes.slice().sort((a,b)=>a.nom.localeCompare(b.nom,'fr'));
+  const l=r.data.personnes.filter(personneDuSecteur).sort((a,b)=>a.nom.localeCompare(b.nom,'fr'));
+  h+=noteFiltre(l.length,'personne(s), avec celles de tout le site');
   return h+'<section class="card">'+(l.length?'<table><thead><tr><th>Nom</th><th>Rôle</th><th>Rattachement</th><th>Code tablette</th>'+(mod?'<th></th>':'')+'</tr></thead><tbody>'+
     l.map(p=>'<tr><td><b>'+esc(p.nom)+'</b>'+repere(p)+'</td><td>'+esc(ROLES_NOMS[p.role]||p.role)+'</td><td>'+esc(p.role==='admin'?'Toutes les zones':(p.secteurs.map(s=>'Tout le secteur '+secNom(s)).concat(p.zones.map(z=>zones[z]||z)).join(', ')||'Tout le site'))+'</td><td>'+(p.codeDefini?'<span class="tag ok">✓ défini</span>':'<span class="tag warn">pas encore</span>')+'</td>'+
       (mod?'<td style="text-align:right;white-space:nowrap">'+(/^tmp-/.test(p.id)?'<span class="envoi">'+svg('actualiser')+' Enregistrement…</span>':p.modifiable&&!E?'<button class="btn" data-pp="modifier" data-id="'+esc(p.id)+'">'+svg('crayon')+'Modifier</button> '+(p.nom===S.moi.nom?'':S.suppr===p.id?'<button class="btn dan plein" data-pp="supprimer-ok">Oui, retirer</button><button class="btn" data-pp="supprimer-non">Non</button>':'<button class="btn dan" data-pp="supprimer" data-id="'+esc(p.id)+'">Retirer</button>'):p.modifiable?'':'<span class="hint">hors de vos secteurs</span>')+'</td>':'')+'</tr>').join('')+'</tbody></table>'
@@ -1354,7 +1365,9 @@ PAGES['c-message']=async()=>{
   let h=enTete('c-message','Les annonces affichées sur l’accueil des tablettes de vos secteurs.');
   if(!r.ok)return h+refus(r);
   const zones={};(r.data.zones||[]).forEach(z=>zones[z.id]=z.nom);
-  const l=r.data.messages||[],E=S.edit&&S.edit.cle==='c-message'?S.edit:null;
+  // Secteur choisi : les messages de ses zones et ceux de tout le site.
+  const l=(r.data.messages||[]).filter(m=>!filtreSecteur()||!(m.zones||[]).length||m.zones.some(z=>secteursAffiches().includes(secteurDeZone(z)))),E=S.edit&&S.edit.cle==='c-message'?S.edit:null;
+  h+=noteFiltre(l.length,'message(s), avec ceux de tout le site');
   if(S.msgMsg)h+='<div class="msg '+S.msgMsg[0]+'" role="status">'+svg(S.msgMsg[0]==='ok'?'ok':'alerte')+'<div>'+S.msgMsg[1]+'</div></div>';
   if(mod&&!E)h+='<div class="row" style="margin-bottom:12px"><button class="btn pri" data-msg="nouveau">'+svg('plus')+'Nouveau message</button><span class="hint">'+(S.moi.admin?'Les tablettes le reçoivent à leur prochain échange.':'Vous pouvez modifier les messages rattachés seulement à vos zones.')+'</span></div>';
   if(E)h+=vueFicheMessage(r);
@@ -1518,7 +1531,11 @@ PAGES.droits=async()=>{
     ['onglets','contenus'].forEach(k=>Object.keys(b[k]||{}).forEach(a=>{if(b[k][a].length)l.push((k==='onglets'?'Onglets':'Contenus')+' masqués dans '+a+' : '+b[k][a].length)}));
     return l.length?'<ul style="margin:0;padding-left:20px">'+l.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>':'<span class="hint">Rien de masqué</span>'};
   const table=(titre,o,nom)=>'<section class="card"><h2>'+titre+'</h2>'+(Object.keys(o||{}).length?'<table><tbody>'+Object.keys(o).map(k=>'<tr><td style="width:30%"><b>'+esc(nom(k))+'</b></td><td>'+bloc(o[k])+'</td></tr>').join('')+'</tbody></table>':'<div class="vide">Aucun réglage.</div>')+'</section>';
-  return h+'<div class="stack">'+table('Par rôle',d.roles,k=>ROLES[k]||k)+table('Par secteur',d.secteurs,secNom)+table('Par personne',d.personnes,k=>noms[k]||k)+'</div>';
+  // Secteur choisi : ses réglages et ceux des personnes du secteur (les rôles valent pour tout le site).
+  const garde=(o,f)=>{const x={};Object.keys(o||{}).forEach(k=>{if(f(k))x[k]=o[k]});return x};
+  const pers={};(r.data.personnes||[]).forEach(p=>pers[p.id]=p);
+  const ds=filtreSecteur()?garde(d.secteurs,k=>secteursAffiches().includes(k)):d.secteurs,dp=filtreSecteur()?garde(d.personnes,k=>!pers[k]||personneDuSecteur(pers[k])):d.personnes;
+  return h+noteFiltre(Object.keys(ds||{}).length+Object.keys(dp||{}).length,'réglage(s) de secteur ou de personne')+'<div class="stack">'+table('Par rôle (tout le site)',d.roles,k=>ROLES[k]||k)+table('Par secteur',ds,secNom)+table('Par personne',dp,k=>noms[k]||k)+'</div>';
 };
 
 // Contenus des applis : une liste à gauche, le détail à droite (lecture seule). sous() rend du TEXTE (échappé à l'affichage).
@@ -1569,6 +1586,7 @@ function pageContenu(id){
 PAGES['c-releve']=async()=>{
   const r=await lire('releve-listes');
   let h=enTete('c-releve','Équipes, opérateurs et machines proposés dans la Relève d’équipe (frittage).');
+  if(horsFrittage())return h+horsFrittage();
   if(!r.ok)return h+refus(r);
   const l=r.data.listes;
   if(!l)return h+'<div class="card vide">Pas encore de relève sur Google.</div>';
@@ -1579,6 +1597,7 @@ PAGES['c-releve']=async()=>{
 PAGES.lancements=async()=>{
   const r=await lire('lancements-lire');
   let h=enTete('lancements','Les machines du frittage, leur état et leur file d’attente. Actualisé toutes les minutes.');
+  if(horsFrittage())return h+horsFrittage();
   if(!r.ok)return h+refus(r);
   const st=r.data.state||{},lm=machinesLancement(st),mod=peutModif('lancements');
   // Modification : aussi les machines du frittage du parc (pour mettre un premier fichier sur une machine libre).
@@ -1629,7 +1648,9 @@ PAGES.tablettes=async()=>{
   const r=await pr,mod=peutModif('tablettes');
   let h=enTete('tablettes','Les tablettes de vos zones : dernière connexion, version du pack et état envoyé. Jamais les codes des Réglages.');
   if(!r.ok)return h+refus(r);
-  const l=r.data.tablettes||[];
+  // Secteur choisi : les tablettes de ses zones (nom de zone envoyé par la tablette, « Zone · Tablette »).
+  const l=(r.data.tablettes||[]).filter(t=>{if(!filtreSecteur())return true;const s=secteurDeZone(String(t.zone||'').split(' · ')[0].trim());return !s||secteursAffiches().includes(s)});
+  h+=noteFiltre(l.length,'tablette(s)');
   // Sur le PC : réglages des mises à jour (administrateur) et alertes ignorées sur ce PC.
   let site=null,ign={},avis='';
   if(CONSOLE_PC){
@@ -1686,6 +1707,7 @@ async function changerCanalTablette(el){
 PAGES.tableau=async()=>{
   const r=await lire('releves-lire');
   let h=enTete('tableau','Relèves d’équipe enregistrées (frittage) et consignes en cours.');
+  if(horsFrittage())return h+horsFrittage();
   if(!r.ok)return h+refus(r);
   const rec=(r.data.records||[]).slice().reverse().slice(0,40);
   const lireP=x=>{try{return JSON.parse(x.payload)}catch(e){return {}}};
@@ -1702,7 +1724,7 @@ PAGES.tableau=async()=>{
 // Règles « par type » : remplacées par les machines de ces types, comme l'appli (typeFiche / typesAct).
 function etatCalendrier(d,calAutre){
   const cal=calAutre||d.cal;
-  const st={cal:cal?JSON.parse(JSON.stringify(cal)):null,ops:d.ops||[],journal:d.journal||[],machines:d.machines||[],operators:d.operators||[]};
+  const st={cal:cal?JSON.parse(JSON.stringify(cal)):null,ops:d.ops||[],journal:d.journal||[],machines:d.machines||[],operators:nomsCalendrier(d)};
   // Broches (fraisage, 2026-10-16) : broches de chaque machine et broches hors service → suivi broche par broche (◐ 2/4).
   if(typeof CalMaint!=='undefined'&&CalMaint.brochesDe){st.broches=CalMaint.brochesDe(d.brochesMachines||{});st.hs=CalMaint.hsDe(d.bhs||{})}
   if(st.cal&&Array.isArray(st.cal.regles)){
@@ -1796,7 +1818,7 @@ const ceTexte=(c,v,l,type,attr)=>'<label class="lbl" style="margin:0;min-width:1
 const ceChoix=(c,v,l,opts,rr,t)=>'<label class="lbl" style="margin:0;min-width:160px">'+l+'<select class="in" data-ce="'+c+'"'+(rr?' data-rr="1"':'')+(t?' data-t="'+t+'"':'')+'>'+opts.map(([k,x])=>'<option value="'+esc(k)+'"'+(String(v)===String(k)?' selected':'')+'>'+esc(x)+'</option>').join('')+'</select></label>';
 const ceListe=(c,v,choix)=>'<div class="row" style="gap:6px">'+(choix.length?choix.map(x=>'<label class="chip"><input type="checkbox" data-ce-l="'+c+'" value="'+esc(x)+'"'+((v||[]).includes(x)?' checked':'')+'>'+esc(x)+'</label>').join(''):'<span class="hint">Aucun choix possible.</span>')+'</div>';
 function vueReglages(d,sec){
-  const E=S.calEd,cal=E.cal,ops=(d.ops||[]).filter(o=>!o.archived),noms=d.operators||[],r=cal.roulement;
+  const E=S.calEd,cal=E.cal,ops=(d.ops||[]).filter(o=>!o.archived),noms=nomsCalendrier(d),r=cal.roulement;
   let h=(E.msg?'<div class="msg '+E.msg[0]+'">'+svg('alerte')+'<div>'+E.msg[1]+'</div></div>':'');
   h+='<section class="card edition"><h2>1. Jours travaillés et jours fermés</h2><div class="hint" style="margin-bottom:6px">Semaine habituelle</div>'+ceJours('jours',cal.jours)+
     '<h3 style="font-size:16px;margin:14px 0 6px">Périodes particulières (autres jours travaillés)</h3>'+cal.periodes.map((p,i)=>'<div class="row etape">'+ceTexte('periodes.'+i+'.du',p.du,'Du','date')+ceTexte('periodes.'+i+'.au',p.au,'Au','date')+ceJours('periodes.'+i+'.jours',p.jours)+'<button class="btn" data-cr="moins" data-k="periodes" data-i="'+i+'">Retirer</button></div>').join('')+
@@ -1862,15 +1884,27 @@ function erreurReglages(c){
   for(const c2 of c.conges)if(!c2.nom||!c2.du||!c2.au||c2.au<c2.du)return 'Un congé n’a pas de personne ou de dates valides.';
   return '';
 }
+// Personnes du calendrier (2026-10-16) : même liste que les tablettes (opsListe) : personnes du pack rattachées au
+// secteur (ou de tout le site, sans administrateur) + noms déjà connus de l'appli Maintenance (state.operators).
+function nomsCalendrier(d){const l=[];(d.personnesSecteur||[]).concat(d.operators||[]).forEach(n=>{if(n&&!l.includes(n))l.push(n)});return l}
 PAGES.calendrier=async()=>{
-  const sec=unSecteur(),mod=peutModif('calendrier');
+  // « Tous les secteurs » (correctif 2026-10-16) : un calendrier par secteur ; on affiche le premier secteur qui a un
+  // calendrier réglé (ou le dernier choisi ici), avec le choix du secteur bien visible.
+  let sec=unSecteur();const mod=peutModif('calendrier'),tous=S.secteur==='tous'&&secteursVisibles().length>1;
+  if(tous){
+    if(S.calSecAff&&secteursVisibles().includes(S.calSecAff))sec=S.calSecAff;
+    else{const l=await Promise.all(secteursVisibles().map(s=>lire('calendrier-lire',{secteur:s}).then(r=>[s,r],()=>[s,null])));
+      const bon=l.find(([,r])=>r&&r.ok&&r.data.cal&&(r.data.cal.regles||[]).length)||l.find(([,r])=>r&&r.ok);if(bon)sec=bon[0]}
+  }
+  S.calSecAff=tous?sec:null;
   let h=enTete('calendrier','Maintenances prévues, secteur '+esc(secNom(sec))+'. '+(mod?'Vous pouvez régler le calendrier ici (comme dans l’appli Maintenance).':'Les réglages se lisent ici ; ils se modifient avec le droit « Modification ».'));
   if(!sec)return h+'<div class="card vide">Aucun secteur visible.</div>';
-  h+=S.secteur==='tous'?choixSecteur():'';
+  if(tous)h+='<div class="msg info" role="status">'+svg('aide')+'<div><b>Tous les secteurs : un calendrier par secteur.</b> Affiché : '+esc(secNom(sec))+'. Choisissez un autre secteur :</div></div>'+
+    '<div class="row" role="group" aria-label="Secteur du calendrier" style="margin-bottom:14px">'+secteursVisibles().map(id=>'<button class="chip" data-calsec="'+esc(id)+'" aria-pressed="'+(id===sec)+'">'+esc(secNom(id))+'</button>').join('')+'</div>';
   const r=await lire('calendrier-lire',{secteur:sec});
   if(!r.ok)return h+refus(r);
   if(typeof CalMaint==='undefined')return h+'<div class="card vide">Moteur du calendrier absent.</div>';
-  const d=r.data,vue=S.calVue||'semaine',cal=d.cal||CAL_VIDE();S.calNoms=d.operators||[];
+  const d=r.data,vue=S.calVue||'semaine',cal=d.cal||CAL_VIDE();S.calNoms=nomsCalendrier(d);
   if(S.msgCal)h+='<div class="msg '+S.msgCal[0]+'" role="status">'+svg(S.msgCal[0]==='ok'?'ok':'alerte')+'<div>'+S.msgCal[1]+'</div></div>';
   h+='<div class="row" role="group" aria-label="Vue" style="margin-bottom:12px">'+[['semaine','Semaine'],['mois','Mois'],['reglages','Réglages']].map(([k,t])=>'<button class="chip" data-calvue="'+k+'" aria-pressed="'+(vue===k)+'">'+t+'</button>').join('')+'</div>';
   if(vue==='reglages'){
@@ -2264,7 +2298,7 @@ function vueConges(st,sec){
     '<p class="hint" style="margin:8px 0 0">Les autres réglages (roulement, règles, jours fermés) se font dans l’appli Maintenance.</p></section>';
 }
 async function actionConges(b){
-  const sec=unSecteur(),r=await lire('calendrier-lire',{secteur:sec}),cal=r.data&&r.data.cal;if(!cal)return;
+  const sec=S.calSecAff||unSecteur(),r=await lire('calendrier-lire',{secteur:sec}),cal=r.data&&r.data.cal;if(!cal)return;
   const n=JSON.parse(JSON.stringify(cal));n.conges=n.conges||[];n.rempl=n.rempl||{};let resume='';
   if(b.dataset.cg==='ajouter'){
     const nom=document.getElementById('cgNom').value,du=document.getElementById('cgDu').value,au=document.getElementById('cgAu').value||du;
@@ -2515,6 +2549,7 @@ document.addEventListener('click',async e=>{
   if((b.dataset.go||b.dataset.sec!==undefined||b.dataset.calvue)&&S.calEd&&S.calEd.sale){S.calEd.msg=['warn','Enregistrez ou annulez d’abord les réglages en cours.'];chargerPage();return}
   if(b.dataset.cr){actionCalendrier(b).catch(x=>{if(x.message!=='session'&&S.calEd){S.calEd.msg=['err','<b>'+esc(x.message)+'</b>'];chargerPage()}});return}
   if(b.dataset.calvue){S.calVue=b.dataset.calvue;S.msgCal=null;chargerPage();return}
+  if(b.dataset.calsec){if(S.calEd&&S.calEd.sale){S.calEd.msg=['warn','Enregistrez ou annulez d’abord les réglages en cours.'];chargerPage();return}S.calSecAff=b.dataset.calsec;S.calEd=null;S.msgCal=null;chargerPage();return}
   if(b.dataset.mois!==undefined){S.mois=b.dataset.mois;chargerPage();return}
   if((b.dataset.go||b.dataset.sec!==undefined||b.dataset.item||b.dataset.parc!==undefined)&&S.edit&&S.edit.sale){S.edit.msg=['warn','Enregistrez ou annulez d’abord la modification en cours.'];chargerPage();return}
   if((b.dataset.go||b.dataset.sec!==undefined)&&S.dr&&S.dr.sale){S.dr.msg=['warn','Enregistrez ou annulez d’abord les réglages en cours.'];chargerPage();return}
