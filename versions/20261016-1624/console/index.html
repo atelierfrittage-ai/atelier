@@ -1815,7 +1815,9 @@ function vueMois(st,cal){
 const ceCase=(c,v,l)=>'<label class="chip"><input type="checkbox" data-ce="'+c+'" data-t="bool"'+(v?' checked':'')+'>'+l+'</label>';
 const ceJours=(c,l)=>'<div class="row" style="gap:6px">'+JOURS_SEM.map(([n,t])=>'<label class="chip"><input type="checkbox" data-ce-l="'+c+'" data-t="num" value="'+n+'"'+((l||[]).includes(n)?' checked':'')+'>'+t+'</label>').join('')+'</div>';
 const ceTexte=(c,v,l,type,attr)=>'<label class="lbl" style="margin:0;min-width:140px">'+l+'<input class="in" type="'+(type||'text')+'" data-ce="'+c+'"'+(type==='number'?' data-t="num"':'')+' value="'+esc(v==null?'':v)+'"'+(attr||'')+'></label>';
-const ceChoix=(c,v,l,opts,rr,t)=>'<label class="lbl" style="margin:0;min-width:160px">'+l+'<select class="in" data-ce="'+c+'"'+(rr?' data-rr="1"':'')+(t?' data-t="'+t+'"':'')+'>'+opts.map(([k,x])=>'<option value="'+esc(k)+'"'+(String(v)===String(k)?' selected':'')+'>'+esc(x)+'</option>').join('')+'</select></label>';
+// Correctif 2026-10-16 : une valeur vide (nouvelle règle : opération pas encore choisie) affichait la 1re option comme
+// choisie sans l'enregistrer (« Chaque règle doit avoir une opération ») → option « Choisir… » tant que rien n'est choisi.
+const ceChoix=(c,v,l,opts,rr,t)=>'<label class="lbl" style="margin:0;min-width:160px">'+l+'<select class="in" data-ce="'+c+'"'+(rr?' data-rr="1"':'')+(t?' data-t="'+t+'"':'')+'>'+(opts.some(([k])=>String(v)===String(k))?'':'<option value="" selected disabled>Choisir…</option>')+opts.map(([k,x])=>'<option value="'+esc(k)+'"'+(String(v)===String(k)?' selected':'')+'>'+esc(x)+'</option>').join('')+'</select></label>';
 const ceListe=(c,v,choix)=>'<div class="row" style="gap:6px">'+(choix.length?choix.map(x=>'<label class="chip"><input type="checkbox" data-ce-l="'+c+'" value="'+esc(x)+'"'+((v||[]).includes(x)?' checked':'')+'>'+esc(x)+'</label>').join(''):'<span class="hint">Aucun choix possible.</span>')+'</div>';
 function vueReglages(d,sec){
   const E=S.calEd,cal=E.cal,ops=(d.ops||[]).filter(o=>!o.archived),noms=nomsCalendrier(d),r=cal.roulement;
