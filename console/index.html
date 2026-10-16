@@ -343,16 +343,155 @@ var CalMaint=(function(){
   }
   // Une machine est faite pour une occurrence si une maintenance TERMINÉE de l'opération a eu lieu après l'occurrence
   // précédente (une avance est permise) et avant l'occurrence suivante.
+  // Machine suivie broche par broche (fraisage) : faite quand chaque broche en service a sa réponse « faite » ou
+  // « pas faite » (une broche à tour de rôle : dès que la broche du tour en a une).
   function faite(st,o,m,suivante,precedente){
+    if(suivi(st,o.op,m)){var x=brochesOcc(st,o,m,suivante,precedente);return x.fini?(x.e||{id:'',end:D(o.date).getTime(),hs:true}):null}
     for(var i=0;i<st.journal.length;i++){var e=st.journal[i];if(e.result==='ok'&&e.fid===o.op.id&&e.machine===m){var j=S(new Date(e.end));if((precedente?j>precedente:j>=o.date)&&(!suivante||j<suivante))return e}}
     return null;
+  }
+  // --- Broches (fraisage, 2026-10-16) -----------------------------------------------------------------------------
+  // st.broches = {machine: ['1','2',…]} (fiche du parc) ; st.hs = {machine: {'3': true}} (broches hors service
+  // aujourd'hui). Sans st.broches (frittage, ancienne console) : rien ne change.
+  function axesM(st,m){var a=st.broches&&st.broches[m];return a&&a.length>1?a:[]}
+  function aEtapeBroche(l){for(var i=0;i<(l||[]).length;i++)if(l[i]&&l[i].axes)return true;return false}
+  // Opération avec au moins une étape « ↻ à faire sur chaque broche » (version de base ou version d'un type).
+  function parBroche(f){
+    if(f.parBroche!=null)return !!f.parBroche;
+    if(aEtapeBroche(f.steps))return true;
+    for(var i=0;i<(f.variantes||[]).length;i++)if(aEtapeBroche(f.variantes[i].steps))return true;
+    return false;
+  }
+  function suivi(st,f,m){return axesM(st,m).length>0&&parBroche(f)}
+  function horsService(st,m,b){return !!(st.hs&&st.hs[m]&&st.hs[m][b])}
+  // Broches hors service aujourd'hui d'après bhs {"machine|b": {hs, t}} ; nom : traduit un ancien nom de machine.
+  // Une machine renommée peut avoir une déclaration sous son ancien nom : la plus récente (t) l'emporte.
+  function hsDe(bhs,nom){
+    var t={},o={};Object.keys(bhs||{}).forEach(function(k){var i=k.lastIndexOf('|'),m=nom?nom(k.slice(0,i)):k.slice(0,i),x=bhs[k],c=m+'|'+k.slice(i+1);
+      if(x&&(!t[c]||x.t>t[c].x.t))t[c]={m:m,b:k.slice(i+1),x:x}});
+    Object.keys(t).forEach(function(c){var y=t[c];if(y.x.hs)(o[y.m]=o[y.m]||{})[y.b]=y.x});
+    return o;
+  }
+  function brochesDe(nb){var o={};Object.keys(nb||{}).forEach(function(m){var n=Math.round(Number(nb[m])||0);if(n>1){o[m]=[];for(var i=1;i<=n;i++)o[m].push(String(i))}});return o}
+  // Réponses d'une maintenance enregistrée, broche par broche. Ancienne entrée (sans « broches ») terminée : toutes les
+  // broches faites ; non terminée : aucune réponse.
+  function reponses(e,ax){
+    if(e.broches&&typeof e.broches==='object'&&Object.keys(e.broches).length)return e.broches;
+    var o={};if(e.result==='ok')ax.forEach(function(b){o[b]={rep:'f',raison:''}});return o;
+  }
+  // Passages d'une même maintenance : le premier, puis ses reprises (suite = id du premier). date = jour du premier
+  // passage : une reprise faite plus tard compte pour l'échéance où la maintenance a commencé (décision 2026-10-16).
+  // Relecture m2 (2026-10-16) : le résultat est gardé pour CE journal (même tableau, même longueur) : la fiche machine
+  // et l'écran télé appellent groupes() des dizaines de fois par calcul. Un nouvel état (nouveau tableau, entrée ajoutée
+  // ou retirée) repart de zéro. Les entrées ne changent pas une fois enregistrées.
+  var memo=typeof WeakMap==='function'?new WeakMap():null;
+  function groupes(st,fid,m,ax){
+    var j=st.journal,c=memo&&memo.get(j),k=fid+'\u0001'+m+'\u0001'+ax.join(',');
+    if(!c||c.n!==j.length){c={n:j.length,par:null,r:{}};if(memo)memo.set(j,c)}
+    if(!c.r[k])c.r[k]=groupesCalc(st,fid,m,ax,c);
+    return c.r[k];
+  }
+  function groupesCalc(st,fid,m,ax,c){
+    // Entrées rangées une fois par opération et machine pour tout le calcul.
+    if(!c.par){c.par={};st.journal.forEach(function(e){var q=e.fid+'\u0001'+e.machine;(c.par[q]=c.par[q]||[]).push(e)})}
+    var ids={},par={},l=[];
+    (c.par[fid+'\u0001'+m]||[]).forEach(function(e){ids[e.id]=e});
+    Object.keys(ids).forEach(function(id){var e=ids[id],g=e.suite&&ids[e.suite]?e.suite:e.id;(par[g]=par[g]||[]).push(e)});
+    Object.keys(par).forEach(function(g){
+      var es=par[g].sort(function(x,y){return x.end-y.end}),p=ids[g],rep={};
+      es.forEach(function(e){var r=reponses(e,ax);Object.keys(r).forEach(function(b){rep[b]={rep:r[b].rep,raison:r[b].raison||'',e:e}})});
+      l.push({id:g,date:S(new Date(p.end)),debut:p.start,fin:es[es.length-1].end,entrees:es,rep:rep});
+    });
+    return l.sort(function(x,y){return x.debut-y.debut||(x.id<y.id?-1:1)});
+  }
+  // État broche par broche d'une occurrence (même fenêtre que faite) :
+  // {tour, axes, br:[{b, st:'ok'|'p'|'hs'|'todo', e, raison}], n (faites), tot (sans les hors service), fini, commence, e}.
+  function brochesOcc(st,o,m,suivante,precedente){
+    var ax=axesM(st,m),rep={},der=null;
+    groupes(st,o.op.id,m,ax).forEach(function(g){
+      if(!((precedente?g.date>precedente:g.date>=o.date)&&(!suivante||g.date<suivante)))return;
+      // Une réponse définitive (faite, pas faite, hors service) n'est pas effacée par un « à reprendre » ; sinon la plus récente.
+      Object.keys(g.rep).forEach(function(b){var x=g.rep[b],y=rep[b];if(!y||(x.rep!=='r'||y.rep==='r')&&(y.rep==='r'||x.e.end>=y.e.end))rep[b]=x});
+      g.entrees.forEach(function(e){if(!der||e.end>der.end)der=e});
+    });
+    if(o.op.broches==='tour')return tourOcc(st,o.op,m,ax,rep,der);
+    var br=ax.map(function(b){var x=rep[b],r=x&&x.rep;return {b:b,st:r==='f'?'ok':r==='p'?'p':r==='h'?'hs':horsService(st,m,b)?'hs':'todo',e:x?x.e:null,raison:x?x.raison:''}});
+    var tot=0,n=0,clos=0;br.forEach(function(x){if(x.st!=='hs')tot++;if(x.st==='ok')n++;if(x.st==='ok'||x.st==='p')clos++});
+    return {tour:false,axes:ax,br:br,n:n,tot:tot,fini:clos===tot,commence:!!der,e:der};
+  }
+  // Une broche à tour de rôle : faite dès qu'une broche a « faite » ou « pas faite » ; sinon, la broche du tour.
+  function tourOcc(st,f,m,ax,rep,der){
+    var b='';Object.keys(rep).forEach(function(k){var r=rep[k].rep;if((r==='f'||r==='p')&&(!b||rep[k].e.end>rep[b].e.end))b=k});
+    if(b)return {tour:true,axes:ax,br:[{b:b,st:rep[b].rep==='f'?'ok':'p',e:rep[b].e,raison:rep[b].raison}],n:rep[b].rep==='f'?1:0,tot:1,fini:true,commence:true,e:der};
+    var d=brocheDuTour(st,f,m,0);
+    return {tour:true,axes:ax,br:d?[{b:d,st:'todo',e:null,raison:''}]:[],n:0,tot:d?1:0,fini:!d,commence:!!der,e:der};
+  }
+  // Broche du tour : celle qui suit la dernière broche faite (ou pas faite), en sautant les hors service ;
+  // decalage = 1 pour l'échéance d'après, 2 pour la suivante… '' si toutes sont hors service.
+  function brocheDuTour(st,f,m,decalage){
+    var ax=axesM(st,m),der='',t=-1,i,n=decalage||0,k;
+    groupes(st,f.id,m,ax).forEach(function(g){Object.keys(g.rep).forEach(function(b){var x=g.rep[b];if((x.rep==='f'||x.rep==='p')&&x.e.end>=t&&ax.indexOf(b)>=0){t=x.e.end;der=b}})});
+    i=ax.indexOf(der);
+    for(k=0;k<ax.length*(n+2);k++){i=(i+1)%ax.length;if(!horsService(st,m,ax[i])){if(!n)return ax[i];n--}}
+    return '';
+  }
+  // Maintenances commencées dont des broches restent « à reprendre » : le dernier passage de chaque broche dit
+  // « à reprendre », et aucun passage plus récent ne l'a faite (ni dite pas faite). Hors service : sortie du compte.
+  function ouvertes(st,f,m){
+    var ax=axesM(st,m);if(!ax.length||!parBroche(f))return [];
+    var gs=groupes(st,f.id,m,ax),out=[];
+    gs.forEach(function(g,k){
+      var reste=ax.filter(function(b){var x=g.rep[b],j,y;if(!x||x.rep!=='r'||horsService(st,m,b))return false;
+        for(j=k+1;j<gs.length;j++){y=gs[j].rep[b];if(y&&(y.rep==='f'||y.rep==='p'))return false}return true});
+      if(reste.length)out.push({g:g,reste:reste,br:ax.filter(function(b){return g.rep[b]||reste.indexOf(b)>=0}).map(function(b){var x=g.rep[b],r=x&&x.rep;
+        return {b:b,st:reste.indexOf(b)>=0?'todo':r==='f'?'ok':r==='p'?'p':r==='h'||horsService(st,m,b)?'hs':'ok',e:x?x.e:null,raison:x?x.raison:''}})});
+    });
+    return out;
+  }
+  // Le jour d'un premier passage tombe-t-il dans la fenêtre de l'occurrence l[i] (comme faite : après la précédente) ?
+  function dansFenetre(date,l,i){return i>=0&&(i>0?date>l[i-1].date:date>=l[i].date)&&(!l[i+1]||date<l[i+1].date)}
+  // Fiche machine : pour chaque opération suivie broche par broche sur la machine, chaque broche avec sa dernière fois
+  // faite, sa prochaine échéance et son état (ok | jour | bientot | retard | hs | na).
+  function ficheBroches(st,m,now){
+    var ax=axesM(st,m);if(!ax.length)return [];
+    now=now||Date.now();var today=auj(now),occ=[],par={},out=[];
+    try{occ=st.cal&&st.cal.regles.length?occurrences(st,ajoute(today,-60),ajoute(today,150)):[]}catch(e){occ=[]}
+    occ.forEach(function(o){if(o.date&&o.machines.indexOf(m)>=0&&suivi(st,o.op,m)){var p=par[o.op.id]=par[o.op.id]||{f:o.op,l:[]};if(!p.l.some(function(x){return x.date===o.date}))p.l.push(o)}});
+    st.ops.forEach(function(f){
+      if(!suivi(st,f,m)||f.aucune)return;
+      var p=par[f.id],l=p?p.l.sort(function(a,b){return a.date<b.date?-1:1}):[],i=-1,j,gs=groupes(st,f.id,m,ax),ouv=ouvertes(st,f,m);
+      if((f.machines||[]).length&&f.machines.indexOf(m)<0)return;
+      for(j=0;j<l.length;j++)if(l[j].date<=today)i=j;
+      var h=function(o){var t=(o.regle.avant||'23:59').split(':'),d=D(o.date);d.setHours(+t[0],+t[1],0,0);return d.getTime()};
+      var cur=i>=0?brochesOcc(st,l[i],m,l[i+1]?l[i+1].date:'',i>0?l[i-1].date:''):null,prochaine={};
+      if(f.broches==='tour'){
+        // Calendrier des broches à venir : la broche du tour à l'échéance en cours (si pas faite), puis les suivantes.
+        var k=0,start=cur&&!cur.fini?i:i+1;
+        for(j=start;j<l.length&&k<ax.length*2;j++,k++){var b=brocheDuTour(st,f,m,k);if(b&&!prochaine[b])prochaine[b]={o:l[j],cur:j===i}}
+      }
+      var br=ax.map(function(b){
+        var der=0,raison='',x=null;gs.forEach(function(g){var y=g.rep[b];if(y&&y.rep==='f'&&y.e.end>der)der=y.e.end;if(y&&(y.rep==='f'||y.rep==='p'))raison=y.rep==='p'?y.raison||'raison non écrite':''});
+        if(horsService(st,m,b))return {b:b,etat:'hs',derniere:der,prochaine:'',hs:st.hs[m][b]};
+        // Broche restée « à reprendre » d'une échéance passée : en retard (sans calendrier : simplement à reprendre).
+        var vieux=ouv.filter(function(u){return u.reste.indexOf(b)>=0&&!dansFenetre(u.g.date,l,i)})[0];
+        if(vieux)return {b:b,etat:i<0?'jour':'retard',derniere:der,prochaine:vieux.g.date,raison:raison};
+        if(f.broches==='tour'){x=prochaine[b];if(!x)return {b:b,etat:'na',derniere:der,prochaine:'',raison:raison};
+          return {b:b,etat:x.cur?(h(x.o)<now?'retard':'jour'):ecart(today,x.o.date)<=1?'bientot':'ok',derniere:der,prochaine:x.o.date,raison:raison}}
+        var c=cur&&cur.br.filter(function(y){return y.b===b})[0];
+        if(c&&c.st==='todo')return {b:b,etat:h(l[i])<now?'retard':'jour',derniere:der,prochaine:l[i].date,raison:raison};
+        // « Pas faite » à l'échéance en cours : close, mais montrée comme telle jusqu'à la prochaine échéance.
+        var n=l[i+1];return {b:b,etat:c&&c.st==='p'?'pf':!n?'na':ecart(today,n.date)<=1?'bientot':'ok',derniere:der,prochaine:n?n.date:'',raison:raison};
+      });
+      out.push({f:f,tour:f.broches==='tour',br:br});
+    });
+    return out;
   }
   // États pour l'écran télé (même forme que les échéances par fréquence) : {f, m, due, etat, qui, nb}.
   function etats(st,now){
     if(!st.cal||!st.cal.regles.length)return null;
     now=now||Date.now();var today=auj(now),occ=occurrences(st,ajoute(today,-21),ajoute(today,21)).filter(function(o){return o.date}),out=[];
     var heure=function(o){var h=(o.regle.avant||'23:59').split(':'),d=D(o.date);d.setHours(+h[0],+h[1],0,0);return d.getTime()};
-    var parCle={};occ.forEach(function(o){o.machines.forEach(function(m){var k=o.regle.id+'|'+m;(parCle[k]=parCle[k]||[]).push(o)})});
+    var parCle={},seen={};occ.forEach(function(o){o.machines.forEach(function(m){var k=o.regle.id+'|'+m;(parCle[k]=parCle[k]||[]).push(o)})});
     Object.keys(parCle).forEach(function(k){
       // Seule compte la dernière occurrence passée (ou d'aujourd'hui) : faite → on regarde la suivante ; sinon en retard.
       var l=parCle[k],m=k.slice(k.indexOf('|')+1),choix=null,etat='ok',last=0,i=-1,j;
@@ -362,12 +501,27 @@ var CalMaint=(function(){
       if(i>=0&&!fait){choix=l[i];etat=l[i].date<today?'retard':heure(l[i])<now?'retard':'jour'}
       else if(l[i+1]){choix=l[i+1];etat=ecart(today,choix.date)<=1?'bientot':'ok'}
       if(!choix)return;
-      out.push({f:choix.op,m:m,last:last,due:heure(choix),etat:etat,qui:choix.noms.join(' + '),nb:choix.noms.length,occ:choix});
+      var x={f:choix.op,m:m,last:last,due:heure(choix),etat:etat,qui:choix.noms.join(' + '),nb:choix.noms.length,occ:choix};
+      // Broches (2026-10-16) : état broche par broche de l'occurrence montrée (celle qui est faite, sinon celle à faire).
+      if(suivi(st,choix.op,m)){
+        var oc=fait?l[i]:choix,jo=l.indexOf(oc);x.bro=brochesOcc(st,oc,m,l[jo+1]?l[jo+1].date:'',jo>0?l[jo-1].date:'');
+        // Maintenance commencée à une échéance passée et pas finie : ses broches restantes restent à faire, en retard ;
+        // la nouvelle échéance démarre normalement pour toutes les broches.
+        if(!seen[choix.op.id+'|'+m]){seen[choix.op.id+'|'+m]=1;
+          ouvertes(st,choix.op,m).forEach(function(u){if(i>=0&&dansFenetre(u.g.date,l,i))return;if(i<0&&l[0]&&u.g.date>=l[0].date)return;
+            var n=0,tot=0;u.br.forEach(function(y){if(y.st!=='hs')tot++;if(y.st==='ok')n++});
+            out.push({f:choix.op,m:m,last:u.g.fin,due:D(u.g.date).getTime()+43199999,etat:'retard',qui:'',nb:0,occ:null,ancienne:u.g.date,
+              bro:{tour:choix.op.broches==='tour',axes:axesM(st,m),br:u.br,n:n,tot:tot,fini:false,commence:true,e:null,reste:u.reste,groupe:u.g.id}});
+          });
+        }
+      }
+      out.push(x);
     });
     var R={retard:0,jamais:1,jour:2,bientot:3,ok:4};
     return out.sort(function(a,b){return R[a.etat]-R[b.etat]||a.due-b.due});
   }
-  return {D:D,S:S,ajoute:ajoute,lundi:lundi,ecart:ecart,auj:auj,travaille:travaille,ferme:ferme,equipeDu:equipeDu,datesRegle:datesRegle,occurrences:occurrences,faite:faite,etats:etats,absent:absent};
+  return {D:D,S:S,ajoute:ajoute,lundi:lundi,ecart:ecart,auj:auj,travaille:travaille,ferme:ferme,equipeDu:equipeDu,datesRegle:datesRegle,occurrences:occurrences,faite:faite,etats:etats,absent:absent,
+    axesM:axesM,parBroche:parBroche,suivi:suivi,horsService:horsService,hsDe:hsDe,brochesDe:brochesDe,groupes:groupes,brochesOcc:brochesOcc,brocheDuTour:brocheDuTour,ouvertes:ouvertes,ficheBroches:ficheBroches,dansFenetre:dansFenetre};
 })();
 // </calendrier>
 // ---------------------------------------------------------------------------------------------------------------
@@ -521,14 +675,59 @@ async function appel(op,extra){
   return j;
 }
 // Lecture gardée 60 s (même opération, mêmes paramètres) ; « Actualiser » vide tout.
+// Vitesse (2026-10-16) : une lecture plus ancienne (moins de 15 min) est affichée tout de suite et relue en arrière-plan
+// (témoin « mise à jour… ») ; la page se redessine si les données ont changé et que personne n'est en train de saisir.
+// Une même lecture n'est jamais demandée deux fois en même temps. Mémoire de la page seulement (rien dans le navigateur).
+// Toute écriture vide S.charge (nouvel objet) : une lecture lancée avant l'écriture n'y est alors jamais rangée.
+const FRAIS_MS=60000,GARDE_MS=15*60000,ENCOURS={},IDS_CHARGE=new WeakMap();
+const idCharge=()=>{let i=IDS_CHARGE.get(S.charge);if(!i){i=alea(8);IDS_CHARGE.set(S.charge,i)}return i};
 async function lire(op,extra){
   const cle=op+'|'+JSON.stringify(extra||{}),g=S.charge[cle];
-  if(g&&Date.now()-g.t<60000)return g.r;
-  const j=await appel(op,extra);
-  const r={ok:j.status===200,status:j.status,data:j.data||{},error:j.data&&j.data.error||''};
-  if(r.ok||r.status===403)S.charge[cle]={t:Date.now(),r:r};
-  S.maj=Date.now();
-  return r;
+  if(g&&Date.now()-g.t<FRAIS_MS)return g.r;
+  if(g&&Date.now()-g.t<GARDE_MS){relireFond(cle,op,extra);return g.r}
+  return chercher(cle,op,extra);
+}
+function chercher(cle,op,extra){
+  const base=S.charge,k=cle+'#'+idCharge();
+  if(ENCOURS[k])return ENCOURS[k];
+  return ENCOURS[k]=appel(op,extra).then(j=>{
+    const r={ok:j.status===200,status:j.status,data:j.data||{},error:j.data&&j.data.error||''};
+    if((r.ok||r.status===403)&&S.charge===base)S.charge[cle]={t:Date.now(),r:r};
+    S.maj=Date.now();
+    return r;
+  }).finally(()=>{delete ENCOURS[k]});
+}
+// Saisie en cours (formulaire, réglages, brouillon) : on ne redessine pas la page sous les doigts de la personne.
+function saisieEnCours(){
+  const a=document.activeElement;
+  return !!(S.edit||S.dr||S.adm||S.calEd||S.types||S.suppr||(S.acc&&S.acc.modifie)||(a&&a.closest&&a.closest('#page')&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)));
+}
+let nbFond=0;
+function temoinFond(){const e=document.getElementById('majFond');if(e)e.hidden=!nbFond}
+function relireFond(cle,op,extra){
+  const avant=S.charge[cle],page=S.page;
+  if(ENCOURS[cle+'#'+idCharge()])return;
+  nbFond++;temoinFond();
+  chercher(cle,op,extra).then(r=>{
+    if(r&&avant&&JSON.stringify(r.data)!==JSON.stringify(avant.r.data)&&S.page===page&&S.moi&&!saisieEnCours())chargerPage();
+  }).catch(()=>{}).finally(()=>{nbFond--;temoinFond()});
+}
+// Après la connexion : les lectures des parties ouvertes à la personne, 3 à la fois, en arrière-plan.
+function lecturesParties(){
+  const sec=unSecteur(),l=[];
+  const ajoute=(id,op,extra)=>{if(droit(id))l.push([op,extra])};
+  ajoute('parc','parc-lire');ajoute('personnes','personnes-lire');ajoute('c-message','messages-lire');ajoute('droits','droits-lire');
+  ajoute('tablettes','tablettes-lire');ajoute('c-releve','releve-listes');ajoute('tableau','releves-lire');ajoute('lancements','lancements-lire');
+  ajoute('acces','comptes-lire');ajoute('apparence','administration-lire');
+  if(sec){ajoute('calendrier','calendrier-lire',{secteur:sec});[['c-maint','maintenance'],['c-fiches','fiches'],['c-proc','procedures'],['c-taches','taches']].forEach(([id,app])=>ajoute(id,'contenu-lire',{app,secteur:sec}))}
+  return l;
+}
+async function prechargerParties(){
+  const file=lecturesParties(),jeton=S.jeton;
+  // Console du PC : état du site (administrateur) lu d'avance ; cela fait aussi vérifier la session par le serveur du PC.
+  if(CONSOLE_PC&&S.moi&&S.moi.admin)lireEtatPC().catch(()=>{});
+  const suivant=async()=>{while(file.length&&S.jeton===jeton){const [op,extra]=file.shift();const cle=op+'|'+JSON.stringify(extra||{});if(!S.charge[cle])try{await chercher(cle,op,extra)}catch(e){return}}};
+  await Promise.all([suivant(),suivant(),suivant()]);
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -560,10 +759,12 @@ async function seConnecter(nom,code){
 }
 // Droits de la personne connectée (moi) et ce qu'elle voit du site (site-lire).
 async function demarrer(){
-  const m=await appel('moi');
+  // moi et site-lire en même temps (vitesse, 2026-10-16) ; puis les autres parties en arrière-plan.
+  S.charge={};
+  const [m,s]=await Promise.all([appel('moi'),lire('site-lire')]);
   if(m.status!==200)throw new Error((m.data&&m.data.error)||'Connexion refusée.');
-  S.moi=m.data;S.dernierGeste=Date.now();S.charge={};
-  const s=await lire('site-lire');
+  S.moi=m.data;S.dernierGeste=Date.now();
+  setTimeout(()=>{if(S.moi)prechargerParties().catch(()=>{})},300);
   S.site=s.ok&&s.data.site?s.data.site:{nom:'',secteurs:[],zones:[]};
   const vis=S.site.secteurs||[];
   S.secteur=vis.length===1?vis[0]:'tous';
@@ -631,6 +832,7 @@ function vTop(){
   const h=S.maj?new Date(S.maj).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):'';
   return '<header class="top">'+sec+'<span class="grow"></span>'+
     temoinGoogle()+
+    '<span id="majFond" class="hint" role="status"'+(nbFond?'':' hidden')+'>'+svg('actualiser')+' mise à jour…</span>'+
     '<button class="btn" data-act="actualiser">'+svg('actualiser')+'Actualiser</button>'+
     '<div class="who"><span class="av">'+esc(ini)+'</span><div><b>'+esc(S.moi.nom)+'</b><span>'+(adm?'Administrateur · tout':'Manager')+'</span></div><button class="btn" data-act="sortir">'+svg('sortie')+'Se déconnecter</button></div></header>';
 }
@@ -1169,16 +1371,25 @@ function alertesTablettes(l,site){
   }
   return a.sort((x,y)=>(x.niv==='err'?0:1)-(y.niv==='err'?0:1));
 }
+// État du site (GitHub) lu par le serveur du PC : gardé comme les lectures Google (affiché tout de suite, relu derrière).
+async function lireEtatPC(){
+  const cle='PC|/api/etat',g=S.charge[cle],base=S.charge;
+  const lit=()=>apiPC('/api/etat').then(e=>{if(S.charge===base)S.charge[cle]={t:Date.now(),r:e};return e});
+  if(g&&Date.now()-g.t<GARDE_MS){if(Date.now()-g.t>=FRAIS_MS&&!ENCOURS[cle])ENCOURS[cle]=lit().catch(()=>{}).finally(()=>{delete ENCOURS[cle]});return g.r}
+  return lit();
+}
 PAGES.tablettes=async()=>{
-  const r=await lire('tablettes-lire'),mod=peutModif('tablettes');
+  // Les trois lectures en même temps (vitesse, 2026-10-16) : Google, état du site (GitHub), alertes ignorées sur ce PC.
+  const pr=lire('tablettes-lire'),pe=CONSOLE_PC&&S.moi.admin?lireEtatPC().then(e=>({e}),x=>({x})):null,pi=CONSOLE_PC?apiPC('/api/alertes-ignorees').then(i=>({i}),x=>({x})):null;
+  const r=await pr,mod=peutModif('tablettes');
   let h=enTete('tablettes','Les tablettes de vos zones : dernière connexion, version du pack et état envoyé. Jamais les codes des Réglages.');
   if(!r.ok)return h+refus(r);
   const l=r.data.tablettes||[];
   // Sur le PC : réglages des mises à jour (administrateur) et alertes ignorées sur ce PC.
   let site=null,ign={},avis='';
   if(CONSOLE_PC){
-    if(S.moi.admin){try{const e=await apiPC('/api/etat');site=e.site||null;if(e.erreur)avis='GitHub : '+e.erreur}catch(x){if(x.message==='session')throw x;avis=x.message}}
-    try{ign=await apiPC('/api/alertes-ignorees')||{}}catch(x){if(x.message==='session')throw x}
+    if(pe){const o=await pe;if(o.x){if(o.x.message==='session')throw o.x;avis=o.x.message}else{site=o.e.site||null;if(o.e.erreur)avis='GitHub : '+o.e.erreur}}
+    const oi=await pi;if(oi.x){if(oi.x.message==='session')throw oi.x}else ign=oi.i||{};
   }
   if(S.msgTab)h+='<div class="msg '+S.msgTab[0]+'" role="status">'+svg(S.msgTab[0]==='ok'?'ok':'alerte')+'<div>'+S.msgTab[1]+'</div></div>';
   if(avis)h+='<div class="msg warn">'+svg('alerte')+'<div>'+esc(avis)+'</div></div>';
@@ -1222,7 +1433,7 @@ async function actionTablettes(b){
 }
 async function changerCanalTablette(el){
   const id=el.dataset.canal,canal=el.value;el.disabled=true;S.msgTab=null;
-  try{await apiPC('/api/canal',{appareil:id,canal});S.msgTab=['ok','Tablette '+esc(id)+' : mises à jour « '+({normale:'normale',test:'tablette test',bloquee:'bloquée'}[canal])+' » (en ligne dans 1 à 2 minutes).']}
+  try{await apiPC('/api/canal',{appareil:id,canal});delete S.charge['PC|/api/etat'];S.msgTab=['ok','Tablette '+esc(id)+' : mises à jour « '+({normale:'normale',test:'tablette test',bloquee:'bloquée'}[canal])+' » (en ligne dans 1 à 2 minutes).']}
   catch(x){if(x.message==='session')return;S.msgTab=['err','<b>'+esc(x.message)+'</b>']}
   return chargerPage();
 }
@@ -1247,6 +1458,8 @@ PAGES.tableau=async()=>{
 function etatCalendrier(d,calAutre){
   const cal=calAutre||d.cal;
   const st={cal:cal?JSON.parse(JSON.stringify(cal)):null,ops:d.ops||[],journal:d.journal||[],machines:d.machines||[],operators:d.operators||[]};
+  // Broches (fraisage, 2026-10-16) : broches de chaque machine et broches hors service → suivi broche par broche (◐ 2/4).
+  if(typeof CalMaint!=='undefined'&&CalMaint.brochesDe){st.broches=CalMaint.brochesDe(d.brochesMachines||{});st.hs=CalMaint.hsDe(d.bhs||{})}
   if(st.cal&&Array.isArray(st.cal.regles)){
     const tm=d.typesMachines||{},ren=d.typesRenommes||{},act=t=>ren[t]||t;
     st.cal.regles=st.cal.regles.map(g=>{
@@ -1272,7 +1485,9 @@ function occurrencesEtat(st,du,au){
   const C=CalMaint;let large=[];try{large=C.occurrences(st,C.ajoute(du,-35),C.ajoute(au,35)).filter(o=>o.date)}catch(e){}
   const suite={};large.forEach(o=>o.machines.forEach(m=>{const k=o.regle.id+'|'+m;(suite[k]=suite[k]||[]).push(o)}));
   const faite=(o,m)=>{const l=suite[o.regle.id+'|'+m]||[],i=l.indexOf(o);try{return C.faite(st,o,m,l[i+1]?l[i+1].date:'',i>0?l[i-1].date:'')}catch(e){return null}};
-  return {occ:large.filter(o=>o.date>=du&&o.date<=au),faite};
+  // Broches : état broche par broche de l'occurrence (null hors fraisage ou sans étape « ↻ »).
+  const bro=(o,m)=>{if(!C.suivi||!C.suivi(st,o.op,m))return null;const l=suite[o.regle.id+'|'+m]||[],i=l.indexOf(o);try{return C.brochesOcc(st,o,m,l[i+1]?l[i+1].date:'',i>0?l[i-1].date:'')}catch(e){return null}};
+  return {occ:large.filter(o=>o.date>=du&&o.date<=au),faite,bro};
 }
 // Charge de chacun sur une période : machines à faire par personne (remplaçants compris, validés ou proposés).
 function chargePeriode(st,du,au){
@@ -1289,7 +1504,7 @@ function vueCharge(st,du,au,titre){
 function vueSemaine(st,cal){
   const C=CalMaint,auj=C.auj(),lun=S.semaine||C.lundi(auj);
   const jours=[0,1,2,3,4,5,6].map(i=>C.ajoute(lun,i)).filter(d=>(cal.jours||[1,2,3,4,5]).indexOf(C.D(d).getDay())>=0||C.D(d).getDay()%6!==0);
-  const {occ,faite}=occurrencesEtat(st,jours[0],jours[jours.length-1]);
+  const {occ,faite,bro}=occurrencesEtat(st,jours[0],jours[jours.length-1]);
   const machines=st.machines.length?st.machines:[...new Set(occ.flatMap(o=>o.machines))];
   let h='<div class="row" style="margin-bottom:10px"><button class="btn" data-semaine="'+C.ajoute(lun,-7)+'">‹ Semaine précédente</button><button class="btn" data-semaine="">Cette semaine</button><button class="btn" data-semaine="'+C.ajoute(lun,7)+'">Semaine suivante ›</button>'+
     '<span class="hint">Semaine du '+esc(C.D(lun).toLocaleDateString('fr-FR',{day:'numeric',month:'long'}))+'</span></div>';
@@ -1299,8 +1514,12 @@ function vueSemaine(st,cal){
     h+='<div class="mn">'+esc(m)+'</div>';
     jours.forEach(d=>{
       h+='<div>'+occ.filter(o=>o.date===d&&o.machines.indexOf(m)>=0).map(o=>{
-        const f=faite(o,m),c=f?'f':d<auj?'r':d===auj?'a':'p',sy={f:'✓',r:'✕',a:'•',p:'○'}[c];
-        return '<span class="op '+c+'">'+sy+' '+esc(o.op.title||'')+'<small>'+esc(f?'faite par '+(f.op||'')+(f.end?' le '+dateFr(f.end):''):(o.noms||[]).join(' + '))+'</small></span>'}).join('')+'</div>';
+        const f=faite(o,m),c=f?'f':d<auj?'r':d===auj?'a':'p',sy={f:'✓',r:'✕',a:'•',p:'○'}[c],b=bro(o,m);
+        // Broches : ◐ 2/4 si commencée, « · B3 » pour une broche à tour de rôle, ⊘ hors service.
+        const bt=b?(b.tour&&b.br[0]?' · B'+b.br[0].b:'')+(!b.tour&&b.commence&&!b.fini?' ◐ '+b.n+'/'+b.tot:'')+(b.br.some(x=>x.st==='hs')?' · ⊘ '+b.br.filter(x=>x.st==='hs').map(x=>'B'+x.b).join(' '):''):'';
+        // Échéance close avec une broche « pas faite » (2026-10-16) : reste verte, mention « ✕ B4 pas faite », raison au survol.
+        const pf=f&&b&&b.fini?b.br.filter(x=>x.st==='p'):[];
+        return '<span class="op '+c+'"'+(pf.length?' title="'+esc(pf.map(x=>'B'+x.b+' pas faite : '+(x.raison||'raison non écrite')).join(' ; '))+'"':'')+'>'+sy+' '+esc((o.op.title||'')+bt)+(pf.length?'<small style="color:#8E1B21;font-weight:700">✕ '+esc(pf.map(x=>'B'+x.b).join(', '))+' pas faite'+(pf.length>1?'s':'')+'</small>':'')+'<small>'+esc(f?'faite par '+(f.op||'')+(f.end?' le '+dateFr(f.end):''):(o.noms||[]).join(' + '))+'</small></span>'}).join('')+'</div>';
     });
   });
   h+='</div>';
@@ -1309,17 +1528,18 @@ function vueSemaine(st,cal){
 }
 function vueMois(st,cal){
   const C=CalMaint,auj=C.auj(),premier=S.mois||auj.slice(0,8)+'01',d0=C.D(premier),dernier=C.S(new Date(d0.getFullYear(),d0.getMonth()+1,0,12));
-  const {occ,faite}=occurrencesEtat(st,premier,dernier),lun=C.lundi(premier),moisSuiv=C.S(new Date(d0.getFullYear(),d0.getMonth()+1,1,12)),moisPrec=C.S(new Date(d0.getFullYear(),d0.getMonth()-1,1,12));
+  const {occ,faite,bro}=occurrencesEtat(st,premier,dernier),lun=C.lundi(premier),moisSuiv=C.S(new Date(d0.getFullYear(),d0.getMonth()+1,1,12)),moisPrec=C.S(new Date(d0.getFullYear(),d0.getMonth()-1,1,12));
   let h='<div class="row" style="margin-bottom:10px"><button class="btn" data-mois="'+moisPrec+'">‹ Mois précédent</button><button class="btn" data-mois="">Ce mois-ci</button><button class="btn" data-mois="'+moisSuiv+'">Mois suivant ›</button>'+
     '<span class="hint">'+esc(d0.toLocaleDateString('fr-FR',{month:'long',year:'numeric'}))+'</span></div>';
   h+='<div class="cal" style="grid-template-columns:repeat(7,minmax(110px,1fr))">'+JOURS_SEM.map(j=>'<div class="hd">'+j[1]+'</div>').join('');
   for(let d=lun;d<=dernier||C.D(d).getDay()!==1;d=C.ajoute(d,1)){
     if(d>dernier&&C.D(d).getDay()===1)break;
     const dans=d>=premier&&d<=dernier,l=dans?occ.filter(o=>o.date===d):[],ferme=dans&&C.ferme(cal,d),trav=dans&&C.travaille(cal,d);
-    let fait=0,ret=0,tot=0;l.forEach(o=>o.machines.forEach(m=>{tot++;if(faite(o,m))fait++;else if(d<auj)ret++}));
+    // pf : broches « pas faite » d'échéances closes (comptées faites, signalées à part, 2026-10-16).
+    let fait=0,ret=0,tot=0;const pf=[];l.forEach(o=>o.machines.forEach(m=>{tot++;if(faite(o,m)){fait++;const b=bro(o,m);if(b&&b.fini)b.br.filter(x=>x.st==='p').forEach(x=>pf.push(m+' B'+x.b+' : '+(x.raison||'raison non écrite')))}else if(d<auj)ret++}));
     h+='<div style="'+(dans?'':'background:#f7f9fa;')+(d===auj?'outline:2px solid var(--accent);outline-offset:-2px;':'')+'"><b style="font-size:15px">'+(dans?Number(d.slice(8)):'')+'</b>'+
       (ferme?'<br><small class="hint">'+esc(ferme)+'</small>':dans&&!trav?'<br><small class="hint">non travaillé</small>':'')+
-      (tot?'<br><span class="op '+(ret?'r':fait===tot?'f':d===auj?'a':'p')+'" style="margin-top:4px">'+tot+' machine(s)'+(fait?'<small>'+fait+' faite(s)</small>':ret?'<small>'+ret+' en retard</small>':'')+'</span>':'')+'</div>';
+      (tot?'<br><span class="op '+(ret?'r':fait===tot?'f':d===auj?'a':'p')+'" style="margin-top:4px">'+tot+' machine(s)'+(fait?'<small>'+fait+' faite(s)</small>':ret?'<small>'+ret+' en retard</small>':'')+(pf.length?'<small style="color:#8E1B21;font-weight:700" title="'+esc(pf.join(' ; '))+'">✕ '+pf.length+' broche(s) pas faite(s)</small>':'')+'</span>':'')+'</div>';
   }
   h+='</div>';
   return h+vueCharge(st,premier,dernier,'Charge du mois par personne (remplaçants compris)');
@@ -1620,7 +1840,9 @@ const FORMS={
     {k:'title',t:'texte',l:'Nom de l’opération',req:1},{k:'machines',t:'machines',l:'Machines (aucune cochée = toutes les machines)'},
     {k:'tools',t:'lignes',l:'Matériel (une ligne par élément)'},{k:'safety',t:'lignes',l:'Sécurité (une ligne par consigne)'},
     {k:'steps',t:'etapes',l:'Étapes',nouveau:()=>({title:'',detail:'',photo:null,axes:false}),sous:[{k:'title',t:'texte',l:'Étape'},{k:'detail',t:'zone',l:'Détail'},{k:'photo',t:'photo',l:'Photo'},{k:'axes',t:'case',l:'À faire sur chaque broche',fraisage:1}]},
-    {k:'checks',t:'lignes',l:'Contrôles à la fin (une ligne par contrôle)'}]},
+    {k:'checks',t:'lignes',l:'Contrôles à la fin (une ligne par contrôle)'},
+    // Broches (fraisage, 2026-10-16) : choisi opération par opération.
+    {k:'broches',t:'choix',l:'Broches (étapes « ↻ ») — une broche à tour de rôle : chaque broche est faite une échéance sur N',fraisage:1,choix:[['toutes','Toutes les broches à chaque échéance (recommandé)'],['tour','Une broche à tour de rôle']]}]},
   fiches:{nouveau:id=>({id:'f'+id,title:'',intro:'',signs:[],before:'',reflexes:[],checks:[],rappel:''}),champs:[
     {k:'title',t:'texte',l:'Titre de la fiche',req:1},{k:'intro',t:'zone',l:'Introduction'},{k:'signs',t:'lignes',l:'Signes du problème (une ligne par signe)'},
     {k:'before',t:'zone',l:'Avant de commencer'},
@@ -1661,7 +1883,7 @@ function vueFormulaire(p,st){
   const E=S.edit,F=FORMS[p.app],titre=CONTENUS[p.app].titre;
   return '<section class="card det edition"><h2>'+(E.nouveau?'Nouveau':'Modifier')+' : '+esc(E.item[titre]||'(sans titre)')+'</h2>'+
     (E.msg?'<div class="msg '+E.msg[0]+'">'+svg('alerte')+'<div>'+E.msg[1]+'</div></div>':'')+
-    '<div class="form">'+F.champs.map(f=>champ(f,E.item[f.k],f.k,st)).join('')+'</div>'+
+    '<div class="form">'+F.champs.filter(f=>!f.fraisage||unSecteur()==='fraisage').map(f=>champ(f,E.item[f.k],f.k,st)).join('')+'</div>'+
     '<div class="savebar" style="position:sticky;left:auto;right:auto;bottom:12px"><span class="st">'+(E.sale?'<b style="color:var(--warn)">• Modifications à envoyer.</b>':'Rien de modifié.')+' Les tablettes les reçoivent à leur prochain échange.</span>'+
     '<button class="btn" data-ed="annuler">Annuler</button><button class="btn pri" data-ed="enregistrer">Enregistrer et envoyer</button></div></section>';
 }
