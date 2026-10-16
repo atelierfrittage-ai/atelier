@@ -90,6 +90,21 @@ button.sync.err{background:var(--err-bg);border-color:#e9a3a6}button.sync.warn{b
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:var(--shadow)}
 .card h2{margin:0 0 12px;font-size:18px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .hint{color:var(--muted);font-size:15px}
+/* Réactivité (2026-10-16) : état des enregistrements masqués, squelette pendant une première lecture, clic visible. */
+.envoi{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:600;color:var(--muted);white-space:nowrap}
+.envoi.ok{color:var(--ok)}.envoi.err{color:var(--err)}
+#bandeauEnvoi:empty{display:none}#bandeauEnvoi{padding:12px 24px 0}
+.btn:active,.nav button:active,.chip:active{transform:scale(.97)}
+.btn[aria-busy="true"]{opacity:.7;cursor:progress}
+.sq{background:linear-gradient(90deg,#e9eef0 25%,#f4f7f8 50%,#e9eef0 75%);background-size:200% 100%;animation:sq 1.2s linear infinite;border-radius:12px;height:110px;margin:0 0 16px}
+.sq.h{height:54px;width:55%}
+@keyframes sq{from{background-position:200% 0}to{background-position:-200% 0}}
+@media (prefers-reduced-motion:reduce){.sq{animation:none}}
+.absent{position:fixed;inset:0;z-index:50;background:var(--bg,#f2f5f6);display:grid;place-items:center;padding:16px}
+.absent .box{background:#fff;border:1px solid var(--line);border-radius:16px;padding:28px;max-width:440px;width:100%;box-shadow:0 10px 40px rgba(21,36,43,.18)}
+.absent h2{margin:0 0 10px}
+.tag.attente{background:#fff4dc;color:#8a5a00;border:1px dashed #d8a640}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .tag{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:2px 10px;font-size:14px;font-weight:700;background:#e9eef0;color:#41545C;white-space:nowrap;flex:none}
 .tag.ok{background:var(--ok-bg);color:var(--ok)}.tag.warn{background:var(--warn-bg);color:var(--warn)}.tag.err{background:var(--err-bg);color:var(--err)}.tag.acc{background:var(--accent-soft);color:var(--accent-dark)}
 .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
@@ -441,6 +456,9 @@ var CalMaint=(function(){
     var ax=axesM(st,m);if(!ax.length||!parBroche(f))return [];
     var gs=groupes(st,f.id,m,ax),out=[];
     gs.forEach(function(g,k){
+      // Passage fait du temps où l'opération était « une broche à tour de rôle » (une seule broche répondue) : plus à reprendre
+      // une fois l'opération repassée en « toutes les broches » (la prochaine maintenance les fait toutes), 2026-10-16.
+      if(f.broches!=='tour'&&Object.keys(g.rep).length===1&&ax.filter(function(b){return !horsService(st,m,b)}).length>1&&g.entrees.every(function(e){return e.broches}))return;
       var reste=ax.filter(function(b){var x=g.rep[b],j,y;if(!x||x.rep!=='r'||horsService(st,m,b))return false;
         for(j=k+1;j<gs.length;j++){y=gs[j].rep[b];if(y&&(y.rep==='f'||y.rep==='p'))return false}return true});
       if(reste.length)out.push({g:g,reste:reste,br:ax.filter(function(b){return g.rep[b]||reste.indexOf(b)>=0}).map(function(b){var x=g.rep[b],r=x&&x.rep;
@@ -679,6 +697,7 @@ async function appel(op,extra){
 // (témoin « mise à jour… ») ; la page se redessine si les données ont changé et que personne n'est en train de saisir.
 // Une même lecture n'est jamais demandée deux fois en même temps. Mémoire de la page seulement (rien dans le navigateur).
 // Toute écriture vide S.charge (nouvel objet) : une lecture lancée avant l'écriture n'y est alors jamais rangée.
+const perime=()=>Date.now()-60001;
 const FRAIS_MS=60000,GARDE_MS=15*60000,ENCOURS={},IDS_CHARGE=new WeakMap();
 const idCharge=()=>{let i=IDS_CHARGE.get(S.charge);if(!i){i=alea(8);IDS_CHARGE.set(S.charge,i)}return i};
 async function lire(op,extra){
@@ -688,10 +707,15 @@ async function lire(op,extra){
   return chercher(cle,op,extra);
 }
 function chercher(cle,op,extra){
-  const base=S.charge,k=cle+'#'+idCharge();
+  const base=S.charge,k=cle+'#'+idCharge(),g0=GEN[cle]||0;
   if(ENCOURS[k])return ENCOURS[k];
   return ENCOURS[k]=appel(op,extra).then(j=>{
     const r={ok:j.status===200,status:j.status,data:j.data||{},error:j.data&&j.data.error||''};
+    // Relecture m1 : une lecture partie AVANT un envoi confirmé de la même clé est plus ancienne que lui : ignorée.
+    if(r.ok&&(GEN[cle]||0)!==g0)return S.charge[cle]?S.charge[cle].r:Object.assign(r,{data:surcouche(cle,CONF[cle]?clone(CONF[cle]):r.data)});
+    // Données confirmées par Google (base des envois) ; à l'écran, les enregistrements en attente y sont réappliqués.
+    if(r.ok)CONF[cle]=JSON.parse(JSON.stringify(r.data));
+    if(r.ok)r.data=surcouche(cle,r.data);
     if((r.ok||r.status===403)&&S.charge===base)S.charge[cle]={t:Date.now(),r:r};
     S.maj=Date.now();
     return r;
@@ -700,7 +724,9 @@ function chercher(cle,op,extra){
 // Saisie en cours (formulaire, réglages, brouillon) : on ne redessine pas la page sous les doigts de la personne.
 function saisieEnCours(){
   const a=document.activeElement;
-  return !!(S.edit||S.dr||S.adm||S.calEd||S.types||S.suppr||(S.acc&&S.acc.modifie)||(a&&a.closest&&a.closest('#page')&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)));
+  // (Administration : la page est toujours un formulaire ; il n'y a saisie que si quelque chose a été changé.)
+  if(S.adm&&!S.adm.sale&&!S.edit&&!S.dr)S.adm=null;
+  return !!(S.edit||S.dr||(S.adm&&S.adm.sale)||S.calEd||S.types||S.suppr||(S.acc&&S.acc.modifie)||(a&&a.closest&&a.closest('#page')&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)));
 }
 let nbFond=0;
 function temoinFond(){const e=document.getElementById('majFond');if(e)e.hidden=!nbFond}
@@ -713,22 +739,183 @@ function relireFond(cle,op,extra){
   }).catch(()=>{}).finally(()=>{nbFond--;temoinFond()});
 }
 // Après la connexion : les lectures des parties ouvertes à la personne, 3 à la fois, en arrière-plan.
-function lecturesParties(){
-  const sec=unSecteur(),l=[];
+function lecturesParties(avecSecteur){
+  const sec=avecSecteur===false?'':unSecteur(),l=[];
   const ajoute=(id,op,extra)=>{if(droit(id))l.push([op,extra])};
+  // Manager : ses secteurs sont connus dès la connexion → calendriers de la vue d'ensemble lus tout de suite.
+  if(avecSecteur===false&&S.moi&&Array.isArray(S.moi.secteurs)&&!S.moi.secteurs.includes('*'))S.moi.secteurs.forEach(s=>ajoute('calendrier','calendrier-lire',{secteur:s}));
   ajoute('parc','parc-lire');ajoute('personnes','personnes-lire');ajoute('c-message','messages-lire');ajoute('droits','droits-lire');
   ajoute('tablettes','tablettes-lire');ajoute('c-releve','releve-listes');ajoute('tableau','releves-lire');ajoute('lancements','lancements-lire');
   ajoute('acces','comptes-lire');ajoute('apparence','administration-lire');
   if(sec){ajoute('calendrier','calendrier-lire',{secteur:sec});[['c-maint','maintenance'],['c-fiches','fiches'],['c-proc','procedures'],['c-taches','taches']].forEach(([id,app])=>ajoute(id,'contenu-lire',{app,secteur:sec}))}
   return l;
 }
-async function prechargerParties(){
-  const file=lecturesParties(),jeton=S.jeton;
+async function prechargerParties(avecSecteur){
+  const file=lecturesParties(avecSecteur),jeton=S.jeton;
   // Console du PC : état du site (administrateur) lu d'avance ; cela fait aussi vérifier la session par le serveur du PC.
   if(CONSOLE_PC&&S.moi&&S.moi.admin)lireEtatPC().catch(()=>{});
   const suivant=async()=>{while(file.length&&S.jeton===jeton){const [op,extra]=file.shift();const cle=op+'|'+JSON.stringify(extra||{});if(!S.charge[cle])try{await chercher(cle,op,extra)}catch(e){return}}};
   await Promise.all([suivant(),suivant(),suivant()]);
 }
+
+// ---------------------------------------------------------------------------------------------------------------
+// Enregistrements en temps masqué (demande de l'utilisateur, 2026-10-16). Un enregistrement s'affiche tout de suite et
+// la fiche se ferme ; l'envoi à Google part derrière, par une FILE (un envoi à la fois, dans l'ordre). Les contrôles du
+// script restent les mêmes : chaque envoi part de la version confirmée par Google que la personne avait sous les yeux
+// (« depuis », versions des éléments). Une version changée par CETTE page (envoi précédent) est suivie (SUITE) ; changée
+// ailleurs : conflit, la modification est gardée → « Réappliquer » ou « Abandonner ». Réseau coupé : nouveaux essais.
+// Mémoire de la page seulement. Tâche : {cle, op, libelle, page, construire(base)→corps, vue(données)→données,
+// esp/version(base)/vu (contrôle de version), nouvelle(réponse, corps)→version écrite, apres(réponse, base)→données
+// confirmées (sinon relecture), pack (écriture de la configuration du pack), reprise() (rouvre la saisie)}.
+const CONF={},SUITE={},GEN={},ENVOI={file:[],actif:null,ok:0,erreur:null,conflit:null,essais:0,minuterie:0,pause:'',sortie:false};
+const suite=(esp,v)=>{let x=v,n=0;while(SUITE[esp+'|'+x]!==undefined&&n++<100)x=SUITE[esp+'|'+x];return x};
+const clone=o=>o==null?o:JSON.parse(JSON.stringify(o));
+// Relecture m5 : élément changé et pas encore confirmé → repère « ◐ pas encore enregistré » (_attente, jamais envoyé).
+const sansRepere=o=>JSON.stringify(o,(k,x)=>k==='_attente'||k==='modifiable'?undefined:x);
+function marquer(avant,l){const m={};(avant||[]).forEach(x=>{if(x&&x.id)m[x.id]=x});return l.map(x=>!x||(x.id&&m[x.id]&&sansRepere(m[x.id])===sansRepere(Object.assign({},m[x.id],x)))?x:Object.assign({},x,{_attente:true}))}
+const repere=o=>o&&o._attente?' <span class="tag attente" title="Envoi vers Google en cours">◐ pas encore enregistré</span>':'';
+const enAttente=()=>(ENVOI.actif?1:0)+ENVOI.file.length+(ENVOI.conflit?1:0);
+// Données à l'écran : la version confirmée + les enregistrements pas encore confirmés.
+function surcouche(cle,d){
+  let x=d;[ENVOI.conflit,ENVOI.actif].concat(ENVOI.file).forEach(t=>{if(t&&t.cle===cle){try{x=t.vue(clone(x))||x}catch(e){}}});
+  return x;
+}
+function afficherConf(cle){
+  const g=S.charge[cle],d=CONF[cle];
+  if(d)S.charge[cle]={t:g?g.t:Date.now(),r:{ok:true,status:200,data:surcouche(cle,clone(d)),error:''}};
+}
+// Mise en file : affichage immédiat (la page se redessine aussitôt), envoi derrière.
+function enregistrer(t){
+  t.qui=S.moi&&S.moi.nom;t.n=alea(6);
+  if(!CONF[t.cle]&&S.charge[t.cle])CONF[t.cle]=clone(S.charge[t.cle].r.data);
+  if(t.version&&t.vu===undefined)t.vu=CONF[t.cle]?t.version(CONF[t.cle]):undefined;
+  ENVOI.file.push(t);ENVOI.erreur=null;
+  afficherConf(t.cle);majEnvoi();
+  setTimeout(pousserEnvoi,0);
+}
+async function relireConf(cle){const [op,ex]=[cle.slice(0,cle.indexOf('|')),JSON.parse(cle.slice(cle.indexOf('|')+1))];S.charge[cle]&&(S.charge[cle].t=0);const r=await chercher(cle,op,ex);if(!r.ok)throw Object.assign(new Error(r.error||'Lecture impossible.'),{refus:r.status})}
+async function pousserEnvoi(){
+  if(ENVOI.actif||ENVOI.pause||ENVOI.conflit||!ENVOI.file.length)return;
+  if(!S.jeton||!S.moi){ENVOI.pause='session';majEnvoi();return}
+  const t=ENVOI.actif=ENVOI.file.shift();majEnvoi();
+  try{
+    let base=CONF[t.cle];
+    if(t.version){
+      const v=suite(t.esp,t.vu);
+      if(!base||t.version(base)!==v){await relireConf(t.cle);base=CONF[t.cle]}
+      if(!base||t.version(base)!==v){conflit(t,'modifié ailleurs : la version a changé entre-temps (tablette ou autre console).');return}
+    }else if(!base){await relireConf(t.cle);base=CONF[t.cle]}
+    // Repère « pas encore enregistré » (_attente) : jamais envoyé.
+    const corps=JSON.parse(JSON.stringify(t.construire(clone(base)),(k,x)=>k==='_attente'?undefined:x)),j=await appel(t.op,corps);
+    if(j.status===200){
+      ENVOI.essais=0;ENVOI.ok=Date.now();
+      const av=t.version?t.version(base):undefined;let nv=t.nouvelle&&t.esp?t.nouvelle(j,corps):undefined;
+      const d=t.apres?t.apres(j,clone(base)):null;
+      ENVOI.actif=null;GEN[t.cle]=(GEN[t.cle]||0)+1;
+      if(d){CONF[t.cle]=d;afficherConf(t.cle)}else{S.charge[t.cle]&&(S.charge[t.cle].t=perime())}
+      // Relecture m3 : pas de nouvelle version dans la réponse → celle de la relecture sert de suite.
+      if(t.esp&&av!==undefined&&nv===undefined){await relireConf(t.cle).catch(()=>{});if(CONF[t.cle])nv=t.version(CONF[t.cle])}
+      if(t.esp&&nv!==undefined&&av!==undefined&&nv!==av)SUITE[t.esp+'|'+av]=nv;
+      if(t.esp&&av===undefined&&nv!==undefined)SUITE[t.esp+'|0']=nv; // création suivie d'une modification avant confirmation
+      // Configuration du pack : les autres lectures du pack seront relues (affichées tout de suite, relues derrière).
+      if(t.pack)Object.keys(S.charge).forEach(k=>{if(k!==t.cle&&/^(personnes|parc|messages|droits|administration|site)-lire\|/.test(k))S.charge[k].t=perime()});
+      if(t.refus)t.refus(j);
+    // 409 « version » (changé ailleurs entre-temps) : conflit ; les autres 409 (nom déjà pris…) sont des refus.
+    }else if(j.status===409&&/entre-temps|modifié ailleurs/i.test((j.data&&j.data.error)||'')){ENVOI.actif=null;await relireConf(t.cle).catch(()=>{});
+      // Relecture m2 : après une coupure, l'envoi précédent a pu arriver chez Google sans réponse ; si la modification y
+      // est déjà, c'est un succès (pas de faux conflit).
+      if(t.reseau&&dejaApplique(t)){ENVOI.essais=0;ENVOI.ok=Date.now();GEN[t.cle]=(GEN[t.cle]||0)+1;afficherConf(t.cle)}
+      else{conflit(t,'modifié ailleurs : la version a changé entre-temps (tablette ou autre console).');return}}
+    else{ENVOI.actif=null;await relireConf(t.cle).catch(()=>{});
+      const m=(j.data&&j.data.error)||'Enregistrement refusé.';
+      if(t.reseau&&dejaApplique(t)){ENVOI.ok=Date.now();afficherConf(t.cle)}
+      else ENVOI.erreur={t,message:(t.reseau&&j.status===409?'peut-être déjà enregistré (la connexion a été coupée pendant l’envoi) : vérifiez. ':'')+m,refus:true}}
+  }catch(e){
+    ENVOI.actif=null;
+    if(e.message==='session'){ENVOI.file.unshift(t);ENVOI.pause='session';majEnvoi();return}
+    if(e.refus){ENVOI.erreur={t,message:e.message,refus:true}}
+    else{
+      // Réseau : la tâche reste en tête ; nouveaux essais après 2, 4, 8, 16 s, puis toutes les 30 s avec un bandeau.
+      ENVOI.file.unshift(t);ENVOI.essais++;t.reseau=true;
+      const att=ENVOI.essais<=4?1000*Math.pow(2,ENVOI.essais):30000;
+      if(ENVOI.essais>4)ENVOI.erreur={reseau:true,message:'Pas de connexion avec Google.'};
+      clearTimeout(ENVOI.minuterie);ENVOI.minuterie=setTimeout(()=>{ENVOI.minuterie=0;pousserEnvoi()},att);ENVOI.prochain=Date.now()+att;
+      majEnvoi();return;
+    }
+  }
+  majEnvoi();rafraichirApresEnvoi(t);
+  if(!ENVOI.file.length&&ENVOI.sortie){ENVOI.sortie=false;seDeconnecter()}
+  setTimeout(pousserEnvoi,0);
+}
+// « Vous êtes toujours là ? » (en ligne, 10 min sans geste avec des envois en attente) : cache toute la console.
+function afficherAbsent(){
+  let d=document.getElementById('absent');
+  if(!d){d=document.createElement('div');d.id='absent';d.setAttribute('role','dialog');d.setAttribute('aria-modal','true');d.className='absent';document.body.appendChild(d)}
+  d.innerHTML='<div class="box"><h2>Vous êtes toujours là ?</h2><p>'+enAttente()+' enregistrement(s) en attente d’envoi vers Google.</p><p class="hint">Sans réponse dans 10 minutes, la console se déconnecte et ces enregistrements seront perdus.</p><button class="btn pri big" data-envoi="continuer">Continuer</button></div>';
+  const b=d.querySelector('button');if(b)b.focus();
+}
+function continuerPresence(){S.absent=0;S.dernierGeste=Date.now();const d=document.getElementById('absent');if(d)d.remove();if(ENVOI.pause==='absent')ENVOI.pause='';majEnvoi();pousserEnvoi()}
+// La modification d'une tâche est-elle déjà dans la version confirmée ? (listes comparées sans tenir compte de l'ordre
+// ni du repère « pas encore enregistré »)
+function canonEnvoi(o){
+  if(Array.isArray(o)){const l=o.map(canonEnvoi);return l.every(x=>x&&typeof x==='object'&&'id' in x)?l.sort((a,b)=>String(a.id).localeCompare(String(b.id))):l}
+  if(o&&typeof o==='object'){const r={};Object.keys(o).sort().forEach(k=>{if(k!=='_attente'&&k!=='modifiable')r[k]=canonEnvoi(o[k])});return r}
+  return o;
+}
+function dejaApplique(t){const b=CONF[t.cle];if(!b)return false;try{return JSON.stringify(canonEnvoi(t.vue(clone(b))))===JSON.stringify(canonEnvoi(b))}catch(e){return false}}
+// Relecture m4 : une autre personne se connecte sur cette page → rien de la précédente ne sert de base.
+function changerPersonne(nom){
+  if(ENVOI.personne&&ENVOI.personne!==nom){[CONF,SUITE,GEN].forEach(o=>Object.keys(o).forEach(k=>delete o[k]))}
+  ENVOI.personne=nom;
+}
+// Écriture directe (code de la console, coupure d'un accès, retrait d'un appareil) : après les enregistrements en file.
+function attendreFile(){return new Promise(ok=>{const v=()=>(ENVOI.actif||ENVOI.file.length)&&!ENVOI.conflit&&!ENVOI.erreur&&!ENVOI.pause?setTimeout(v,100):ok();v()})}
+function conflit(t,message){ENVOI.actif=null;ENVOI.conflit=t;t.message=message;afficherConf(t.cle);majEnvoi();rafraichirApresEnvoi(t)}
+function rafraichirApresEnvoi(t){if(S.moi&&S.page===t.page&&!saisieEnCours()){const y=scrollY;chargerPage().then(()=>scrollTo(0,y))}}
+// Barre du haut : « Enregistrement… », « ✓ Enregistré hh:mm » ; bandeau en cas de conflit ou d'échec.
+function vueEnvoi(){
+  const n=enAttente();
+  if(ENVOI.conflit||(ENVOI.erreur&&!ENVOI.erreur.reseau))return '<span class="envoi err">'+svg('alerte')+' À vérifier</span>';
+  if(n)return '<span class="envoi">'+svg('actualiser')+' Enregistrement…'+(n>1?' ('+n+')':'')+'</span>';
+  return ENVOI.ok?'<span class="envoi ok">'+svg('ok')+' Enregistré '+heureFr(ENVOI.ok)+'</span>':'';
+}
+function vueBandeau(){
+  const c=ENVOI.conflit,e=ENVOI.erreur,b=(a,t,cl)=>'<button class="btn'+(cl?' '+cl:'')+'" data-envoi="'+a+'">'+t+'</button>';
+  if(c)return '<div class="msg err" role="alert">'+svg('alerte')+'<div><b>« '+esc(c.libelle)+' » : '+esc(c.message)+'</b><br>Votre modification est gardée. La version actuelle de Google vient d’être relue.<div class="row" style="margin-top:8px">'+
+    b('reappliquer','Réappliquer ma modification','pri')+b('abandonner','Abandonner ma modification')+(c.page&&c.page!==S.page?b('voir','Voir'):'')+'</div></div></div>';
+  if(e&&e.reseau)return '<div class="msg warn" role="alert">'+svg('alerte')+'<div><b>'+esc(e.message)+'</b> '+enAttente()+' enregistrement(s) en attente : nouvel essai automatique toutes les 30 s.<div class="row" style="margin-top:8px">'+b('reessayer','Réessayer maintenant','pri')+'</div></div></div>';
+  if(e)return '<div class="msg err" role="alert">'+svg('alerte')+'<div><b>« '+esc(e.t.libelle)+' » refusé : '+esc(e.message)+'</b><div class="row" style="margin-top:8px">'+(e.t.reprise?b('reprendre','Reprendre ma saisie','pri'):'')+(e.t.page&&e.t.page!==S.page?b('voir','Voir'):'')+b('fermer','Fermer')+'</div></div></div>';
+  if(ENVOI.sortie)return '<div class="msg info" role="status">'+svg('horloge')+'<div><b>Déconnexion dès que les enregistrements en cours sont partis…</b><div class="row" style="margin-top:8px">'+b('sortir-quand-meme','Se déconnecter sans attendre','dan')+b('rester','Rester connecté')+'</div></div></div>';
+  if(ENVOI.pause==='session'&&enAttente())return '<div class="msg warn" role="status">'+svg('alerte')+'<div><b>'+enAttente()+' enregistrement(s) en attente : reconnectez-vous pour les envoyer.</b></div></div>';
+  return '';
+}
+function majEnvoi(){
+  const a=document.getElementById('envoiEtat');if(a)a.innerHTML=vueEnvoi();
+  const b=document.getElementById('bandeauEnvoi');if(b)b.innerHTML=vueBandeau();
+}
+function actionEnvoi(b){
+  const act=b.dataset.envoi,c=ENVOI.conflit,e=ENVOI.erreur;
+  if(act==='continuer'){continuerPresence();return}
+  if(act==='reappliquer'&&c){ENVOI.conflit=null;c.vu=c.version?c.version(CONF[c.cle]||{}):undefined;ENVOI.file.unshift(c);majEnvoi();pousserEnvoi();return}
+  if(act==='abandonner'&&c){ENVOI.conflit=null;afficherConf(c.cle);if(c.abandon)c.abandon();majEnvoi();rafraichirApresEnvoi(c);pousserEnvoi();return}
+  if(act==='reessayer'){ENVOI.erreur=null;ENVOI.essais=0;clearTimeout(ENVOI.minuterie);ENVOI.minuterie=0;majEnvoi();pousserEnvoi();return}
+  if(act==='voir'){const t=c||(e&&e.t);if(t&&t.page){S.page=t.page;render()}return}
+  if(act==='reprendre'&&e&&e.t.reprise){ENVOI.erreur=null;S.page=e.t.page;e.t.reprise();render();return}
+  if(act==='fermer'){ENVOI.erreur=null;majEnvoi();return}
+  if(act==='sortir-quand-meme'){ENVOI.sortie=false;ENVOI.file=[];ENVOI.conflit=null;ENVOI.erreur=null;seDeconnecter();return}
+  if(act==='rester'){ENVOI.sortie=false;majEnvoi();return}
+}
+// Fermer ou recharger la page avec des envois en attente : le navigateur demande confirmation.
+addEventListener('beforeunload',e=>{if(enAttente()){e.preventDefault();e.returnValue=''}});
+// Reprise après une reconnexion : seulement les enregistrements de la même personne.
+function reprendreEnvois(){
+  if(ENVOI.pause!=='session')return;
+  const autres=ENVOI.file.filter(t=>t.qui!==(S.moi&&S.moi.nom));
+  if(autres.length){ENVOI.file=ENVOI.file.filter(t=>t.qui===(S.moi&&S.moi.nom));ENVOI.erreur={t:autres[0],message:autres.length+' enregistrement(s) d’une autre personne abandonné(s).',refus:true}}
+  ENVOI.pause='';majEnvoi();pousserEnvoi();
+}
+// Écritures dans la configuration du pack (personnes, parc, messages, qui voit quoi, administration) : version = maj.
+function tachePack(o){return Object.assign({pack:true,esp:'pack',version:d=>Number(d.maj)||0,nouvelle:j=>Number((j.data||{}).maj)||(j.data&&j.data.admin?Number(j.data.admin.maj):undefined)},o)}
 
 // ---------------------------------------------------------------------------------------------------------------
 // Connexion, session, déconnexion
@@ -753,9 +940,30 @@ async function seConnecter(nom,code){
     const j=await appel('connexion',{nom:nom,code:code});
     if(j.status!==200){S.err=(j.data&&j.data.error)||'Connexion refusée.';return}
     S.jeton=j.data.jeton;ecrireJeton(S.jeton);S.nomTape='';
-    await demarrer();
+    // Réactivité (2026-10-16) : la réponse de connexion donne déjà les droits (comme « moi ») ; la console s'affiche
+    // aussitôt, les secteurs du site et les parties arrivent derrière.
+    const m=Object.assign({},j.data);delete m.jeton;
+    demarrerAvec(m);
   }catch(e){S.err=e.message}
   finally{S.occupe=false;render()}
+}
+function demarrerAvec(moi){
+  changerPersonne(moi.nom);S.moi=moi;S.dernierGeste=Date.now();S.charge={};
+  S.site={nom:'',secteurs:(moi.secteurs||[]).filter(x=>x!=='*'),zones:[]};
+  if(!droit(S.page))S.page=premierePartie();
+  S.sitePret=lire('site-lire').then(s=>{
+    S.sitePret=null;
+    if(!S.moi)return;
+    S.site=s.ok&&s.data.site?s.data.site:{nom:'',secteurs:[],zones:[]};
+    const vis=S.site.secteurs||[];S.secteur=vis.length===1?vis[0]:'tous';
+    // Coquille (nom du site, sélecteur de secteur) mise à jour sans toucher à la partie affichée.
+    const nav=document.querySelector('.nav'),top=document.querySelector('.top');
+    if(nav)nav.outerHTML=vNav();if(top)top.outerHTML=vTop();
+    setTimeout(()=>{if(S.moi)prechargerParties().catch(()=>{})},50);
+  },()=>{S.sitePret=null});
+  // Pendant ce temps, les lectures qui ne dépendent pas d'un secteur partent déjà (vue d'ensemble plus tôt).
+  prechargerParties(false).catch(()=>{});
+  reprendreEnvois();
 }
 // Droits de la personne connectée (moi) et ce qu'elle voit du site (site-lire).
 async function demarrer(){
@@ -763,15 +971,17 @@ async function demarrer(){
   S.charge={};
   const [m,s]=await Promise.all([appel('moi'),lire('site-lire')]);
   if(m.status!==200)throw new Error((m.data&&m.data.error)||'Connexion refusée.');
-  S.moi=m.data;S.dernierGeste=Date.now();
+  changerPersonne(m.data.nom);S.moi=m.data;S.dernierGeste=Date.now();
   setTimeout(()=>{if(S.moi)prechargerParties().catch(()=>{})},300);
   S.site=s.ok&&s.data.site?s.data.site:{nom:'',secteurs:[],zones:[]};
   const vis=S.site.secteurs||[];
   S.secteur=vis.length===1?vis[0]:'tous';
   if(!droit(S.page))S.page=premierePartie();
+  reprendreEnvois();
 }
 function finSession(message){
-  S.jeton='';S.moi=null;S.site=null;S.charge={};S.photos={};S.sel={};S.acc=null;S.edit=null;S.types=null;S.calEd=null;S.dr=null;S.adm=null;S.msgAdm=null;S.suppr=null;S.msgCont=S.msgLanc=S.msgCal=S.msgParc=S.msgPers=S.msgMsg=S.msgDr=S.msgTab=null;ecrireJeton('');
+  {const ab=document.getElementById('absent');if(ab)ab.remove();S.absent=0}
+  S.jeton='';S.moi=null;S.site=null;S.sitePret=null;S.charge={};S.photos={};S.sel={};S.acc=null;S.edit=null;S.types=null;S.calEd=null;S.dr=null;S.adm=null;S.msgAdm=null;S.suppr=null;S.msgCont=S.msgLanc=S.msgCal=S.msgParc=S.msgPers=S.msgMsg=S.msgDr=S.msgTab=null;ecrireJeton('');
   S.info=message||'';S.err='';render();
 }
 async function seDeconnecter(message){
@@ -783,11 +993,27 @@ async function seDeconnecter(message){
 ['pointerdown','keydown','wheel','touchstart'].forEach(t=>addEventListener(t,()=>{S.dernierGeste=Date.now()},{passive:true}));
 setInterval(()=>{
   if(!S.jeton)return;
-  if(Date.now()-S.dernierGeste>=INACTIF_MS){seDeconnecter('Déconnecté après 10 minutes sans activité.');return}
+  // Console du PC (2026-10-16) : la session reste ouverte tant que la page est ouverte (la session Windows protège ce
+  // PC) ; un petit appel toutes les 5 minutes la garde vivante chez Google (plafond de 6 h du script inchangé).
+  // Ailleurs : déconnexion après 10 minutes sans activité, mais jamais avec des enregistrements en attente.
+  if(CONSOLE_PC){if(Date.now()-(S.vivant||0)>5*60000){S.vivant=Date.now();appel('moi').catch(()=>{})}}
+  else if(S.absent){
+    // Relecture I1 : 10 minutes de plus sans réponse → déconnexion ; les enregistrements non partis sont perdus.
+    if(Date.now()-S.absent>=INACTIF_MS){const n=enAttente();ENVOI.file=[];ENVOI.conflit=null;ENVOI.erreur=null;ENVOI.pause='';S.absent=0;
+      seDeconnecter('Déconnecté après 20 minutes sans activité.'+(n?' '+n+' enregistrement(s) n’étai(en)t pas encore parti(s) vers Google : ils sont perdus, refaites-les.':''))}
+    return;
+  }
+  else if(Date.now()-S.dernierGeste>=INACTIF_MS){
+    if(!enAttente()){seDeconnecter('Déconnecté après 10 minutes sans activité.');return}
+    // Relecture I1 (en ligne) : envois en attente → plus d'actualisation ni de nouvel essai ; les données sont masquées
+    // derrière « Vous êtes toujours là ? » (bouton Continuer).
+    S.absent=Date.now();ENVOI.pause='absent';clearTimeout(ENVOI.minuterie);ENVOI.minuterie=0;afficherAbsent();return;
+  }
   // Vue d'ensemble et lancements : actualisés toutes les 60 s tant que la personne est là.
   // Pas pendant une saisie (numéro de fichier en cours de frappe, formulaire…).
   const saisie=[...document.querySelectorAll('#page input,#page textarea')].some(i=>i===document.activeElement||(i.type!=='file'&&i.type!=='checkbox'&&i.value));
-  if((S.page==='accueil'||S.page==='lancements')&&!saisie&&!S.edit&&Date.now()-S.maj>60000){S.charge={};chargerPage()}
+  // (réactivité 2026-10-16 : lectures marquées anciennes → affichées telles quelles, relues derrière, page mise à jour)
+  if((S.page==='accueil'||S.page==='lancements')&&!saisie&&!S.edit&&Date.now()-S.maj>60000){Object.values(S.charge).forEach(g=>{g.t=perime()});chargerPage()}
   // Témoin « Google » : petite vérification si rien n'a été échangé depuis 2 min 30 (la personne est là).
   const dernier=Math.max(S.google.ok,S.google.erreur?S.google.erreur.at:0);
   if(document.visibilityState==='visible'&&Date.now()-dernier>150000)appel('site-lire').catch(()=>{});
@@ -832,8 +1058,9 @@ function vTop(){
   const h=S.maj?new Date(S.maj).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):'';
   return '<header class="top">'+sec+'<span class="grow"></span>'+
     temoinGoogle()+
+    '<span id="envoiEtat" role="status">'+vueEnvoi()+'</span>'+
     '<span id="majFond" class="hint" role="status"'+(nbFond?'':' hidden')+'>'+svg('actualiser')+' mise à jour…</span>'+
-    '<button class="btn" data-act="actualiser">'+svg('actualiser')+'Actualiser</button>'+
+    '<button class="btn" data-act="actualiser" title="Actualiser (relire tout)" aria-label="Actualiser">'+svg('actualiser')+'</button>'+
     '<div class="who"><span class="av">'+esc(ini)+'</span><div><b>'+esc(S.moi.nom)+'</b><span>'+(adm?'Administrateur · tout':'Manager')+'</span></div><button class="btn" data-act="sortir">'+svg('sortie')+'Se déconnecter</button></div></header>';
 }
 function enTete(id,texte,droite){
@@ -845,7 +1072,8 @@ function render(){
   const r=document.getElementById('racine');
   if(!S.jeton||!S.moi){r.innerHTML=vLogin();const n=document.getElementById(S.nomTape?'lCode':'lNom');if(n&&!S.occupe)n.focus();return}
   if(!droit(S.page))S.page=premierePartie();
-  r.innerHTML='<div class="app">'+vNav()+'<div class="main">'+vTop()+'<main id="page"><div class="vide">Chargement…</div></main></div></div>';
+  // Squelette (jamais de page blanche) : remplacé dès que la partie est prête (aussitôt si elle est déjà en mémoire).
+  r.innerHTML='<div class="app">'+vNav()+'<div class="main">'+vTop()+'<div id="bandeauEnvoi">'+vueBandeau()+'</div><main id="page"><div aria-busy="true"><span class="sr">Chargement…</span><div class="sq h"></div><div class="sq"></div><div class="sq"></div></div></main></div></div>';
   chargerPage();
 }
 let numChargement=0;
@@ -853,6 +1081,8 @@ async function chargerPage(){
   const n=++numChargement,el=()=>document.getElementById('page');
   if(!el())return;
   try{
+    // Juste après la connexion : la coquille s'affiche tout de suite ; la partie attend les secteurs du site.
+    if(S.sitePret)await S.sitePret;
     const h=await (PAGES[S.page]||vPC)();
     if(n!==numChargement||!el())return;
     el().innerHTML=h;S.etat='';
@@ -988,18 +1218,18 @@ PAGES.parc=async()=>{
     (mod&&!E?'<span class="grow"></span><button class="btn pri" data-pe="nouveau">'+svg('plus')+'Nouvelle machine</button>':'')+'</div>';
   h+='<div class="parc'+(sel||E?' ouvert':'')+'"><div class="mgrid">'+(ms.length?ms.map(m=>{
     const manque=!m.serie||!m.type;
-    return '<button class="mac'+(m.actif===false?' off':'')+'" data-parc="'+esc(m.id)+'"'+((sel&&sel.id===m.id)||(E&&E.item.id===m.id)?' aria-current="true"':'')+'><span class="sec-t">'+esc(secNom(m.secteur))+'</span><div class="vis">'+svg('parc')+'</div><div class="bd"><b>'+esc(m.nom)+'</b>'+
+    return '<button class="mac'+(m.actif===false?' off':'')+'" data-parc="'+esc(m.id)+'"'+((sel&&sel.id===m.id)||(E&&E.item.id===m.id)?' aria-current="true"':'')+'><span class="sec-t">'+esc(secNom(m.secteur))+'</span><div class="vis">'+svg('parc')+'</div><div class="bd"><b>'+esc(m.nom)+'</b>'+repere(m)+
       '<span class="l">'+esc(m.type||'type à préciser')+(m.zone?' · '+esc(zones[m.zone]||m.zone):' · tout le secteur')+'</span>'+
       '<span class="row" style="gap:6px">'+(m.actif===false?'<span class="tag">Hors service</span>':'<span class="tag ok">✓ En service</span>')+(manque?'<span class="tag warn">! Fiche à compléter</span>':'')+'</span></div></button>'}).join(''):'<div class="vide">Aucune machine.</div>')+'</div>';
   if(E)h+=vueFicheMachine(r);
   else if(sel){
     const ligne=(l,v)=>v?'<dt>'+l+'</dt><dd>'+esc(v)+'</dd>':'';
-    h+='<aside class="card fiche"><h2>'+pastille('parc','s')+esc(sel.nom)+'<span class="grow"></span>'+(mod?'<button class="btn" data-pe="modifier" data-id="'+esc(sel.id)+'">'+svg('crayon')+'Modifier</button>':'')+'<button class="btn" data-parc="">Fermer</button></h2><dl>'+
+    h+='<aside class="card fiche"><h2>'+pastille('parc','s')+esc(sel.nom)+'<span class="grow"></span>'+(mod&&!/^tmp-/.test(sel.id)?'<button class="btn" data-pe="modifier" data-id="'+esc(sel.id)+'">'+svg('crayon')+'Modifier</button>':'')+'<button class="btn" data-parc="">Fermer</button></h2><dl>'+
       ligne('Secteur',secNom(sel.secteur))+ligne('Zone',sel.zone?zones[sel.zone]||sel.zone:'Tout le secteur')+ligne('Type',sel.type)+ligne('Marque',sel.marque)+ligne('Modèle',sel.modele)+
       ligne('N° de série',sel.serie)+ligne('Mise en service',sel.mes)+ligne('SAV',sel.sav)+ligne('Broches',sel.secteur==='fraisage'&&sel.broches?sel.broches:'')+ligne('État',sel.actif===false?'Hors service':'En service')+
       ligne('Anciens noms',liste(sel.anciens))+ligne('Notes',sel.notes)+'</dl>'+
       (sel.photo?'<h3 style="margin:14px 0 4px;font-size:16px">Photo</h3>'+boutonPhoto(sel.photo):'')+(sel.plaque?'<h3 style="margin:14px 0 4px;font-size:16px">Plaque</h3>'+boutonPhoto(sel.plaque):'')+
-      (mod?'<div class="row" style="margin-top:14px">'+(S.suppr===sel.id?'<button class="btn dan plein" data-pe="supprimer-ok">Oui, supprimer « '+esc(sel.nom)+' »</button><button class="btn" data-pe="supprimer-non">Annuler</button>':'<button class="btn dan" data-pe="supprimer" data-id="'+esc(sel.id)+'">Supprimer la machine</button>')+'</div>'+
+      (mod&&!/^tmp-/.test(sel.id)?'<div class="row" style="margin-top:14px">'+(S.suppr===sel.id?'<button class="btn dan plein" data-pe="supprimer-ok">Oui, supprimer « '+esc(sel.nom)+' »</button><button class="btn" data-pe="supprimer-non">Annuler</button>':'<button class="btn dan" data-pe="supprimer" data-id="'+esc(sel.id)+'">Supprimer la machine</button>')+'</div>'+
         '<p class="hint" style="margin:8px 0 0">Une machine qui ne sert plus : préférez « Hors service » (son historique reste lisible).</p>':'')+'</aside>';
   }
   h+='</div>';
@@ -1007,41 +1237,43 @@ PAGES.parc=async()=>{
   return h;
 };
 // Envoi au script : TOUTES les machines visibles (la page les a toutes), avec la version lue (depuis).
-async function envoyerParc(r,machines,types,msgOk,supprimer){
+// Temps masqué (2026-10-16) : changer(machines) / types appliqués à l'écran tout de suite, puis à la version confirmée.
+function envoyerParc(libelle,changer,types,supprimer){
   // supprimer : suppressions EXPLICITES (le script refuse une machine simplement absente de la liste).
-  const j=await appel('parc-ecrire',Object.assign({machines,depuis:r.data.maj},types?{types}:{},supprimer?{supprimer}:{}));S.charge={};
-  if(j.status===200){S.edit=null;S.types=null;S.suppr=null;S.msgParc=['ok',msgOk];return true}
-  const rech=' <button class="btn" data-pe="recharger">Recharger</button>';
-  const m=['err','<b>'+esc((j.data&&j.data.error)||'Refusé.')+'</b>'+(j.status===409&&/changé entre-temps/.test(j.data.error||'')?rech:'')];
-  if(S.types&&types)S.types.msg=m;else if(S.edit)S.edit.msg=m;else S.msgParc=m;
-  return false;
+  const edit=clone(S.edit),ty=clone(S.types);
+  const machinesDe=d=>((d.parc||{}).machines||[]).filter(m=>!/^tmp-/.test(m.id||''));
+  enregistrer(tachePack({cle:'parc-lire|{}',op:'parc-ecrire',page:'parc',libelle,
+    construire:d=>Object.assign({machines:changer(machinesDe(d)).map(m=>{const x=Object.assign({},m);if(/^tmp-/.test(x.id||''))delete x.id;return x}),depuis:Number(d.maj)||0},types?{types}:{},supprimer?{supprimer}:{}),
+    vue:d=>{if(!d.parc)return d;const tmp=d.parc.machines.filter(m=>/^tmp-/.test(m.id||''));d.parc.machines=marquer(machinesDe(d),changer(machinesDe(d))).map(m=>m.id?m:Object.assign({},m,{id:'tmp-'+alea(8)})).concat(tmp);if(types)d.parc.types=types.map(y=>Object.assign({id:y.id||'tmp-'+alea(6)},y));return d},
+    apres:j=>j.data,reprise:edit||ty?()=>{S.edit=edit;S.types=ty}:null}));
+  S.edit=null;S.types=null;S.suppr=null;S.msgParc=null;
 }
 async function actionParc(b){
   const act=b.dataset.pe,r=await lire('parc-lire');if(!r.ok)return chargerPage();
   const toutes=r.data.parc?r.data.parc.machines:[];
   if(act==='nouveau'){S.edit={cle:'parc',nouveau:true,item:machineVersBrouillon({secteur:unSecteur()||(r.data.secteurs||[])[0]||'',actif:true}),sale:true};S.msgParc=null;return chargerPage()}
   if(act==='modifier'){const m=toutes.find(x=>x.id===b.dataset.id);if(m){S.edit={cle:'parc',nouveau:false,item:machineVersBrouillon(m),nomAvant:m.nom,sale:false};S.msgParc=null}return chargerPage()}
-  if(act==='annuler'||act==='recharger'){S.edit=null;S.types=null;S.charge={};S.msgParc=act==='recharger'?['info','Parc rechargé.']:null;return chargerPage()}
+  if(act==='annuler'||act==='recharger'){S.edit=null;S.types=null;if(act==='recharger')delete S.charge['parc-lire|{}'];S.msgParc=act==='recharger'?['info','Parc rechargé.']:null;return chargerPage()}
   if(act==='enregistrer'){
     const m=brouillonVersMachine(S.edit.item);
     if(!String(m.nom).trim()){S.edit.msg=['err','<b>Donnez un nom à la machine.</b>'];return chargerPage()}
     // Renommage : l'ancien nom est gardé (le script le fait aussi).
     if(!S.edit.nouveau&&S.edit.nomAvant&&S.edit.nomAvant.toLocaleLowerCase('fr')!==String(m.nom).trim().toLocaleLowerCase('fr'))m.anciens=(m.anciens||[]).concat(S.edit.nomAvant);
-    const l=S.edit.nouveau?toutes.concat(m):toutes.map(x=>x.id===m.id?m:x);
-    b.disabled=true;
-    if(await envoyerParc(r,l,null,'Machine « '+esc(m.nom)+' » enregistrée : les tablettes la reçoivent à leur prochain échange.')&&m.id)S.sel.parc=m.id;
+    const nouveau=S.edit.nouveau;
+    envoyerParc('machine « '+m.nom+' »',l=>nouveau?l.concat(m):l.map(x=>x.id===m.id?m:x),null);
+    if(m.id)S.sel.parc=m.id;
     return chargerPage();
   }
   if(act==='supprimer'){S.suppr=b.dataset.id;return chargerPage()}
   if(act==='supprimer-non'){S.suppr=null;return chargerPage()}
-  if(act==='supprimer-ok'){const m=toutes.find(x=>x.id===S.suppr);await envoyerParc(r,toutes.filter(x=>x.id!==S.suppr),null,'Machine « '+esc(m?m.nom:'')+' » supprimée.',[S.suppr]);S.sel.parc='';return chargerPage()}
+  if(act==='supprimer-ok'){const m=toutes.find(x=>x.id===S.suppr),id=S.suppr;envoyerParc('suppression de « '+(m?m.nom:'')+' »',l=>l.filter(x=>x.id!==id),null,[id]);S.sel.parc='';return chargerPage()}
   if(act==='types'){S.types={liste:JSON.parse(JSON.stringify((r.data.parc||{}).types||[])),avant:{}};S.types.liste.forEach(y=>S.types.avant[y.id]=y.nom);return chargerPage()}
   if(act==='types-annuler'){S.types=null;return chargerPage()}
   if(act==='type-plus'){S.types.liste.push({nom:'',broches:0});return chargerPage()}
   if(act==='type-moins'){S.types.liste.splice(+b.dataset.i,1);return chargerPage()}
   if(act==='types-enregistrer'){
     const l=S.types.liste.filter(y=>String(y.nom).trim()).map(y=>{const a=y.id&&S.types.avant[y.id];return Object.assign({},y,{broches:Number(y.broches)||0,anciens:(y.anciens||[]).concat(a&&a!==y.nom?[a]:[])})});
-    await envoyerParc(r,toutes,l,'Types de machine enregistrés.');return chargerPage();
+    envoyerParc('types de machine',x=>x,l);return chargerPage();
   }
 }
 
@@ -1074,24 +1306,31 @@ PAGES.personnes=async()=>{
   if(E)h+=vueFichePersonne(r);
   const l=r.data.personnes.slice().sort((a,b)=>a.nom.localeCompare(b.nom,'fr'));
   return h+'<section class="card">'+(l.length?'<table><thead><tr><th>Nom</th><th>Rôle</th><th>Rattachement</th><th>Code tablette</th>'+(mod?'<th></th>':'')+'</tr></thead><tbody>'+
-    l.map(p=>'<tr><td><b>'+esc(p.nom)+'</b></td><td>'+esc(ROLES_NOMS[p.role]||p.role)+'</td><td>'+esc(p.role==='admin'?'Toutes les zones':(p.secteurs.map(s=>'Tout le secteur '+secNom(s)).concat(p.zones.map(z=>zones[z]||z)).join(', ')||'Tout le site'))+'</td><td>'+(p.codeDefini?'<span class="tag ok">✓ défini</span>':'<span class="tag warn">pas encore</span>')+'</td>'+
-      (mod?'<td style="text-align:right;white-space:nowrap">'+(p.modifiable&&!E?'<button class="btn" data-pp="modifier" data-id="'+esc(p.id)+'">'+svg('crayon')+'Modifier</button> '+(p.nom===S.moi.nom?'':S.suppr===p.id?'<button class="btn dan plein" data-pp="supprimer-ok">Oui, retirer</button><button class="btn" data-pp="supprimer-non">Non</button>':'<button class="btn dan" data-pp="supprimer" data-id="'+esc(p.id)+'">Retirer</button>'):p.modifiable?'':'<span class="hint">hors de vos secteurs</span>')+'</td>':'')+'</tr>').join('')+'</tbody></table>'
+    l.map(p=>'<tr><td><b>'+esc(p.nom)+'</b>'+repere(p)+'</td><td>'+esc(ROLES_NOMS[p.role]||p.role)+'</td><td>'+esc(p.role==='admin'?'Toutes les zones':(p.secteurs.map(s=>'Tout le secteur '+secNom(s)).concat(p.zones.map(z=>zones[z]||z)).join(', ')||'Tout le site'))+'</td><td>'+(p.codeDefini?'<span class="tag ok">✓ défini</span>':'<span class="tag warn">pas encore</span>')+'</td>'+
+      (mod?'<td style="text-align:right;white-space:nowrap">'+(/^tmp-/.test(p.id)?'<span class="envoi">'+svg('actualiser')+' Enregistrement…</span>':p.modifiable&&!E?'<button class="btn" data-pp="modifier" data-id="'+esc(p.id)+'">'+svg('crayon')+'Modifier</button> '+(p.nom===S.moi.nom?'':S.suppr===p.id?'<button class="btn dan plein" data-pp="supprimer-ok">Oui, retirer</button><button class="btn" data-pp="supprimer-non">Non</button>':'<button class="btn dan" data-pp="supprimer" data-id="'+esc(p.id)+'">Retirer</button>'):p.modifiable?'':'<span class="hint">hors de vos secteurs</span>')+'</td>':'')+'</tr>').join('')+'</tbody></table>'
     :'<div class="vide">Aucune personne dans vos secteurs.</div>')+'</section>';
 };
 // Envoi : les personnes MODIFIABLES par ce compte (le script garde les autres telles quelles), avec la version lue.
-async function envoyerPersonnes(r,liste,msgOk,supprimer){
-  const j=await appel('personnes-ecrire',Object.assign({personnes:liste,depuis:r.data.maj},supprimer?{supprimer}:{}));S.charge={};
-  if(j.status===200){S.edit=null;S.suppr=null;S.msgPers=['ok',msgOk];return true}
-  const m=['err','<b>'+esc((j.data&&j.data.error)||'Refusé.')+'</b>'+(j.status===409&&/changé entre-temps/.test(j.data.error||'')?' <button class="btn" data-pp="recharger">Recharger</button>':'')];
-  if(S.edit)S.edit.msg=m;else S.msgPers=m;
-  return false;
+// Temps masqué (2026-10-16) : changer(liste des modifiables) est appliqué à l'écran tout de suite, puis, au moment de
+// l'envoi, à la version confirmée par Google (même « depuis » que la personne avait sous les yeux).
+const modsPersonnes=d=>(d.personnes||[]).filter(p=>p.modifiable&&!/^tmp-/.test(p.id)).map(p=>({id:p.id,nom:p.nom,role:p.role,zones:p.zones,secteurs:p.secteurs}));
+function envoyerPersonnes(libelle,changer,supprimer){
+  const edit=clone(S.edit);
+  enregistrer(tachePack({cle:'personnes-lire|{}',op:'personnes-ecrire',page:'personnes',libelle,
+    construire:d=>Object.assign({personnes:changer(modsPersonnes(d)),depuis:Number(d.maj)||0},supprimer?{supprimer}:{}),
+    vue:d=>{const av={};(d.personnes||[]).forEach(p=>av[p.id]=p);
+      const l=changer(modsPersonnes(d)).map(x=>{const p=av[x.id]||{},y=Object.assign({},p,x,{id:x.id||'tmp-'+alea(8),modifiable:true,codeDefini:!!(p.codeDefini||x.nouveauCode),zones:x.zones||[],secteurs:x.secteurs||[]});delete y.nouveauCode;return y});
+      d.personnes=(d.personnes||[]).filter(p=>!p.modifiable||/^tmp-/.test(p.id)).concat(marquer(d.personnes,l));return d},
+    apres:j=>j.data,reprise:edit?()=>{S.edit=edit}:null}));
+  // Le code tablette tapé ne reste pas dans la page : il part avec l'envoi (chiffré par le script), puis est oublié.
+  S.edit=null;S.suppr=null;S.msgPers=null;
 }
 async function actionPersonnes(b){
   const act=b.dataset.pp,r=await lire('personnes-lire');if(!r.ok)return chargerPage();
   const mods=r.data.personnes.filter(p=>p.modifiable).map(p=>({id:p.id,nom:p.nom,role:p.role,zones:p.zones,secteurs:p.secteurs}));
   if(act==='nouveau'){S.edit={cle:'personnes',nouveau:true,item:{nom:'',role:'operateur',zones:[],secteurs:S.moi.admin?[]:[unSecteur()].filter(Boolean),nouveauCode:''},sale:true};S.msgPers=null;return chargerPage()}
   if(act==='modifier'){const p=r.data.personnes.find(x=>x.id===b.dataset.id);if(p){S.edit={cle:'personnes',nouveau:false,item:{id:p.id,nom:p.nom,role:p.role,zones:p.zones.slice(),secteurs:p.secteurs.slice(),nouveauCode:''},nomAvant:p.nom,codeDefini:p.codeDefini,sale:false};S.msgPers=null}return chargerPage()}
-  if(act==='annuler'||act==='recharger'){S.edit=null;S.charge={};S.msgPers=act==='recharger'?['info','Liste rechargée.']:null;return chargerPage()}
+  if(act==='annuler'||act==='recharger'){S.edit=null;if(act==='recharger')delete S.charge['personnes-lire|{}'];S.msgPers=act==='recharger'?['info','Liste rechargée.']:null;return chargerPage()}
   if(act==='enregistrer'){
     const x=JSON.parse(JSON.stringify(S.edit.item)),c=String(x.nouveauCode||'').trim();
     const champCode=document.getElementById('f-nouveauCode');if(champCode)champCode.value='';
@@ -1099,14 +1338,13 @@ async function actionPersonnes(b){
     if(c&&!/^\d{4,8}$/.test(c)){S.edit.item.nouveauCode='';S.edit.msg=['err','<b>Le code tablette doit faire 4 à 8 chiffres.</b>'];return chargerPage()}
     if(!c||!S.moi.admin)delete x.nouveauCode;
     S.edit.item.nouveauCode=''; // jamais gardé dans la page
-    const l=S.edit.nouveau?mods.concat(x):mods.map(p=>p.id===x.id?x:p);
-    b.disabled=true;
-    await envoyerPersonnes(r,l,'« '+esc(x.nom)+' » enregistré'+(c?' (nouveau code tablette chiffré, jamais réaffiché)':'')+' : les tablettes le reçoivent à leur prochain échange.');
+    const nouveau=S.edit.nouveau;void mods;
+    envoyerPersonnes(String(x.nom),l=>nouveau?l.concat(x):l.map(p=>p.id===x.id?x:p));
     return chargerPage();
   }
   if(act==='supprimer'){S.suppr=b.dataset.id;return chargerPage()}
   if(act==='supprimer-non'){S.suppr=null;return chargerPage()}
-  if(act==='supprimer-ok'){const p=r.data.personnes.find(x=>x.id===S.suppr);await envoyerPersonnes(r,mods.filter(x=>x.id!==S.suppr),'« '+esc(p?p.nom:'')+' » retiré de la liste.',[S.suppr]);return chargerPage()}
+  if(act==='supprimer-ok'){const p=r.data.personnes.find(x=>x.id===S.suppr),id=S.suppr;envoyerPersonnes('retrait de '+(p?p.nom:''),l=>l.filter(x=>x.id!==id),[id]);return chargerPage()}
 }
 
 // Message d'accueil (lot 7b, 2026-10-15) : lecture, et en « Modification » comme la console du PC. Manager : seulement
@@ -1120,7 +1358,7 @@ PAGES['c-message']=async()=>{
   if(S.msgMsg)h+='<div class="msg '+S.msgMsg[0]+'" role="status">'+svg(S.msgMsg[0]==='ok'?'ok':'alerte')+'<div>'+S.msgMsg[1]+'</div></div>';
   if(mod&&!E)h+='<div class="row" style="margin-bottom:12px"><button class="btn pri" data-msg="nouveau">'+svg('plus')+'Nouveau message</button><span class="hint">'+(S.moi.admin?'Les tablettes le reçoivent à leur prochain échange.':'Vous pouvez modifier les messages rattachés seulement à vos zones.')+'</span></div>';
   if(E)h+=vueFicheMessage(r);
-  return h+(l.length?'<div class="stack">'+l.map(m=>'<section class="card"><h2>'+pastille('message','s')+esc(m.titre||'(sans titre)')+'<span class="grow"></span>'+(m.niveau==='important'?'<span class="tag err">! Important</span>':'<span class="tag acc">Info</span>')+
+  return h+(l.length?'<div class="stack">'+l.map(m=>'<section class="card"><h2>'+pastille('message','s')+esc(m.titre||'(sans titre)')+repere(m)+'<span class="grow"></span>'+(m.niveau==='important'?'<span class="tag err">! Important</span>':'<span class="tag acc">Info</span>')+
     (mod&&m.modifiable&&!E?' <button class="btn" data-msg="modifier" data-id="'+esc(m.id)+'">'+svg('crayon')+'Modifier</button>'+(S.suppr===m.id?'<button class="btn dan plein" data-msg="supprimer-ok">Oui, retirer</button><button class="btn" data-msg="supprimer-non">Non</button>':'<button class="btn dan" data-msg="supprimer" data-id="'+esc(m.id)+'">Retirer</button>'):'')+'</h2>'+
     '<p style="margin:0 0 8px;white-space:pre-wrap">'+esc(m.texte||'')+'</p><p class="hint" style="margin:0">'+(m.zones&&m.zones.length?'Zones : '+esc(m.zones.map(z=>zones[z]||z).join(', ')):'Toutes les tablettes')+(m.du||m.au?' · du '+esc(m.du||'…')+' au '+esc(m.au||'…'):'')+(mod&&!m.modifiable?' · <span class="tag">modifiable par l’administrateur</span>':'')+'</p>'+
     (m.images||[]).map(i=>boutonPhoto(i.photo)).join('')+'</section>').join('')+'</div>':'<div class="card vide">Aucun message.</div>');
@@ -1139,12 +1377,15 @@ function vueFicheMessage(r){
     '<div class="row" style="margin-top:14px"><button class="btn" data-msg="annuler">Annuler</button><button class="btn pri" data-msg="enregistrer">Enregistrer</button></div></section>';
 }
 // Envoi : les messages MODIFIABLES par ce compte (le script garde les autres), avec la version lue ; retrait explicite.
-async function envoyerMessages(r,liste,msgOk,supprimer){
-  const j=await appel('messages-ecrire',Object.assign({messages:liste,depuis:r.data.maj},supprimer?{supprimer}:{}));S.charge={};
-  if(j.status===200){S.edit=null;S.suppr=null;S.msgMsg=['ok',msgOk];return true}
-  const m=['err','<b>'+esc((j.data&&j.data.error)||'Refusé.')+'</b>'+(j.status===409?' <button class="btn" data-msg="recharger">Recharger</button>':'')];
-  if(S.edit&&S.edit.cle==='c-message')S.edit.msg=m;else S.msgMsg=m;
-  return false;
+// Temps masqué (2026-10-16) : même principe que les personnes (changer appliqué à l'écran puis à la version confirmée).
+const modsMessages=d=>(d.messages||[]).filter(m=>m.modifiable).map(m=>{const x=Object.assign({},m);delete x.modifiable;return x});
+function envoyerMessages(libelle,changer,supprimer){
+  const edit=clone(S.edit);
+  enregistrer(tachePack({cle:'messages-lire|{}',op:'messages-ecrire',page:'c-message',libelle,
+    construire:d=>Object.assign({messages:changer(modsMessages(d)),depuis:Number(d.maj)||0},supprimer?{supprimer}:{}),
+    vue:d=>{d.messages=(d.messages||[]).filter(m=>!m.modifiable).concat(marquer(d.messages,changer(modsMessages(d))).map(m=>Object.assign({},m,{modifiable:true})));return d},
+    apres:j=>j.data,reprise:edit?()=>{S.edit=edit}:null}));
+  S.edit=null;S.suppr=null;S.msgMsg=null;
 }
 async function actionMessages(b){
   const act=b.dataset.msg,r=await lire('messages-lire');if(!r.ok)return chargerPage();
@@ -1152,20 +1393,20 @@ async function actionMessages(b){
   if(act==='nouveau'){const zv=r.data.zones||[],z=!S.moi.admin&&zv.length===1?[zv[0].id]:[];
     S.edit={cle:'c-message',nouveau:true,item:{id:'m'+alea(12),titre:'',texte:'',niveau:'info',zones:z,du:'',au:'',images:[]},sale:true};S.msgMsg=null;return chargerPage()}
   if(act==='modifier'){const m=mods.find(x=>x.id===b.dataset.id);if(m){S.edit={cle:'c-message',nouveau:false,item:Object.assign({titre:'',texte:'',niveau:'info',zones:[],du:'',au:''},JSON.parse(JSON.stringify(m)),{images:(m.images||[]).map(i=>({photo:i.photo,texte:i.texte||''}))}),sale:false};S.msgMsg=null}return chargerPage()}
-  if(act==='annuler'||act==='recharger'){S.edit=null;S.charge={};S.msgMsg=act==='recharger'?['info','Messages rechargés.']:null;return chargerPage()}
+  if(act==='annuler'||act==='recharger'){S.edit=null;if(act==='recharger')delete S.charge['messages-lire|{}'];S.msgMsg=act==='recharger'?['info','Messages rechargés.']:null;return chargerPage()}
   if(act==='img-moins'){S.edit.item.images.splice(+b.dataset.i,1);S.edit.sale=true;return chargerPage()}
   if(act==='enregistrer'){
     const x=JSON.parse(JSON.stringify(S.edit.item));
     if(!String(x.titre).trim()&&!String(x.texte).trim()){S.edit.msg=['err','<b>Écrivez un titre ou un texte.</b>'];return chargerPage()}
     if(!S.moi.admin&&!x.zones.length){S.edit.msg=['err','<b>Cochez au moins une de vos zones.</b>'];return chargerPage()}
     if(x.du&&x.au&&x.au<x.du){S.edit.msg=['err','<b>La date de fin est avant la date de début.</b>'];return chargerPage()}
-    b.disabled=true;
-    await envoyerMessages(r,S.edit.nouveau?mods.concat(x):mods.map(m=>m.id===x.id?x:m),'Message enregistré : les tablettes le reçoivent à leur prochain échange.');
+    const nouveau=S.edit.nouveau;void mods;
+    envoyerMessages('message « '+(x.titre||String(x.texte).slice(0,40))+' »',l=>nouveau?l.concat(x):l.map(m=>m.id===x.id?x:m));
     return chargerPage();
   }
   if(act==='supprimer'){S.suppr=b.dataset.id;return chargerPage()}
   if(act==='supprimer-non'){S.suppr=null;return chargerPage()}
-  if(act==='supprimer-ok'){await envoyerMessages(r,mods.filter(x=>x.id!==S.suppr),'Message retiré des tablettes.',[S.suppr]);return chargerPage()}
+  if(act==='supprimer-ok'){const id=S.suppr,m=mods.find(x=>x.id===id);envoyerMessages('retrait du message « '+(m?m.titre||'':'')+' »',l=>l.filter(x=>x.id!==id),[id]);return chargerPage()}
 }
 
 // Qui voit quoi (lot 7b, 2026-10-15) : mêmes réglages que l'éditeur de la console du PC (commun/pack.js : droitsPour).
@@ -1228,11 +1469,11 @@ function vueDroitsEdition(r){
   return h+'<div class="savebar" style="position:sticky;left:auto;right:auto;bottom:12px"><span class="st">'+(D.sale?'<b style="color:var(--warn)">• Modifications à envoyer.</b>':'Rien de modifié.')+' Les tablettes les reçoivent à leur prochain échange.</span><button class="btn" data-dr="annuler">Annuler</button><button class="btn pri" data-dr="enregistrer">Enregistrer et envoyer</button></div>';
 }
 async function actionDroits(b){
-  const act=b.dataset.dr;if(act==='modifier')S.charge={}; // version fraîche avant de modifier
+  const act=b.dataset.dr; // (réactivité : la version affichée sert ; un changement ailleurs est détecté à l'envoi)
   const r=await lire('droits-lire');if(!r.ok)return chargerPage();
   if(act==='modifier'){S.dr={b:JSON.parse(JSON.stringify(r.data.droits||{})),orig:JSON.parse(JSON.stringify(r.data.droits||{})),cible:'',sale:false,maj:r.data.maj};S.msgDr=null;return chargerPage()}
   const D=S.dr;if(!D)return;
-  if(act==='annuler'||act==='recharger'){S.dr=null;S.charge={};S.msgDr=act==='recharger'?['info','Réglages rechargés.']:null;return chargerPage()}
+  if(act==='annuler'||act==='recharger'){S.dr=null;if(act==='recharger')delete S.charge['droits-lire|{}'];S.msgDr=act==='recharger'?['info','Réglages rechargés.']:null;return chargerPage()}
   const c=drCible(r);
   if(act==='tog'){const {partie,app,id}=b.dataset,ap=app||null,herite=drListe(D.b,c,partie,ap).slice(),verrou=drVerrou(r,D.b,c,partie,ap),o=drObjet(D.b,c,true);let l;
     // Liste créée ici : elle part de ce qui est affiché (hérité) et garde ce que l'administrateur a masqué (lot 7d).
@@ -1254,9 +1495,13 @@ async function actionDroits(b){
     // Retraits explicites (lot 7c) : les réglages lus puis retirés ici (le script n'efface rien d'autre).
     const o=D.orig||{},supprimer=[];
     [['r','roles'],['p','personnes'],['s','secteurs']].forEach(([t,k])=>Object.keys(o[k]||{}).forEach(id=>{if(!(D.b[k]||{})[id])supprimer.push(t+':'+id)}));
-    const j=await appel('droits-ecrire',{droits:D.b,depuis:D.maj,supprimer});S.charge={};
-    if(j.status===200){S.dr=null;S.msgDr=['ok','« Qui voit quoi » enregistré : les tablettes le reçoivent à leur prochain échange.']}
-    else D.msg=['err','<b>'+esc((j.data&&j.data.error)||'Refusé.')+'</b>'+(j.status===409?' <button class="btn" data-dr="recharger">Recharger (abandonner mes changements)</button>':'')];
+    // Temps masqué (2026-10-16) : le réglage voulu s'affiche tout de suite ; envoyé derrière avec la version lue.
+    const droits=clone(D.b),dr=clone(S.dr);
+    enregistrer(tachePack({cle:'droits-lire|{}',op:'droits-ecrire',page:'droits',libelle:'Qui voit quoi',vu:Number(D.maj)||0,
+      construire:d=>({droits,depuis:Number(d.maj)||0,supprimer}),
+      vue:d=>{d.droits=clone(droits);return d},
+      apres:(j,base)=>Object.assign({},j.data,{contenus:j.data.contenus||base.contenus}),reprise:()=>{S.dr=dr}}));
+    S.dr=null;S.msgDr=null;
     return chargerPage();
   }
 }
@@ -1312,7 +1557,7 @@ function pageContenu(id){
     const l=(st[A.liste]||[]).filter(o=>!o.archived).sort((a,b)=>String(a[A.titre]).localeCompare(String(b[A.titre]),'fr',{numeric:true}));
     if(!l.length&&!E)return h+'<div class="card vide">Rien pour l’instant dans ce secteur.</div>';
     const sel=E?(l.find(o=>o.id===E.item.id)||null):l.find(o=>o.id===S.sel[cle])||l[0];
-    h+='<div class="cont"><div class="liste" role="list">'+l.map(o=>'<button class="it" role="listitem" data-item="'+esc(cle)+'" data-id="'+esc(o.id)+'"'+(o===sel?' aria-current="true"':'')+'>'+pastille(p.ico,'s')+'<span>'+esc(o[A.titre]||'(sans titre)')+'<small>'+esc(A.sous(o))+'</small></span></button>').join('')+'</div>'+
+    h+='<div class="cont"><div class="liste" role="list">'+l.map(o=>'<button class="it" role="listitem" data-item="'+esc(cle)+'" data-id="'+esc(o.id)+'"'+(o===sel?' aria-current="true"':'')+'>'+pastille(p.ico,'s')+'<span>'+esc(o[A.titre]||'(sans titre)')+repere(o)+'<small>'+esc(A.sous(o))+'</small></span></button>').join('')+'</div>'+
       (E?vueFormulaire(p,st):'<section class="card det"><h2>'+esc(sel[A.titre]||'')+(mod?'<span class="grow"></span><button class="btn" data-ed="modifier" data-id="'+esc(sel.id)+'">'+svg('crayon')+'Modifier</button>'+
         (S.suppr===sel.id?'<button class="btn dan plein" data-ed="supprimer-ok">Oui, supprimer</button><button class="btn" data-ed="supprimer-non">Annuler</button>':'<button class="btn dan" data-ed="supprimer" data-id="'+esc(sel.id)+'">Supprimer</button>'):'')+'</h2>'+A.detail(sel)+'</section>')+'</div>';
     if(p.app==='taches'&&(st.postes||[]).length)h+='<p class="hint">Postes : '+esc(st.postes.map(x=>x.name+(x.start?' ('+x.start+')':'')).join(' · '))+'</p>';
@@ -1417,7 +1662,7 @@ async function actionTablettes(b){
   if(act==='suppr-non'){S.suppr=null;return chargerPage()}
   if(act==='suppr-ok'){
     const id=S.suppr;S.suppr=null;b.disabled=true;
-    const j=await appel('tablettes-suppr',{ids:[id]});S.charge={};
+    await attendreFile();const j=await appel('tablettes-suppr',{ids:[id]});delete S.charge['tablettes-lire|{}'];delete S.charge['PC|/api/etat'];
     if(j.status!==200)S.msgTab=['err','<b>'+esc((j.data&&j.data.error)||'Refusé.')+'</b>'];
     else{S.msgTab=['ok','Appareil '+esc(id)+' retiré de la liste.'];
       // Son réglage de mises à jour (site, GitHub) : retiré aussi, sur le PC et par l'administrateur.
@@ -1652,13 +1897,13 @@ async function actionCalendrier(b){
   if(act==='moins'){liste(b.dataset.k).splice(+b.dataset.i,1);E.sale=true;return chargerPage()}
   if(act==='moins-conge'){E.cal.conges=E.cal.conges.filter(c=>c.id!==b.dataset.id);delete (E.cal.rempl||{})[b.dataset.id];E.sale=true;return chargerPage()}
   if(act==='haut'||act==='bas'){const l=liste(b.dataset.k),i=+b.dataset.i,j=act==='haut'?i-1:i+1;if(j<0||j>=l.length)return;[l[i],l[j]]=[l[j],l[i]];E.sale=true;return chargerPage()}
-  if(act==='annuler'||act==='recharger'){S.calEd=null;S.charge={};S.msgCal=act==='recharger'?['info','Calendrier rechargé.']:null;return chargerPage()}
+  if(act==='annuler'||act==='recharger'){S.calEd=null;if(act==='recharger')Object.keys(S.charge).forEach(k=>{if(/^calendrier-lire\|/.test(k))delete S.charge[k]});S.msgCal=act==='recharger'?['info','Calendrier rechargé.']:null;return chargerPage()}
   if(act==='enregistrer'){
     const err=erreurReglages(E.cal);if(err){E.msg=['err','<b>'+esc(err)+'</b>'];return chargerPage()}
-    b.disabled=true;
-    const j=await appel('calendrier-ecrire',{secteur:E.sec,cal:brouillonCalPropre(E.cal),depuis:E.depuis,resume:'réglages du calendrier'});S.charge={};
-    if(j.status===200){S.calEd=null;S.msgCal=['ok','Calendrier enregistré : les tablettes du secteur le reçoivent à leur prochain échange.']}
-    else E.msg=['err','<b>'+esc((j.data&&j.data.error)||'Refusé.')+'</b>'+(j.status===409?' <button class="btn" data-cr="recharger">Recharger (abandonner mes changements)</button>':'')];
+    // Temps masqué (2026-10-16) : les réglages s'affichent tout de suite, envoyés derrière avec la version lue.
+    const cal=brouillonCalPropre(E.cal),sauve=clone(E);
+    enregistrerCalendrier(E.sec,E.depuis||0,()=>clone(cal),'réglages du calendrier',()=>{S.calEd=sauve});
+    S.calEd=null;S.msgCal=null;
     return chargerPage();
   }
 }
@@ -1715,7 +1960,7 @@ PAGES.acces=async()=>{
   h+='<div class="accg"><div><div class="mlist">'+comptes.map(x=>{
       const st=x.bloque?'<span class="tag err">✕ Bloqué</span>':!x.actif?'<span class="tag err">✕ Coupé</span>':!x.ouvert?'<span class="tag err">✕ Terminé</span>':'<span class="tag ok">✓ Actif</span>';
       const ini=String(x.nom||'?').split(/\s+/).map(m=>m.charAt(0)).join('').slice(0,2).toUpperCase();
-      return '<button class="mcard'+(x.ouvert?'':' coupe')+'" data-acc="choisir" data-id="'+esc(x.id)+'" aria-current="'+(x.id===a.sel)+'"><span class="av">'+esc(ini)+'</span><div><b>'+esc(x.nom||x.id)+'</b><span>'+
+      return '<button class="mcard'+(x.ouvert?'':' coupe')+'" data-acc="choisir" data-id="'+esc(x.id)+'" aria-current="'+(x.id===a.sel)+'"><span class="av">'+esc(ini)+'</span><div><b>'+esc(x.nom||x.id)+'</b>'+repere(x)+'<span>'+
         (x.admin?'Administrateur · tout':esc(x.secteurs.map(secNom).join(', ')||'aucun secteur'))+'<br>'+(x.vuLe?'vu le '+dateFr(x.vuLe)+' '+heureFr(x.vuLe):'jamais connecté')+'</span></div><div class="r">'+st+(x.fin?'<br><span class="hint" style="font-size:14px">jusqu’au '+dFr(x.fin)+'</span>':'')+(x.codeDefini?'':'<br><span class="tag warn">pas de code</span>')+'</div></button>'}).join('')+
     (a.sel&&!c&&b?'<button class="mcard" aria-current="true"><span class="av">+</span><div><b>'+esc(pers?pers.nom:b.id)+'</b><span>nouvel accès, pas encore enregistré</span></div></button>':'')+
     '</div><p class="hint">Un compte de la console est rattaché à une <b>personne</b> du pack. Son code de la console est différent de son code des tablettes.</p></div>';
@@ -1782,30 +2027,37 @@ async function actionAcces(b){
   if(act==='secteur')return changeBrouillon(x=>{const s=b.dataset.s;x.secteurs=x.secteurs.includes(s)?x.secteurs.filter(y=>y!==s):x.secteurs.concat(s)});
   if(act==='droit')return changeBrouillon(x=>{if(b.dataset.v)x.parties[b.dataset.p]=b.dataset.v;else delete x.parties[b.dataset.p]});
   if(act==='modele')return changeBrouillon(x=>{const M=MODELES[b.dataset.v];x.parties={};PARTIES.forEach(p=>{if(p.admin)return;let v=M.f(p);if(v==='modif'&&p.lect)v='lecture';if(v)x.parties[p.id]=v})});
-  if(act==='annuler'){a.modifie=false;a.msg=null;a.couper=false;S.charge={};const r=await lire('comptes-lire'),c=r.ok&&r.data.comptes.find(x=>x.id===a.sel);a.b=c?brouillonDe(c):null;if(!c)a.sel='';return chargerPage()}
+  if(act==='annuler'){a.modifie=false;a.msg=null;a.couper=false;const r=await lire('comptes-lire'),c=r.ok&&r.data.comptes.find(x=>x.id===a.sel);a.b=c?brouillonDe(c):null;if(!c)a.sel='';return chargerPage()}
   if(act==='enregistrer'){
-    const x=a.b;b.disabled=true;
-    const j=await appel('compte-ecrire',{compte:{id:x.id,actif:x.actif,fin:x.fin,admin:x.admin,secteurs:x.admin?['*']:x.secteurs,parties:x.admin?{}:x.parties,depuis:x.depuis}});
-    S.charge={};
-    if(j.status===200){a.b=brouillonDe(j.data.compte);a.sel=j.data.compte.id;a.modifie=false;a.msg=['ok','Accès enregistré. Il s’applique à la prochaine action de la personne.']}
-    else if(j.status===409)a.msg=['err','<b>Ce compte a été modifié ailleurs pendant que vous le régliez.</b> <button class="btn" data-acc="recharger">Recharger la version actuelle</button> (vos changements seront à refaire).'];
-    else a.msg=['err','<b>'+esc((j.data&&j.data.error)||'Enregistrement refusé.')+'</b>'];
+    // Temps masqué (2026-10-16) : affiché tout de suite, envoyé derrière avec la version du compte lue (depuis).
+    const x=clone(a.b),c={id:x.id,actif:x.actif,fin:x.fin,admin:x.admin,secteurs:x.admin?['*']:x.secteurs,parties:x.admin?{}:x.parties},sauve=clone(a);
+    const nom=((S.charge['comptes-lire|{}']||{r:{data:{}}}).r.data.personnes||[]).find(p=>p.id===x.id);
+    enregistrer({cle:'comptes-lire|{}',op:'compte-ecrire',page:'acces',libelle:'accès de '+(nom?nom.nom:x.id),
+      esp:'compte|'+x.id,vu:Number(x.depuis)||0,version:d=>{const k=(d.comptes||[]).find(y=>y.id===x.id);return k?Number(k.maj)||0:0},
+      construire:d=>{const k=(d.comptes||[]).find(y=>y.id===x.id);return {compte:Object.assign({},c,{depuis:k?Number(k.maj)||0:0})}},
+      vue:d=>{const l=d.comptes=d.comptes||[],i=l.findIndex(y=>y.id===x.id),o=Object.assign({},i>=0?l[i]:{id:x.id,codeDefini:false,ouvert:true,bloque:false},{actif:c.actif,fin:c.fin,admin:c.admin,secteurs:c.secteurs,parties:c.parties,_attente:true});if(i<0)l.push(o);else l[i]=o;return d},
+      nouvelle:j=>Number(j.data.compte&&j.data.compte.maj)||undefined,
+      apres:(j,base)=>{const l=base.comptes=base.comptes||[],i=l.findIndex(y=>y.id===j.data.compte.id);if(i<0)l.push(j.data.compte);else l[i]=j.data.compte;
+        if(a.sel===j.data.compte.id&&!a.modifie)a.b=brouillonDe(j.data.compte);return base},
+      reprise:()=>{Object.assign(a,sauve)},
+      abandon:()=>{const k=((CONF['comptes-lire|{}']||{}).comptes||[]).find(y=>y.id===x.id);if(a.sel===x.id&&k){a.b=brouillonDe(k);a.modifie=false}}});
+    a.modifie=false;a.msg=null;
     return chargerPage();
   }
-  if(act==='recharger'){a.modifie=false;S.charge={};const r=await lire('comptes-lire'),c=r.ok&&r.data.comptes.find(x=>x.id===a.sel);a.b=c?brouillonDe(c):null;a.msg=['info','Version actuelle rechargée.'];return chargerPage()}
+  if(act==='recharger'){a.modifie=false;delete S.charge['comptes-lire|{}'];const r=await lire('comptes-lire'),c=r.ok&&r.data.comptes.find(x=>x.id===a.sel);a.b=c?brouillonDe(c):null;a.msg=['info','Version actuelle rechargée.'];return chargerPage()}
   if(act==='code'){
     const c1=document.getElementById('accCode'),c2=document.getElementById('accCode2'),v1=c1?c1.value:'',v2=c2?c2.value:'';
     if(c1)c1.value='';if(c2)c2.value='';
     if(v1.replace(/\s/g,'').length<8){a.msg=['err','<b>Le code doit faire au moins 8 caractères (sans compter les espaces).</b>'];return chargerPage()}
     if(v1!==v2){a.msg=['err','<b>Les deux codes tapés sont différents.</b> Rien n’est changé.'];return chargerPage()}
-    const j=await appel('compte-code',{id:a.sel,code:v1});S.charge={};
+    await attendreFile();const j=await appel('compte-code',{id:a.sel,code:v1});delete S.charge['comptes-lire|{}'];
     a.msg=j.status===200?['ok','Code de la console enregistré. Donnez-le vous-même à la personne : il ne sera plus jamais affiché.']:['err','<b>'+esc((j.data&&j.data.error)||'Code refusé.')+'</b>'];
     return chargerPage();
   }
   if(act==='couper'){a.couper=true;return chargerPage()}
   if(act==='couper-non'){a.couper=false;return chargerPage()}
   if(act==='couper-ok'){
-    const j=await appel('compte-couper',{id:a.sel});S.charge={};a.couper=false;
+    await attendreFile();const j=await appel('compte-couper',{id:a.sel});delete S.charge['comptes-lire|{}'];a.couper=false;
     if(j.status===200){a.b=brouillonDe(j.data.compte);a.modifie=false;a.msg=['ok','Accès coupé : la personne est déconnectée à sa prochaine action.']}
     else a.msg=['err','<b>'+esc((j.data&&j.data.error)||'Coupure refusée.')+'</b>'];
     return chargerPage();
@@ -1899,7 +2151,7 @@ async function actionEdition(b){
     if(S.edit&&S.edit.sale){S.edit.msg=['warn','Enregistrez ou annulez d’abord la modification en cours.'];return chargerPage()}
     const p=P(S.page),sec=unSecteur(),r=await lire('contenu-lire',{app:p.app,secteur:sec}),st=r.data.state||{},A=CONTENUS[p.app];
     if(act==='nouveau'){S.edit={cle:S.page+'|'+sec,app:p.app,sec,nouveau:true,item:FORMS[p.app].nouveau(alea(10)),base:null,sale:true}}
-    else{const o=(st[A.liste]||[]).find(x=>x.id===b.dataset.id);if(!o)return;S.edit={cle:S.page+'|'+sec,app:p.app,sec,nouveau:false,item:JSON.parse(JSON.stringify(o)),base:JSON.stringify(o),updated:o.updated||0,sale:false}}
+    else{const o=(st[A.liste]||[]).find(x=>x.id===b.dataset.id);if(!o)return;S.edit={cle:S.page+'|'+sec,app:p.app,sec,nouveau:false,item:JSON.parse(JSON.stringify(o)),base:JSON.stringify(o,(k,x)=>k==='_attente'?undefined:x),updated:o.updated||0,sale:false}}
     S.msgCont=null;return chargerPage();
   }
   if(!E&&!/^supprimer/.test(act))return;
@@ -1913,25 +2165,39 @@ async function actionEdition(b){
     const A=CONTENUS[E.app],F=FORMS[E.app],item=itemPropre(E.app,E.item);
     if(!String(item[A.titre]||'').trim()){E.msg=['err','<b>Donnez un titre.</b>'];return chargerPage()}
     if(E.app==='procedures'&&item.statut==='validee'&&!(item.etapes||[]).some(s=>s.titre||s.detail)){E.msg=['err','<b>Ajoutez au moins une étape avant de valider.</b>'];return chargerPage()}
-    const bases=E.nouveau?{}:{[item.id]:E.app==='taches'?{empreinte:E.base}:{updated:E.updated}};
-    b.disabled=true;
-    const j=await appel('contenu-ecrire',{app:E.app,secteur:E.sec,items:[item],bases});
-    S.charge={};
-    if(j.status===200){S.sel[E.cle]=item.id;S.edit=null;S.msgCont=['ok','Enregistré et envoyé : les tablettes le reçoivent à leur prochain échange.']}
-    else if(j.status===409)E.msg=['err','<b>'+esc(j.data.error||'Modifié ailleurs.')+'</b> '+esc((j.data.refuses||[]).map(x=>x.titre+' : '+x.raison).join(' ; '))+' <button class="btn" data-ed="annuler">Recharger (abandonner mes changements)</button>'];
-    else E.msg=['err','<b>'+esc((j.data&&j.data.error)||'Enregistrement refusé.')+'</b>'];
-    void F;return chargerPage();
+    // Temps masqué (2026-10-16) : affiché tout de suite, envoyé derrière avec la version de l'élément ouverte (bases).
+    void F;
+    enregistrerContenu(E.app,E.sec,S.page,item,E.nouveau?null:(E.app==='taches'?E.base:E.updated),clone(E));
+    S.sel[E.cle]=item.id;S.edit=null;S.msgCont=null;
+    return chargerPage();
   }
   if(act==='supprimer'){S.suppr=b.dataset.id;return chargerPage()}
   if(act==='supprimer-non'){S.suppr=null;return chargerPage()}
   if(act==='supprimer-ok'){
     const p=P(S.page),sec=unSecteur(),A=CONTENUS[p.app],r=await lire('contenu-lire',{app:p.app,secteur:sec}),o=((r.data.state||{})[A.liste]||[]).find(x=>x.id===S.suppr);
     if(!o){S.suppr=null;return chargerPage()}
-    const j=await appel('contenu-ecrire',{app:p.app,secteur:sec,supprimer:o.id,bases:{[o.id]:p.app==='taches'?{empreinte:JSON.stringify(o)}:{updated:o.updated||0}}});
-    S.charge={};S.suppr=null;
-    S.msgCont=j.status===200?['ok','« '+esc(o[A.titre])+' » est retiré'+(p.app==='taches'?' (archivé : les jours déjà enregistrés le gardent).':' des tablettes.')]:['err','<b>'+esc((j.data&&j.data.error)||'Suppression refusée.')+'</b>'];
+    enregistrerContenu(p.app,sec,S.page,null,p.app==='taches'?JSON.stringify(o,(k,x)=>k==='_attente'?undefined:x):(o.updated||0),null,o);
+    S.suppr=null;
     return chargerPage();
   }
+}
+// Contenus en temps masqué (2026-10-16). Version d'un élément : updated (empreinte JSON pour les tâches) ; suivie
+// d'un envoi au suivant pour l'élément (SUITE). item null + retire : suppression.
+function enregistrerContenu(app,sec,page,item,vu,edit,retire){
+  const A=CONTENUS[app],id=item?item.id:retire.id,esp='item|'+app+'|'+sec+'|'+id,taches=app==='taches';
+  const trouve=d=>((d.state||{})[A.liste]||[]).find(x=>x.id===id);
+  const version=d=>{const o=trouve(d);return o?(taches?JSON.stringify(o):(o.updated||0)):undefined};
+  enregistrer({cle:'contenu-lire|'+JSON.stringify({app,secteur:sec}),op:'contenu-ecrire',page,libelle:String(item?item[A.titre]||'':('retrait de '+(retire[A.titre]||''))),
+    esp,vu:vu===null?undefined:vu,version:vu===null?undefined:version,
+    construire:d=>{const v=version(d),bases=vu===null?{}:{[id]:taches?{empreinte:v}:{updated:v}};
+      return item?{app,secteur:sec,items:[item],bases}:{app,secteur:sec,supprimer:id,bases}},
+    vue:d=>{const st=d.state=d.state||{},l=st[A.liste]=st[A.liste]||[],i=l.findIndex(x=>x.id===id);
+      if(item){if(i<0)l.push(Object.assign({},item,{_attente:true}));else l[i]=Object.assign({},l[i],item,{_attente:true})}
+      else if(i>=0){if(taches)l[i]=Object.assign({},l[i],{archived:true});else l.splice(i,1)}
+      return d},
+    nouvelle:j=>{const o=(((j.data||{}).state||{})[A.liste]||[]).find(x=>x.id===id);return o?(taches?JSON.stringify(o):(o.updated||0)):undefined},
+    apres:(j,base)=>Object.assign({},base,{rev:j.data.rev,state:j.data.state}),
+    reprise:edit?()=>{S.edit=edit}:null});
 }
 function champSaisi(el){
   const E=S.edit;if(!E)return;
@@ -1941,10 +2207,23 @@ function champSaisi(el){
 
 // --- Lancements (bureau) : mêmes gestes que l'onglet Lancements de la console du PC ---------------------------
 async function envoyerLancements(actions,msgOk){
-  // Identifiant de chaque action tiré ici : un double envoi n'est appliqué qu'une fois par le script.
-  const j=await appel('lancements-actions',{actions:actions.map(a=>Object.assign({id:alea(16)},a))});S.charge={};
-  const refus=j.status===200?Object.values(j.data.refus||{}):[];
-  S.msgLanc=j.status!==200?['err','<b>'+esc((j.data&&j.data.error)||'Refusé.')+'</b>']:refus.length?['warn','En partie refusé : '+esc(refus.join(', '))]:msgOk?['ok',msgOk]:null;
+  // Identifiant de chaque action tiré ici : un double envoi n'est appliqué qu'une fois par le script (aussi après une
+  // coupure du réseau : la file renvoie les mêmes identifiants).
+  // Temps masqué (2026-10-16) : la file d'attente change tout de suite à l'écran, envoi derrière.
+  const l=actions.map(a=>Object.assign({id:alea(16)},a));void msgOk;
+  enregistrer({cle:'lancements-lire|{}',op:'lancements-actions',page:'lancements',libelle:'Lancements ('+l.map(a=>a.num||a.type).join(', ').slice(0,60)+')',
+    construire:()=>({actions:l}),
+    vue:d=>{const st=d.state=d.state||{},f=st.files=st.files||{};
+      l.forEach(a=>{const q=f[a.machine]=(f[a.machine]||[]).slice(),i=q.findIndex(x=>x.id===a.fid);
+        if(a.type==='ajouter'&&i<0)q.push({id:a.fid,num:a.num,note:a.note||'',photo:'',_attente:true});
+        else if(a.type==='retirer'&&i>=0)q.splice(i,1);
+        else if(a.type==='deplacer'&&i>=0){const [x]=q.splice(i,1);q.splice(Math.min(a.pos,q.length),0,x)}
+        else if(a.type==='modifier'&&i>=0)q[i]=Object.assign({},q[i],a.photo!=null?{photo:a.photo}:{},a.note!=null?{note:a.note}:{},{_attente:true});
+        else if(a.type==='vider-histo')st.histo=[]});
+      return d},
+    apres:(j,base)=>Object.assign(base,{rev:j.data.rev,state:j.data.state}),
+    refus:j=>{const r=Object.values(j.data.refus||{});if(r.length)ENVOI.erreur={t:{libelle:'Lancements',page:'lancements'},message:'en partie refusé : '+r.join(', '),refus:true}}});
+  S.msgLanc=null;
   return chargerPage();
 }
 async function actionLancements(b){
@@ -1965,7 +2244,7 @@ async function actionLancements(b){
 }
 function vueLancEdition(n,f){
   return '<div class="row" style="margin-top:10px"><input class="in" data-lan-num placeholder="N° de fichier (plusieurs : séparés par des virgules)" style="flex:2;min-width:160px"><input class="in" data-lan-note placeholder="Note (facultatif)" style="flex:1;min-width:110px"><button class="btn pri" data-lan="ajouter" data-m="'+esc(n)+'">'+svg('plus')+'Ajouter</button></div>'+
-    (f.length?'<ol class="file">'+f.map((x,i)=>'<li><div class="row" style="gap:6px"><b>'+esc(x.num)+'</b>'+(x.note?'<span class="hint">· '+esc(x.note)+'</span>':'')+'<span class="grow"></span>'+
+    (f.length?'<ol class="file">'+f.map((x,i)=>'<li><div class="row" style="gap:6px"><b>'+esc(x.num)+'</b>'+repere(x)+(x.note?'<span class="hint">· '+esc(x.note)+'</span>':'')+'<span class="grow"></span>'+
       '<button class="btn" data-lan="haut" data-m="'+esc(n)+'" data-fid="'+esc(x.id)+'" data-pos="'+i+'"'+(i?'':' disabled')+' aria-label="Monter">↑</button><button class="btn" data-lan="bas" data-m="'+esc(n)+'" data-fid="'+esc(x.id)+'" data-pos="'+i+'"'+(i<f.length-1?'':' disabled')+' aria-label="Descendre">↓</button>'+
       '<button class="btn" data-lan="retirer" data-m="'+esc(n)+'" data-fid="'+esc(x.id)+'" aria-label="Retirer">✕</button></div>'+
       '<div class="row" style="gap:6px;margin-top:4px">'+(x.photo?vignette(x.photo)+'<button class="btn" data-lan="plan-retirer" data-m="'+esc(n)+'" data-fid="'+esc(x.id)+'">Retirer le plan</button>':'')+
@@ -1992,9 +2271,20 @@ async function actionConges(b){
     if(!nom||!/^\d{4}-\d\d-\d\d$/.test(du)||au<du){S.msgCal=['err','<b>Choisissez la personne et les dates (la fin après le début).</b>'];return chargerPage()}
     n.conges.push({id:'c'+alea(10),nom,du,au});resume='congé ajouté : '+nom+' du '+du+' au '+au;
   }else{const c=n.conges.find(x=>x.id===b.dataset.id);n.conges=n.conges.filter(x=>x.id!==b.dataset.id);delete n.rempl[b.dataset.id];resume='congé retiré'+(c?' : '+c.nom:'')}
-  const j=await appel('calendrier-ecrire',{secteur:sec,cal:n,depuis:cal.maj||0,resume});S.charge={};
-  S.msgCal=j.status===200?['ok','Calendrier enregistré : les tablettes le reçoivent à leur prochain échange.']:j.status===409?['err','<b>Le calendrier a été modifié ailleurs entre-temps.</b> Il vient d’être rechargé : refaites la modification.']:['err','<b>'+esc((j.data&&j.data.error)||'Refusé.')+'</b>'];
+  // Temps masqué (2026-10-16) : le congé ajouté ou retiré est appliqué à la version confirmée au moment de l'envoi.
+  const ajout=b.dataset.cg==='ajouter'?n.conges[n.conges.length-1]:null,retire=ajout?null:b.dataset.id;
+  enregistrerCalendrier(sec,cal.maj||0,base=>{const x=clone(base||{});x.conges=(x.conges||[]).filter(c=>c.id!==retire);x.rempl=x.rempl||{};if(retire)delete x.rempl[retire];if(ajout&&!x.conges.some(c=>c.id===ajout.id))x.conges.push(ajout);return x},resume,null);
+  S.msgCal=null;
   return chargerPage();
+}
+// Calendrier en temps masqué : version = cal.maj du secteur ; changer(cal confirmé) → cal à envoyer.
+function enregistrerCalendrier(sec,vu,changer,resume,reprise){
+  enregistrer({cle:'calendrier-lire|'+JSON.stringify({secteur:sec}),op:'calendrier-ecrire',page:'calendrier',libelle:'Calendrier ('+resume+')',
+    esp:'cal|'+sec,vu,version:d=>Number(d.cal&&d.cal.maj)||0,
+    construire:d=>({secteur:sec,cal:changer(d.cal),depuis:Number(d.cal&&d.cal.maj)||0,resume}),
+    vue:d=>{const m=d.cal?d.cal.maj:0;d.cal=Object.assign(changer(d.cal),{maj:m});return d},
+    nouvelle:j=>Number(j.data&&j.data.cal&&j.data.cal.maj)||undefined,
+    apres:(j,base)=>Object.assign(base,{cal:j.data.cal}),reprise});
 }
 
 // ===============================================================================================================
@@ -2120,7 +2410,7 @@ function admTuiles(fn){const ap=S.adm.b.apparence;ap.tuiles=ap.tuiles||{};fn(ap.
 async function actionAdmin(b){
   const A=S.adm,act=b.dataset.ad;if(!A)return;const B=A.b;S.msgAdm=null;A.msg=null;
   const zone=()=>B.zones[+b.dataset.i];
-  if(act==='annuler'){S.adm=null;S.charge={};return chargerPage()}
+  if(act==='annuler'){S.adm=null;return chargerPage()}
   if(act==='couleur'){B.apparence.couleur=b.dataset.v;A.sale=true}
   else if(act==='logo-retirer'){B.apparence.logo='';A.sale=true}
   else if(act==='tuile-haut'||act==='tuile-bas'){const l=admOrdre(B),i=l.indexOf(b.dataset.id),j=i+(act==='tuile-haut'?-1:1);if(j<0||j>=l.length)return;[l[i],l[j]]=[l[j],l[i]];admTuiles(t=>l.forEach((x,k)=>{t[x]=Object.assign({},t[x],{ordre:k})}))}
@@ -2136,12 +2426,15 @@ async function actionAdmin(b){
   else if(act==='zone-appli'){const z=zone(),i=z.applis.indexOf(b.dataset.a);if(i<0)z.applis.push(b.dataset.a);else z.applis.splice(i,1);if(!z.applis.includes('releve'))z.lienReleve=false;A.sale=true}
   else if(act==='zone-lien'){const z=zone(),on=!z.lienReleve;B.zones.forEach(x=>{x.lienReleve=false});z.lienReleve=on;A.sale=true}
   else if(act==='enregistrer'){
-    b.disabled=true;
-    const j=await appel('administration-ecrire',{depuis:B.maj,nom:B.nom,inactivite:Number(B.inactivite)||0,apparence:{couleur:B.apparence.couleur||'',logo:B.apparence.logo||'',tuiles:B.apparence.tuiles||{}},
-      secteurs:B.secteurs,zones:B.zones.map(z=>({id:z.id,nom:z.nom,secteur:z.secteur,applis:z.applis,lienReleve:!!z.lienReleve})),supprimerZones:A.supprimerZones});
-    S.charge={};
-    if(j.status===200){S.adm=null;S.msgAdm=['ok',j.data&&j.data.rien?'Rien à changer.':'Enregistré : les tablettes le reçoivent à leur prochain échange.']}
-    else A.msg=['err','<b>'+esc((j.data&&j.data.error)||'Refusé.')+'</b>'+(j.status===409?' <button class="btn" data-ad="annuler">Recharger (abandonner mes changements)</button>':'')];
+    // Temps masqué (2026-10-16) : affiché tout de suite, envoyé derrière avec la version lue (B.maj).
+    const c={nom:B.nom,inactivite:Number(B.inactivite)||0,apparence:{couleur:B.apparence.couleur||'',logo:B.apparence.logo||'',tuiles:B.apparence.tuiles||{}},
+      secteurs:B.secteurs,zones:B.zones.map(z=>({id:z.id,nom:z.nom,secteur:z.secteur,applis:z.applis,lienReleve:!!z.lienReleve})),supprimerZones:A.supprimerZones},sauve=clone(A);
+    enregistrer(tachePack({cle:'administration-lire|{}',op:'administration-ecrire',page:'apparence',libelle:'Administration et apparence',vu:Number(B.maj)||0,
+      construire:d=>Object.assign(clone(c),{depuis:Number(d.maj)||0}),
+      vue:d=>Object.assign(d,{nom:c.nom,inactivite:c.inactivite,apparence:Object.assign({},d.apparence,c.apparence),secteurs:c.secteurs,
+        zones:c.zones.map(z=>Object.assign({googlePropre:false},(d.zones||[]).find(x=>x.id===z.id)||{},z,{id:z.id||'tmp-'+alea(6)}))}),
+      apres:j=>j.data&&j.data.rien?j.data.admin:j.data,reprise:()=>{S.adm=sauve}}));
+    S.adm=null;S.msgAdm=null;
   }
   return chargerPage();
 }
@@ -2238,11 +2531,13 @@ document.addEventListener('click',async e=>{
   if(b.dataset.go||b.dataset.sec!==undefined){S.edit=null;S.types=null;S.suppr=null;S.dr=null;if(b.dataset.go)S.adm=null;S.msgAdm=null;S.msgCont=S.msgLanc=S.msgCal=S.msgParc=S.msgPers=S.msgMsg=S.msgDr=S.msgTab=null;S.viderHisto=false}
   if(b.dataset.go){S.page=b.dataset.go;try{history.replaceState(null,'','#'+S.page)}catch(x){}render();scrollTo(0,0);return}
   if(b.dataset.sec!==undefined){S.secteur=b.dataset.sec;S.semaine='';render();return}
-  if(b.dataset.act==='sortir'){seDeconnecter();return}
+  if(b.dataset.act==='sortir'){if(enAttente()){ENVOI.sortie=true;majEnvoi()}else seDeconnecter();return}
+  if(b.dataset.envoi){actionEnvoi(b);return}
   if(b.dataset.pc){actionPC(b);return}
   if(b.dataset.act==='google'){ouvrirPanneauGoogle();return}
   if(b.dataset.act==='google-fermer'){const p=document.getElementById('panneauGoogle');if(p)p.remove();return}
-  if(b.dataset.act==='actualiser'){S.charge={};render();return}
+  // Actualiser : tout ce qui est affiché est relu derrière (la page reste à l'écran, mise à jour à l'arrivée).
+  if(b.dataset.act==='actualiser'){Object.values(S.charge).forEach(g=>{g.t=perime()});chargerPage();return}
   if(b.dataset.parc!==undefined){S.sel.parc=b.dataset.parc;if(S.edit&&S.edit.cle==='parc')S.edit=null;S.suppr=null;S.msgParc=null;chargerPage();return}
   if(b.dataset.item){S.sel[b.dataset.item]=b.dataset.id;S.edit=null;S.suppr=null;S.msgCont=null;chargerPage();return}
   if(b.dataset.semaine!==undefined){S.semaine=b.dataset.semaine;chargerPage();return}
