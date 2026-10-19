@@ -251,6 +251,281 @@ button.sync{min-width:44px;justify-content:center}
 @media (max-width:1280px){.g3{grid-template-columns:1fr}.parc.ouvert{grid-template-columns:minmax(0,1fr) 340px}}
 @media (max-width:1000px){.cont{grid-template-columns:1fr}.parc.ouvert{grid-template-columns:1fr}.fiche{position:static;max-height:none}}
 @media (max-width:860px){.app{grid-template-columns:1fr}.nav{position:static;height:auto;display:none}.app.menu .nav{display:flex}.menu-btn{display:inline-flex}.top{position:static}#page{padding:16px}.card{overflow-x:auto}.g3,.accg,.cont,.parc.ouvert{grid-template-columns:minmax(0,1fr)}.savebar{left:8px;right:8px}#bandeauEnvoi{padding:12px 16px 0}}
+/* <design-general> */
+/* Design général v2 (maquette validée par l'utilisateur le 2026-10-17) : sections numérotées à couleurs repères.
+   Une couleur = un TYPE de section (jamais un état) ; vert / orange / rouge restent réservés aux états, toujours avec ✓ • ○.
+   Classes préfixées « ds- » pour ne pas se mélanger avec celles de l'appli. Teintes calculées d'avance (sans color-mix,
+   pour les tablettes au navigateur ancien). Affichage seulement : aucune donnée ne change.
+   v2 : toutes les couleurs passent par des variables (--ds-…), en clair et en sombre (palette de notes.md).
+   Le sombre ne s'applique que si l'appareil l'a choisi (dsTheme, v2.4) : sans choix, l'affichage reste en clair. */
+:root{--ds-haut:0px;
+  --c-identite:#4C5BD4;--c-machines:#22709F;--c-preparation:#7349C2;--c-securite:#B02D63;
+  --c-contenu:#0A7C87;--c-controle:#4C6676;--c-medias:#93439A;--c-reglages:#6A5F55;
+  /* Teintes de chaque type : 7 = en-tête, 14 = puce choisie, bd / bd2 = bords, 5 = fond d'aide */
+  --t-identite-7:#F2F4FC;--t-identite-14:#E6E8F9;--t-identite-bd:#BAC4E1;--t-identite-bd2:#9AA5DD;--t-identite-5:#F6F7FD;
+  --t-machines-7:#F0F5F8;--t-machines-14:#E0EBF2;--t-machines-bd:#B1C8D6;--t-machines-bd2:#87AEC6;--t-machines-5:#F4F8FA;
+  --t-preparation-7:#F5F2FB;--t-preparation-14:#EBE6F6;--t-preparation-bd:#C3C0DD;--t-preparation-bd2:#AB9DD5;--t-preparation-5:#F8F6FC;
+  --t-securite-7:#F9F0F4;--t-securite-14:#F4E2E9;--t-securite-bd:#D0B9C8;--t-securite-bd2:#C790AB;--t-securite-5:#FBF5F7;
+  --t-contenu-7:#EEF6F7;--t-contenu-14:#DDEDEE;--t-contenu-bd:#ABCBD0;--t-contenu-bd2:#7CB4BB;--t-contenu-5:#F3F8F9;
+  --t-controle-7:#F2F4F5;--t-controle-14:#E6EAEC;--t-controle-bd:#BAC6CD;--t-controle-bd2:#9AAAB3;--t-controle-5:#F6F7F8;
+  --t-medias-7:#F7F2F8;--t-medias-14:#F0E5F1;--t-medias-bd:#CABED5;--t-medias-bd2:#BA9AC3;--t-medias-5:#FAF6FA;
+  --t-reglages-7:#F5F4F3;--t-reglages-14:#EAE9E7;--t-reglages-bd:#C1C4C5;--t-reglages-bd2:#A7A7A4;--t-reglages-5:#F8F7F7;
+  /* Surfaces du bloc commun */
+  --ds-carte:#fff;--ds-sur:#fff;--ds-gris:#E8EEF0;--ds-champ-vide:#FBFCFC;
+  --ds-ombre:0 1px 2px rgba(21,36,43,.06),0 4px 14px rgba(21,36,43,.06);--ds-hach:rgba(176,45,99,.07);
+  --ds-coche:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231F7A3A' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12 5 5 9-10'/%3E%3C/svg%3E");
+  --ds-pri:#065E66;--ds-pri-txt:#fff;--ds-vide-txt:#4f6169}
+/* v2.4 : thème sombre = classe « ds-sombre » sur <html>, posée par dsTheme (ds.js) selon le choix de l'appareil :
+   Auto (suit l'appareil) / Clair / Sombre (localStorage « ds-theme », Clair par défaut : rien ne change sans choix).
+   Couleurs éclaircies de notes.md (teinte d'en-tête 12 %) + couleurs de base des pages (mêmes noms dans toutes les applis). */
+:root.ds-sombre{
+  --c-identite:#A9B2FF;--c-machines:#7CC0EC;--c-preparation:#C2A6FF;--c-securite:#FF9CC3;
+  --c-contenu:#5FD6E0;--c-controle:#A9C2D0;--c-medias:#E7A6EE;--c-reglages:#CFC3B8;
+  --t-identite-7:#293646;--t-identite-14:#354157;--t-identite-bd:#52617F;--t-identite-bd2:#717EAD;--t-identite-5:#222F3C;
+  --t-machines-7:#243844;--t-machines-14:#2C4453;--t-machines-bd:#446579;--t-machines-bd2:#5886A2;--t-machines-5:#1F303A;
+  --t-preparation-7:#2C3446;--t-preparation-14:#3A3F57;--t-preparation-bd:#595D7F;--t-preparation-bd2:#7F77AD;--t-preparation-5:#242E3C;
+  --t-securite-7:#34333F;--t-securite-14:#463D4B;--t-securite-bd:#6B5A6D;--t-securite-bd2:#A0728C;--t-securite-5:#282D38;
+  --t-contenu-7:#213A42;--t-contenu-14:#264851;--t-contenu-bd:#3B6C76;--t-contenu-bd2:#48929C;--t-contenu-5:#1D313A;
+  --t-controle-7:#293841;--t-controle-14:#35444E;--t-controle-bd:#526671;--t-controle-bd2:#718793;--t-controle-5:#223038;
+  --t-medias-7:#313444;--t-medias-14:#413F54;--t-medias-bd:#645D7A;--t-medias-bd2:#9377A3;--t-medias-5:#262E3B;
+  --t-reglages-7:#2E383E;--t-reglages-14:#3D4549;--t-reglages-bd:#5D666A;--t-reglages-bd2:#868786;--t-reglages-5:#253037;
+  --ds-carte:#18252d;--ds-sur:#0f1a20;--ds-gris:#23343d;--ds-champ-vide:#1b2a32;
+  --ds-ombre:0 1px 2px rgba(0,0,0,.3);--ds-hach:rgba(255,156,195,.08);
+  --ds-coche:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236FD08E' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12 5 5 9-10'/%3E%3C/svg%3E");
+  --ds-pri:#4FC7D2;--ds-pri-txt:#0f1a20;
+  --bg:#0f1a20;--card:#18252d;--ink:#e6eef1;--muted:#b3c3ca;--ds-vide-txt:#b3c3ca;--line:#2c3e48;--line2:#23343d;
+  --accent:#4FC7D2;--accent-dark:#9FE3EA;--accent-soft:#12383d;
+  --ok:#6FD08E;--ok-soft:#163524;--ok-bg:#163524;--warn:#F2B661;--warn-bg:#3a2a10;--warn-line:#E0A040;
+  --danger:#FF8A8F;--danger-soft:#41191c;--err:#FF8A8F;--err-bg:#41191c;--nav:#0b1418;--nav2:#16262d;--shadow:0 1px 2px rgba(0,0,0,.3);
+  color-scheme:dark}
+:root.ds-sombre body{background:var(--bg);color:var(--ink)}
+/* Boutons principaux de toutes les pages : bleu-vert foncé en clair (texte blanc 7,5:1), bleu-vert clair + texte foncé en sombre. */
+.btn.primary:not(.bloque):not(:disabled),.btn.pri,.btn.send:not(:disabled){background:var(--ds-pri);border-color:var(--ds-pri);color:var(--ds-pri-txt)}
+/* Choix du thème (dsTheme.bouton()) : 3 boutons de 44 px. */
+.ds-theme{display:inline-flex;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--ds-carte)}
+.ds-theme button{border:0;background:transparent;min-height:44px;min-width:44px;padding:6px 14px;font:inherit;font-weight:700;font-size:15px;color:var(--muted);cursor:pointer}
+.ds-theme button+button{border-left:1px solid var(--line)}
+.ds-theme button[aria-pressed="true"]{background:var(--accent-soft);color:var(--ink)}
+.ds-theme button[aria-pressed="true"]::before{content:"✓ "}
+/* Chaque type relie ses teintes à --c / --c7 / --c14 / --cbd / --cbd2 / --c5 (un seul jeu de règles pour clair et sombre). */
+:where(.ds-sec,.ds-somm a,.ds-type-c){--c:var(--c-contenu);--c7:var(--t-contenu-7);--c14:var(--t-contenu-14);--cbd:var(--t-contenu-bd);--cbd2:var(--t-contenu-bd2);--c5:var(--t-contenu-5)}
+[data-ds="identite"]{--c:var(--c-identite);--c7:var(--t-identite-7);--c14:var(--t-identite-14);--cbd:var(--t-identite-bd);--cbd2:var(--t-identite-bd2);--c5:var(--t-identite-5)}
+[data-ds="machines"]{--c:var(--c-machines);--c7:var(--t-machines-7);--c14:var(--t-machines-14);--cbd:var(--t-machines-bd);--cbd2:var(--t-machines-bd2);--c5:var(--t-machines-5)}
+[data-ds="preparation"]{--c:var(--c-preparation);--c7:var(--t-preparation-7);--c14:var(--t-preparation-14);--cbd:var(--t-preparation-bd);--cbd2:var(--t-preparation-bd2);--c5:var(--t-preparation-5)}
+[data-ds="securite"]{--c:var(--c-securite);--c7:var(--t-securite-7);--c14:var(--t-securite-14);--cbd:var(--t-securite-bd);--cbd2:var(--t-securite-bd2);--c5:var(--t-securite-5)}
+[data-ds="contenu"]{--c:var(--c-contenu);--c7:var(--t-contenu-7);--c14:var(--t-contenu-14);--cbd:var(--t-contenu-bd);--cbd2:var(--t-contenu-bd2);--c5:var(--t-contenu-5)}
+[data-ds="controle"]{--c:var(--c-controle);--c7:var(--t-controle-7);--c14:var(--t-controle-14);--cbd:var(--t-controle-bd);--cbd2:var(--t-controle-bd2);--c5:var(--t-controle-5)}
+[data-ds="medias"]{--c:var(--c-medias);--c7:var(--t-medias-7);--c14:var(--t-medias-14);--cbd:var(--t-medias-bd);--cbd2:var(--t-medias-bd2);--c5:var(--t-medias-5)}
+[data-ds="reglages"]{--c:var(--c-reglages);--c7:var(--t-reglages-7);--c14:var(--t-reglages-14);--cbd:var(--t-reglages-bd);--cbd2:var(--t-reglages-bd2);--c5:var(--t-reglages-5)}
+/* Titre de l'éditeur */
+.ds-titre{margin:4px 0 6px}.ds-titre h1{margin:0 0 4px}.ds-titre .hint{margin:0}
+/* Sommaire collant (sous la barre du haut) : une puce par section + progression */
+.ds-somm{position:sticky;top:var(--ds-haut);z-index:12;background:var(--bg);padding:8px 0 8px;margin:0 0 4px;border-bottom:1px solid var(--line)}
+/* Tablette et PC : les pastilles passent à la ligne (toutes visibles, sans barre de défilement) ; téléphone : bande qui défile. */
+.ds-somm-l{display:flex;flex-wrap:wrap;gap:6px}
+.ds-somm a{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:4px 10px 4px 6px;border-radius:999px;border:1px solid var(--line);background:var(--ds-carte);text-decoration:none;color:var(--ink);font-weight:600;font-size:15px;white-space:nowrap;flex:none}
+.ds-somm a .n{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--c);color:var(--ds-sur);font-weight:800;font-size:15px}
+.ds-somm a .e{font-weight:800;padding:0;text-align:inherit} /* v2.2 : « vide » est aussi une classe de la console (bloc vide, 22 px de marge) */.ds-somm a .e.ok{color:var(--ok)}.ds-somm a .e.todo{color:var(--warn)}.ds-somm a .e.vide{color:var(--muted)}
+.ds-somm a.ds-qual{--c:var(--accent);border-style:dashed}
+.ds-somm a[aria-current="true"]{border-color:var(--c);box-shadow:inset 0 0 0 1px var(--c)}
+.ds-prog{display:flex;align-items:center;gap:10px;margin-top:6px;font-size:15px;color:var(--muted);font-weight:600}
+.ds-prog .ds-barre{flex:1;height:10px;border-radius:99px;background:var(--ds-gris);overflow:hidden;max-width:380px}
+.ds-prog .ds-barre i{display:block;height:100%;background:var(--accent);border-radius:99px;transition:width .2s}
+/* Section : bande de 6 px, en-tête teinté, numéro dans une pastille de la couleur du type */
+.ds-sec{position:relative;background:var(--ds-carte);border:1px solid var(--line);border-left:6px solid var(--c);border-radius:14px;margin:22px 0;padding:0;box-shadow:var(--ds-ombre);scroll-margin-top:calc(var(--ds-haut) + var(--ds-somm,158px) + 12px)}
+.ds-sec-h{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:9px 13px 0 0;background:var(--c7);border-bottom:1px solid var(--cbd);flex-wrap:wrap}
+.ds-sec-h .ds-n{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:var(--c);color:var(--ds-sur);font-weight:800;font-size:18px;flex:none}
+.ds-sec-h .ds-ico{color:var(--c);display:inline-flex;flex:none}
+.ds-sec-h .ds-ico svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.ds-sec-h .ds-tt{flex:1 1 200px;min-width:0}
+.ds-sec-h h2{margin:0;font-size:20px;line-height:1.2;display:block}
+.ds-sec-h .ds-type{display:block;font-size:15px;font-weight:600;color:var(--c)}
+.ds-etat{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:4px 12px;font-size:15px;font-weight:700;white-space:nowrap}
+.ds-etat.ok{background:var(--ok-soft,var(--ok-bg));color:var(--ok)}.ds-etat.todo{background:var(--warn-bg);color:var(--warn)}.ds-etat.vide{background:var(--ds-gris);color:var(--ds-vide-txt)}
+.ds-aide-b{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--ds-carte);font-weight:800;color:var(--muted);flex:none}
+.ds-aide-b[aria-expanded="true"]{border-color:var(--c);color:var(--c)}
+/* v2.3 : bouton « replier » (téléphone seulement) ; section repliée : seul son en-tête reste. */
+.ds-repli{display:none;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--ds-carte);color:var(--muted);font-weight:800;font-size:18px;flex:none;place-items:center;padding:0}
+.ds-replie>.ds-sec-b{display:none}
+.ds-replie>.ds-sec-h{border-bottom:0;border-radius:9px 13px 13px 9px}
+.ds-replie .ds-repli span{display:inline-block;transform:rotate(180deg)}
+.ds-sec-b{padding:16px}
+.ds-sec-b>h3:first-child{margin-top:0}
+.ds-aide-long{display:none;background:var(--c5);border:1px dashed var(--cbd2);border-radius:10px;padding:10px 12px;margin:0 0 14px}
+.ds-sec.ds-aide-on .ds-aide-long{display:block}
+/* Sécurité : framboise + hachures + ⚠, jamais confondue avec une pastille d'état rouge */
+.ds-sec[data-ds="securite"]{background-image:repeating-linear-gradient(135deg,var(--ds-hach) 0 10px,transparent 10px 20px)}
+.ds-sec[data-ds="securite"]>.ds-sec-h{background:var(--c14)}
+.ds-sec .ds-sec{margin:14px 0 0;box-shadow:none}
+.ds-sec .ds-sec>.ds-sec-h h2{font-size:18px}
+/* Champs : vide (pointillé) / rempli (bord teinté + ✓) / obligatoire non rempli (orange + « • À compléter ») */
+.ds-sec input.in:not([type=checkbox]):not([type=file]),.ds-sec textarea.in{border:1.5px solid var(--line)}
+.ds-sec input.in.ds-plein[type=date],.ds-sec input.in.ds-plein[type=time]{border-color:var(--cbd2)}
+/* v2.1 : l'état vide / rempli vient aussi de la classe posée par ds.js (ds-vide / ds-plein) : champs sans texte d'exemple (consoles). */
+.ds-sec input.in:placeholder-shown,.ds-sec textarea.in:placeholder-shown,.ds-sec input.in.ds-vide:not([type=checkbox]):not([type=file]):not([type=color]),.ds-sec textarea.in.ds-vide{border-style:dashed;background-color:var(--ds-champ-vide)}
+/* ✓ « rempli » : pas sur les heures, dates et couleurs (la case est trop étroite : l'heure serait coupée, designer 2). */
+.ds-sec input.in[placeholder]:not([type=checkbox]):not([type=file]):not([type=time]):not([type=date]):not([type=color]):not(:placeholder-shown),.ds-sec input.in.ds-plein:not([type=checkbox]):not([type=file]):not([type=time]):not([type=date]):not([type=color]),.ds-sec textarea.in[placeholder]:not(:placeholder-shown),.ds-sec textarea.in.ds-plein{border-color:var(--cbd2);padding-right:40px;background-image:var(--ds-coche);background-repeat:no-repeat;background-position:right 10px top 12px;background-size:20px}
+.ds-sec .in:focus{outline:3px solid var(--cbd2);outline-offset:1px;border-color:var(--c)}
+.ds-sec .ds-manque .in{border:1.5px solid var(--warn-line)!important;box-shadow:inset 4px 0 0 var(--warn-line)}
+.ds-sec .ds-req,.ds-sec .field span.ds-req{display:inline;color:var(--warn);font-weight:800}
+.ds-sec .field>span{font-size:16px;font-weight:700}
+.ds-manque-t{display:none;color:var(--warn);font-weight:700;font-size:15px;margin-top:4px}
+.ds-manque .ds-manque-t{display:block}
+.ds-sec .field span .i{color:var(--c)}
+.ds-sec[data-ds="securite"] .field.danger>span{color:var(--c)}
+.ds-sec[data-ds="securite"] .field textarea.in{border-left:6px solid var(--c)}
+/* Puces (machines, versions) : la couleur du type + ✓ quand c'est choisi */
+.ds-sec .chip[aria-pressed="true"]{border-color:var(--c);background:var(--c14);color:var(--ink)}
+.ds-sec .chip[aria-pressed="true"]::before{content:"✓ ";font-weight:800;color:var(--c)}
+/* v2.1 : puces-cases à cocher (consoles : <label class="chip"><input type="checkbox">) : même rendu une fois cochées. */
+.ds-sec label.chip:has(input:checked){border-color:var(--c);background:var(--c14);color:var(--ink)}
+.ds-sec label.chip input{accent-color:var(--c)}
+.ds-sec .radio[aria-pressed="true"]{border-color:var(--c);background:var(--c7)}
+.ds-sec .radio[aria-pressed="true"] .rd{border-color:var(--c)}.ds-sec .radio[aria-pressed="true"] .rd::after{background:var(--c)}
+/* Boutons « Ajouter » : pointillé de la couleur de la section */
+.ds-sec .btn.ds-ajout{border:1.5px dashed var(--cbd2);background:var(--ds-carte);color:var(--ink);font-weight:700}
+/* Étapes : petites cartes, numéro carré de la couleur « Étapes » */
+.ds-sec .rblock{background:var(--ds-carte);border:1px solid var(--line);border-radius:12px;padding:0;overflow:hidden}
+.ds-sec .rblock>.row:first-child{background:var(--c5);padding:8px 10px;margin:0;border-bottom:1px solid var(--ds-gris)}
+.ds-sec .rblock>:not(.row:first-child){margin-left:12px;margin-right:12px}
+.ds-sec .rblock>textarea.in{width:calc(100% - 24px)}
+.ds-sec .rblock>:nth-child(2){margin-top:10px}
+.ds-sec .rblock>:last-child{margin-bottom:12px}
+.ds-sec .rblock .num{min-width:36px;width:36px;height:36px;border-radius:10px;background:var(--c);font-weight:800}
+/* « ↻ À faire sur chaque broche » : puce à cocher de la couleur des étapes */
+.ds-sec .axe-chk{display:inline-flex;border:1.5px dashed var(--c);border-radius:999px;padding:6px 14px;background:var(--ds-carte)}
+.ds-sec .axe-chk:has(input:checked){border-style:solid;background:var(--c14)}
+.ds-sec .axe-chk input{accent-color:var(--c)}
+.ds-sec .ds-coche{display:flex;gap:12px;align-items:center;min-height:56px;padding:8px 12px;border:1px solid var(--line);border-radius:12px;background:var(--ds-carte);font-weight:600;margin-top:12px}
+.ds-sec .ds-coche input{width:26px;height:26px;flex:none;accent-color:var(--c)}
+/* Bouton principal : bleu-vert foncé (texte blanc 7,5:1) ; en sombre, bleu-vert clair et texte foncé */
+.btn.ds-pri{background:var(--ds-pri);border-color:var(--ds-pri);color:var(--ds-pri-txt);min-height:56px;font-size:18px}
+.ds-version{display:inline-block;margin-left:6px;font-weight:700;color:var(--warn)}
+@media (max-width:640px){
+  /* Téléphone : le sommaire n'est plus collant (la barre du haut prend déjà de la place), une seule colonne. */
+  .ds-somm{position:static}
+  .ds-sec{scroll-margin-top:calc(var(--ds-haut) + 12px)}
+  .ds-somm-l{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
+  .ds-sec-h{padding:10px 12px;gap:10px}.ds-sec-h h2{font-size:18px}
+  .ds-repli{display:grid}
+  .ds-sec-h .ds-tt{flex-basis:120px}
+  .ds-sec-b{padding:12px}
+  .ds-sec .rblock>:not(.row:first-child){margin-left:8px;margin-right:8px}
+  .ds-sec .rblock>textarea.in{width:calc(100% - 16px)}
+}
+@media print{.ds-somm{display:none}}
+/* Console (lot 3 du design général, 2026-10-17) : réglages du calendrier, fiche machine, fiche personne. */
+.ds-sec .ds-sec-b>.card{border:0;box-shadow:none;padding:0;margin:0!important;background:transparent}
+.ds-sec .ds-sec-b>.card>h2{font-size:17px}
+.ds-sec [data-cr="plus"],.ds-sec [data-ed="etape-plus"]{border:1.5px dashed var(--cbd2);background:var(--ds-carte);color:var(--ink)}
+.ds-sec .etape{border-color:var(--cbd);background:var(--c5)}
+.ds-sec .fs{border-color:var(--cbd)}
+.ds-sec.ds-sans-hach{background-image:none}
+/* Fiche machine (colonne de droite) : sommaire non collant (la fiche défile seule), blocs plus serrés. */
+.fiche .ds-somm{position:static;background:transparent}
+.fiche .ds-sec{margin:14px 0;scroll-margin-top:8px}
+.fiche .ds-sec-h{padding:10px 12px;gap:10px}.fiche .ds-sec-b{padding:12px}
+.fiche .ds-sec-h h2{font-size:18px}
+.fiche dl{font-size:15px}
+.ds-parc-g{min-width:0}
+/* Barre du haut toujours sur une ligne (maquette, écran 4) : s'il manque de place, les secteurs défilent sur place. */
+@media (min-width:861px){.top{flex-wrap:nowrap}.top .secsel{flex-wrap:nowrap;overflow-x:auto;min-width:0;flex:0 1 auto;scrollbar-width:thin}.top .secsel button{flex:none}}
+/* Fiche jamais recouverte par la barre du haut (défaut « Modifier caché », campagne 2026-10-17) : la fiche collante est un peu
+   moins haute que la fenêtre (barre du haut + marge du bas de la page, 80 px) ; ainsi, même tout en bas de la page, son haut
+   reste sous la barre. */
+.fiche{max-height:calc(100vh - var(--haut-top,64px) - 104px)}
+.fiche .ds-sec-h .ds-tt{flex-basis:120px}
+/* --- Téléphone et petite fenêtre (lot 4, 2026-10-17) : barre du haut en 2 lignes au plus (Menu + secteurs qui défilent,
+   puis l'état et la personne), une seule colonne, boutons « Enregistrer » collés en bas de l'écran. */
+@media (max-width:860px){
+  .top{gap:8px;padding:8px 12px}
+  .top .grow{display:none}
+  .top .secsel,.top .secfixe{flex:1 1 0;min-width:0}
+  .top .secsel{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin}.top .secsel button{flex:none}
+  .edition>.row:last-child{position:sticky;bottom:0;z-index:6;background:var(--ds-carte);margin:14px -18px -18px;padding:10px 18px;border-top:1px solid var(--line);border-radius:0 0 14px 14px;box-shadow:0 -6px 18px rgba(21,36,43,.08)}
+  .edition>.row:last-child .btn{flex:1 1 140px;min-height:52px}
+  .fiche{max-height:none}
+  /* Une carte qui défile en largeur retiendrait la barre collante : les fiches en modification n'ont pas de tableau. */
+  .card.edition{overflow:visible}
+}
+@media (max-width:640px){
+  #page{padding:12px 12px 90px}
+  .ph h1{font-size:22px}
+  .ds-somm{margin:0 -12px 4px;padding:8px 12px}
+}
+/* Thème sombre — fabriqué par chantier-design\outils\sombre.cjs (2026-10-17) à partir des styles de la page : ne pas modifier à la main, relancer. */
+:where(.ds-sombre) .pa{--c1:#8BE8EE;--c2:#8BE6EE}
+:where(.ds-sombre) .login{background:radial-gradient(1200px 600px at 20% 0%,#3C4A51,transparent),var(--bg)}
+:where(.ds-sombre) .login .box{background:var(--card)}
+:where(.ds-sombre) .in{border:1px solid var(--line);background:var(--card)}
+:where(.ds-sombre) .btn{background:var(--card)}
+:where(.ds-sombre) .btn:hover{border-color:var(--line);background:#414C52}
+:where(.ds-sombre) .btn.pri{color:var(--ds-sur)}
+:where(.ds-sombre) .msg.err{border:1px solid #DA6368}
+:where(.ds-sombre) .msg.ok{border:1px solid #4E6B60}
+:where(.ds-sombre) .msg.info{border:1px solid #4E6C73}
+:where(.ds-sombre) .nav .bdg.r{color:var(--ds-sur)}
+:where(.ds-sombre) .top{background:rgba(63,75,81,0.95)}
+:where(.ds-sombre) .secsel{background:#3D4850}
+:where(.ds-sombre) .secsel button{color:var(--muted)}
+:where(.ds-sombre) .secsel button[aria-pressed="true"]{background:var(--card)}
+:where(.ds-sombre) .secfixe{background:var(--card)}
+:where(.ds-sombre) button.sync:hover{background:var(--card)}
+:where(.ds-sombre) button.sync.err{border-color:#DA6368}
+:where(.ds-sombre) #panneauGoogle{background:var(--card)}
+:where(.ds-sombre) .who{background:var(--card)}
+:where(.ds-sombre) .ro{background:#3F4A51;border:1px solid var(--line);color:var(--muted)}
+:where(.ds-sombre) .sq{background:linear-gradient(90deg,#3E4950 25%,#404B52 50%,#3E4950 75%)}
+:where(.ds-sombre) .absent{background:var(--bg,#3F4A51)}
+:where(.ds-sombre) .absent .box{background:var(--card)}
+:where(.ds-sombre) .tag.attente{background:#424A4D;color:#EECC8B;border:1px dashed #DEB45E}
+:where(.ds-sombre) .tag{background:#3E4950;color:var(--muted)}
+:where(.ds-sombre) .chip{background:var(--card)}
+:where(.ds-sombre) .kpi{background:var(--card);border-top:4px solid var(--k,var(--line))}
+:where(.ds-sombre) .kpi:hover{border-color:var(--line)}
+:where(.ds-sombre) .sec{background:var(--card)}
+:where(.ds-sombre) .al{background:#424B4F;border:1px solid #706C5D}
+:where(.ds-sombre) .al.err{background:#424A51;border-color:#6E6469}
+:where(.ds-sombre) .al .sy{color:var(--ds-sur)}
+:where(.ds-sombre) .quick button{background:var(--card)}
+:where(.ds-sombre) .mac{background:var(--card)}
+:where(.ds-sombre) .mac .vis{background:linear-gradient(140deg,#3E4A51,#3A484F)}
+:where(.ds-sombre) .mac.off .vis{background:#253139}
+:where(.ds-sombre) .mac .sec-t{background:rgba(24,37,45,0.92)}
+:where(.ds-sombre) .cal{background:var(--card)}
+:where(.ds-sombre) .cal .hd{background:#404B52}
+:where(.ds-sombre) .op.r{border-color:#6E6469}
+:where(.ds-sombre) .op.a{border-color:#706C5D}
+:where(.ds-sombre) .op.f{border-color:#5B716B}
+:where(.ds-sombre) .op.p{background:#3F4B51;color:var(--muted)}
+:where(.ds-sombre) .it{background:var(--card)}
+:where(.ds-sombre) .it:hover{border-color:var(--line)}
+:where(.ds-sombre) .it[aria-current="true"]{background:#404C52}
+:where(.ds-sombre) .mcard{background:var(--card)}
+:where(.ds-sombre) .mcard:hover{border-color:var(--line)}
+:where(.ds-sombre) .mcard[aria-current="true"]{background:#404C52}
+:where(.ds-sombre) .mcard.coupe .av{background:#253139;color:var(--muted)}
+:where(.ds-sombre) .sw{background:var(--card)}
+:where(.ds-sombre) .sw button{background:var(--card)}
+:where(.ds-sombre) .perm tr.grp td{background:#404B52}
+:where(.ds-sombre) .tri button{background:var(--card)}
+:where(.ds-sombre) .tri button[aria-pressed="true"].v0{background:#253139;color:var(--muted)}
+:where(.ds-sombre) .tri button:disabled{background:var(--card)}
+:where(.ds-sombre) .btn.dan{background:var(--card);border-color:#DA6368}
+:where(.ds-sombre) .btn.dan.plein{color:var(--ds-sur)}
+:where(.ds-sombre) .savebar{background:rgba(24,37,45,0.97)}
+:where(.ds-sombre) .etape{border:1px dashed var(--line);background:#414C52}
+/* Nouvelle console, thème sombre : compléments aux règles fabriquées (états des lancements sur fond clair → texte foncé ;
+   jours hors du mois du calendrier, dont le fond est écrit dans la page). */
+:where(.ds-sombre) .st-fonctionnement,:where(.ds-sombre) .st-prete{color:var(--ds-sur)}
+:where(.ds-sombre) .cal>div[style*="#f7f9fa"]{background:var(--ds-gris)!important}
+/* Choix du thème en bas du menu des consoles (fond du menu toujours foncé). */
+.ds-theme-menu{display:grid;gap:6px;margin-top:12px;font-size:15px;font-weight:700;color:#cfdbe0}
+.ds-theme-menu .ds-theme{background:transparent;border-color:#3a5560;width:max-content;max-width:100%}
+.ds-theme-menu .ds-theme button{color:#d3e0e5;padding:6px 10px;border-radius:0;width:auto;text-align:center;font-size:15px;min-height:44px}
+.ds-theme-menu .ds-theme button+button{border-left-color:#3a5560}
+.ds-theme-menu .ds-theme button[aria-pressed="true"]{background:#0e4d55;color:#fff}
+/* </design-general> */
 </style>
 </head>
 <body>
@@ -669,7 +944,23 @@ var CalMaint=(function(){
     var R={retard:0,jamais:1,jour:2,bientot:3,ok:4};
     return out.sort(function(a,b){return R[a.etat]-R[b.etat]||a.due-b.due});
   }
-  return {D:D,S:S,ajoute:ajoute,lundi:lundi,ecart:ecart,auj:auj,travaille:travaille,ferme:ferme,equipeDu:equipeDu,datesRegle:datesRegle,occurrences:occurrences,faite:faite,etats:etats,absent:absent,
+  // Personnes du calendrier (lot5-identifiants, 2026-10-17) : chaque personne (roulement, règles, congés, remplaçants,
+  // exceptions, passé figé) passe par f(x) → nom actuel. x peut être le nom actuel, un ANCIEN nom ou l'IDENTIFIANT de la
+  // personne (p…). Les données gardent ce qui est écrit ; seule la lecture traduit. Rien ne change : renvoie c lui-même.
+  function personnesCal(c,f){
+    if(!c||typeof c!=='object'||typeof f!=='function')return c;
+    var cp=function(o){var y={},k;o=o||{};for(k in o)if(Object.prototype.hasOwnProperty.call(o,k))y[k]=o[k];return y};
+    var un=function(n){var v=f(n);return typeof v==='string'&&v?v:n};
+    var tr=function(l){var o=[];(l||[]).forEach(function(n){n=un(n);if(o.indexOf(n)<0)o.push(n)});return o};
+    var x=cp(c),r=cp(c.roulement);r.equipes=((c.roulement||{}).equipes||[]).map(function(e){var y=cp(e);y.personnes=tr(e.personnes);return y});x.roulement=r;
+    x.regles=(c.regles||[]).map(function(g){var y=cp(g),q=cp(g.qui);q.noms=tr((g.qui||{}).noms);y.qui=q;return y});
+    x.conges=(c.conges||[]).map(function(k){var y=cp(k);y.nom=un(k.nom);return y});
+    x.rempl={};Object.keys(c.rempl||{}).forEach(function(k){x.rempl[k]=un(c.rempl[k])});
+    x.exc={};Object.keys(c.exc||{}).forEach(function(k){var y=cp(c.exc[k]);y.noms=tr(c.exc[k].noms);x.exc[k]=y});
+    if(c.fige){x.fige=cp(c.fige);x.fige.n=(c.fige.n||[]).map(un)}
+    return JSON.stringify(x)===JSON.stringify(c)?c:x;
+  }
+  return {personnesCal:personnesCal,D:D,S:S,ajoute:ajoute,lundi:lundi,ecart:ecart,auj:auj,travaille:travaille,ferme:ferme,equipeDu:equipeDu,datesRegle:datesRegle,occurrences:occurrences,faite:faite,etats:etats,absent:absent,
     dureeOp:dureeOp,poids:poids,chargeMois:chargeMois,eligibles:eligibles,DUREE_DEFAUT:DUREE_DEFAUT,figer:figer,
     axesM:axesM,parBroche:parBroche,suivi:suivi,horsService:horsService,hsDe:hsDe,brochesDe:brochesDe,groupes:groupes,brochesOcc:brochesOcc,brocheDuTour:brocheDuTour,ouvertes:ouvertes,ficheBroches:ficheBroches,dansFenetre:dansFenetre};
 })();
@@ -738,6 +1029,150 @@ const TEINTE={accueil:['#16a3ad','#0b6f78'],tableau:['#7c6cf0','#4b3bbd'],ecran:
 const svg=(id,cls)=>'<svg class="'+(cls||'i')+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(ICO[id]||ICO.aide)+'</svg>';
 const pastille=(id,taille)=>{const t=TEINTE[id]||['#5d6f78','#2c3e46'];return '<span class="pa'+(taille?' '+taille:'')+'" style="--c1:'+t[0]+';--c2:'+t[1]+'">'+svg(id)+'</span>'};
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+// <design-general>
+// --- Design général v2 (maquette validée le 2026-10-17) : sections numérotées à couleurs repères, état de chaque section
+// (✓ Rempli / • À compléter / ○ Vide) et sommaire collant avec progression. AFFICHAGE SEULEMENT : rien n'est enregistré ici.
+// v2 : le bloc ne lit plus rien de la page. La page le branche avec dsCreer({view, esc, haut}) :
+//   view = l'élément qui contient l'écran (ou une fonction qui le rend), esc = sa fonction d'échappement HTML,
+//   haut = sélecteur de la barre collante du haut (défaut « .top »).
+// Le même fichier sert donc aux applis tablette, à la console du PC et à la console en ligne.
+// Appeler dsCreer UNE seule fois par page (les écouteurs sont posés sur document) : un 2e appel rend le même objet.
+// titre, type et aide sont du HTML déjà échappé par la page ; nom (sommaire) est échappé ici.
+// v2.4 : thème de l'appareil Auto / Clair / Sombre (localStorage « ds-theme », Clair par défaut), partagé par toutes les
+// pages du même site (accueil et applis du pack, ou console). Pose la classe « ds-sombre » sur <html> (ds.css) et l'attribut
+// data-ds-theme (le choix). Auto suit l'appareil, même quand il change en cours de route. Préférence d'affichage seulement.
+const dsTheme=(function(){
+  const CLE='ds-theme',mq=window.matchMedia?matchMedia('(prefers-color-scheme: dark)'):null;
+  const lire=()=>{try{const v=localStorage.getItem(CLE);return v==='auto'||v==='sombre'?v:'clair'}catch(e){return 'clair'}};
+  function appliquer(){
+    const v=lire(),s=v==='sombre'||(v==='auto'&&!!mq&&mq.matches),r=document.documentElement;
+    r.setAttribute('data-ds-theme',v);r.classList.toggle('ds-sombre',s);
+    document.querySelectorAll('[data-ds-theme-choix]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.dsThemeChoix===v)));
+  }
+  function choisir(v){try{localStorage.setItem(CLE,v)}catch(e){}appliquer()}
+  // Les 3 boutons du choix, à placer où la page veut (réglages de l'appli, menu de la console).
+  function bouton(){const v=lire();return '<div class="ds-theme" role="group" aria-label="Apparence de cet appareil">'+
+    [['auto','Auto'],['clair','Clair'],['sombre','Sombre']].map(([k,t])=>'<button type="button" data-ds-theme-choix="'+k+'" aria-pressed="'+(v===k)+'">'+t+'</button>').join('')+'</div>'}
+  if(mq){if(mq.addEventListener)mq.addEventListener('change',appliquer);else if(mq.addListener)mq.addListener(appliquer)}
+  addEventListener('storage',e=>{if(e.key===CLE)appliquer()});
+  document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-ds-theme-choix]');if(b)choisir(b.dataset.dsThemeChoix)});
+  appliquer();
+  return {appliquer,choisir,bouton,lire};
+})();
+// Aussi sur window : l'accueil du pack ou une autre page peut proposer le même choix (window.dsTheme.bouton()).
+try{window.dsTheme=dsTheme}catch(e){}
+let dsUnique=null;
+function dsCreer(o){
+  if(dsUnique)return dsUnique;
+  o=o||{};
+  const vue=()=>(typeof o.view==='function'?o.view():o.view)||document.body;
+  const esc=o.esc||(s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])));
+  const haut=o.haut||'.top';
+  const ICO={
+    identite:'<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2.2"/><path d="M5.8 16a3.4 3.4 0 0 1 6.4 0"/><path d="M14 10h4"/><path d="M14 14h3"/>',
+    machines:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/>',
+    preparation:'<rect x="3" y="8" width="18" height="12" rx="2"/><path d="M9 8V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3"/><path d="M3 13h18"/>',
+    securite:'<path d="M12 3 2 20h20L12 3z"/><path d="M12 10v4"/><path d="M12 17h.01"/>',
+    contenu:'<path d="M10 6h11M10 12h11M10 18h11"/><path d="M4 6h1v4M4 10h2"/><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"/>',
+    controle:'<circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/>',
+    medias:'<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',
+    reglages:'<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>'
+  };
+  const TXT={ok:'✓ Rempli',todo:'• À compléter',vide:'○ Vide'},SYM={ok:'✓',todo:'•',vide:'○'};
+  // s : {n (numéro, absent = bloc dans une section), t (type), titre, type (sous-titre), nom (sommaire), aide (texte existant
+  // rangé derrière « ? »), corps, cls (classe en plus, ex. « esec » que l'appli surveille), fixe ('ok'|'vide' : état décidé par l'appli),
+  // defaut ('ok' : un choix vide est un choix valable), besoin (texte : la section doit contenir au moins une saisie)}
+  function sec(s){
+    return '<section class="ds-sec'+(s.cls?' '+s.cls:'')+'" data-ds="'+s.t+'"'+(s.n?' id="ds-s'+s.n+'" data-ds-n="'+s.n+'" data-nom="'+esc(s.nom||s.titre)+'"':'')+
+      (s.fixe?' data-ds-fixe="'+s.fixe+'"':'')+(s.defaut?' data-ds-defaut="'+s.defaut+'"':'')+(s.besoin?' data-ds-besoin="1"':'')+'>'+
+      '<header class="ds-sec-h">'+(s.n?'<span class="ds-n">'+s.n+'</span>':'')+'<span class="ds-ico" aria-hidden="true"><svg viewBox="0 0 24 24">'+ICO[s.t]+'</svg></span>'+
+      '<div class="ds-tt"><h2>'+s.titre+'</h2>'+(s.type?'<span class="ds-type">'+s.type+'</span>':'')+'</div>'+
+      (s.n?'<span class="ds-etat"></span>':'')+(s.aide?'<button type="button" class="ds-aide-b" data-ds-aide aria-expanded="false" aria-controls="ds-aide-'+(++nAide)+'" aria-label="Aide de la section">?</button>':'')+
+      // v2.3 : sur téléphone, chaque section numérotée se replie (bouton visible seulement sous 640 px).
+      (s.n?'<button type="button" class="ds-repli" data-ds-repli aria-expanded="true" aria-label="Replier ou déplier la section"><span aria-hidden="true">⌃</span></button>':'')+'</header>'+
+      '<div class="ds-sec-b">'+(s.aide?'<p class="ds-aide-long" id="ds-aide-'+nAide+'">'+s.aide+'</p>':'')+s.corps+
+      (s.besoin?'<p class="ds-manque-t">'+s.besoin+'</p>':'')+'</div></section>';
+  }
+  // Sommaire (vide : rempli par maj) et repère du haut de l'éditeur.
+  function somm(extra){return '<nav class="ds-somm" aria-label="Sections"><div class="ds-somm-l"></div><div class="ds-prog"><span class="ds-prog-t"></span><span class="ds-barre"><i></i></span>'+(extra||'')+'</div></nav>'}
+  function etat(s){
+    if(s.dataset.dsFixe)return s.dataset.dsFixe;
+    let manque=false;
+    s.querySelectorAll('[data-ds-req]').forEach(i=>{const m=!String(i.value||'').trim(),c=i.closest('.field')||i.parentNode;c.classList.toggle('ds-manque',m);if(m)manque=true});
+    // v2.1 : classe ds-vide / ds-plein sur chaque champ (bord pointillé / ✓), même sans texte d'exemple (consoles).
+    s.querySelectorAll('input.in,textarea.in').forEach(i=>{const p=!!String(i.value||'').trim();i.classList.toggle('ds-plein',p);i.classList.toggle('ds-vide',!p)});
+    const hors=el=>!!el.closest('[data-ds-ignore]');
+    let n=[...s.querySelectorAll('input.in,textarea.in,select.in')].filter(i=>!hors(i)&&i.type!=='file'&&i.type!=='checkbox'&&String(i.value||'').trim()).length;
+    n+=[...s.querySelectorAll('input[type=checkbox]:checked,[aria-pressed="true"],.thumb,.shot')].filter(x=>!hors(x)).length;
+    if(s.dataset.dsBesoin){const b=!n;s.classList.toggle('ds-manque',b);if(b)manque=true}
+    return manque?'todo':n||s.dataset.dsDefaut==='ok'?'ok':'vide';
+  }
+  let courant='',nAide=0;
+  // v2.1 (relecteur) : une erreur d'affichage ne doit jamais remonter dans render() de l'appli.
+  function maj(){try{majSomm()}catch(e){try{console.error('design général : sommaire',e)}catch(x){}}}
+  function majSomm(){
+    const top=document.querySelector(haut),v=vue(),r=document.documentElement.style;
+    if(top)r.setProperty('--ds-haut',top.offsetHeight+'px');
+    const l=v.querySelector('.ds-somm-l');if(!l)return;
+    const secs=[...v.querySelectorAll('.ds-sec[data-ds-n]')];let ok=0;
+    const html=secs.map(s=>{const e=etat(s);if(e==='ok')ok++;const p=s.querySelector('.ds-etat');if(p){const k='ds-etat '+e;if(p.className!==k)p.className=k;if(p.textContent!==TXT[e])p.textContent=TXT[e]}
+      return '<a href="#'+s.id+'" data-ds="'+s.dataset.ds+'"'+(courant===s.id?' aria-current="true"':'')+'><span class="n">'+s.dataset.dsN+'</span>'+esc(s.dataset.nom)+' <span class="e '+e+'" role="img" aria-label="'+TXT[e]+'">'+SYM[e]+'</span></a>'}).join('')+
+      (v.querySelector('#qual')?'<a href="#qual" class="ds-qual">Pour une procédure claire</a>':'');
+    // Reconstruit seulement si quelque chose a changé (garde le focus clavier dans le sommaire).
+    if(l.dsHtml!==html){l.innerHTML=html;l.dsHtml=html}
+    // Hauteur réelle du sommaire (1 à 3 lignes) : une section atteinte par le sommaire n'est jamais cachée dessous.
+    const so=v.querySelector('.ds-somm');if(so)r.setProperty('--ds-somm',so.offsetHeight+'px');
+    const t=v.querySelector('.ds-prog-t'),b=v.querySelector('.ds-barre i');
+    // v2.2 : n'écrit que ce qui change (une page qui surveille ses changements, comme la console, ne boucle pas).
+    const pt=ok+' / '+secs.length+' sections remplies',pw=Math.round(ok/Math.max(1,secs.length)*100)+'%';if(t&&t.textContent!==pt)t.textContent=pt;if(b&&b.style.width!==pw)b.style.width=pw;
+  }
+  // Sommaire : aller à la section (sans changer l'adresse de la page) ; « ? » : afficher / cacher l'aide de la section.
+  document.addEventListener('click',e=>{
+    const a=e.target.closest&&e.target.closest('.ds-somm a');
+    if(a){e.preventDefault();const s=vue().querySelector(a.getAttribute('href'));if(s){courant=s.id;replier(s,false);const doux=!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);s.scrollIntoView({behavior:doux?'smooth':'auto',block:'start'});maj()}return}
+    const r=e.target.closest&&e.target.closest('[data-ds-repli]');
+    if(r){const s=r.closest('.ds-sec');replier(s,!s.classList.contains('ds-replie'));return}
+    const h=e.target.closest&&e.target.closest('[data-ds-aide]');
+    if(h){const s=h.closest('.ds-sec'),on=s.classList.toggle('ds-aide-on');h.setAttribute('aria-expanded',String(on))}
+  });
+  function replier(s,oui){s.classList.toggle('ds-replie',oui);const b=s.querySelector(':scope>.ds-sec-h [data-ds-repli]');if(b)b.setAttribute('aria-expanded',String(!oui))}
+  const suivre=e=>{if(e.target.closest&&e.target.closest('.ds-sec'))maj()};
+  document.addEventListener('input',suivre);document.addEventListener('change',suivre);
+  window.addEventListener('resize',()=>{if(vue().querySelector('.ds-somm'))maj()});
+  dsUnique={sec,somm,maj,etat,esc,ICO,TXT,SYM,theme:dsTheme};
+  return dsUnique;
+}
+// --- Console (lot 3 du design général, 2026-10-17) : AFFICHAGE SEULEMENT --------------------------------------------------
+// Fiche machine en modification : les champs de l'appli (champ()), rangés en sections numérotées ; rien d'autre ne change.
+// groupes : [[type, titre, sous-titre, [clés des champs], html en plus]]
+function dsFicheSections(f,b,groupes){
+  const l=f.filter(Boolean);let n=0;
+  return dsSomm()+groupes.map(g=>{const c=l.filter(x=>g[3].includes(x.k));if(!c.length&&!g[4])return '';
+    return dsSec({n:++n,t:g[0],titre:g[1],type:g[2],corps:'<div class="form">'+c.map(x=>champ(x,b[x.k],x.k,{})).join('')+g[4]+'</div>'})}).join('');
+}
+// La console remplace la page entière à chaque lecture (chargerPage) : le sommaire et l'état des sections sont recalculés
+// après chaque changement de la page (en ignorant ceux que le sommaire fait lui-même : pas de boucle).
+function dsSuivreConsole(){
+  let prevu=false;
+  new MutationObserver(l=>{
+    if(prevu||!l.some(m=>!(m.target.closest&&m.target.closest('.ds-somm,.ds-etat'))))return;
+    prevu=true;requestAnimationFrame(()=>{prevu=false;if(document.querySelector('#page .ds-somm'))DS.maj()});
+  }).observe(document.body,{childList:true,subtree:true});
+}
+// --- Choix du thème dans le menu des consoles (lot 6 du design général, 2026-10-17) : AFFICHAGE SEULEMENT --------------
+// Nouvelle console : en bas du menu (.nav .foot), reconstruit à chaque affichage ; ancienne console : en bas du menu (nav).
+// Le choix reste sur ce PC / cet appareil (localStorage « ds-theme »).
+function dsThemeMenu(){
+  const foot=document.querySelector('.nav .foot')||document.querySelector('body > .layout > nav');
+  if(!foot||foot.querySelector('.ds-theme'))return;
+  foot.insertAdjacentHTML('beforeend','<div class="ds-theme-menu"><span>Apparence</span>'+dsTheme.bouton()+'</div>');
+}
+function dsSuivreThemeMenu(){
+  let prevu=false;dsThemeMenu();
+  new MutationObserver(()=>{if(prevu)return;prevu=true;requestAnimationFrame(()=>{prevu=false;try{dsThemeMenu()}catch(e){}})}).observe(document.body,{childList:true,subtree:true});
+}
+const DS=dsCreer({view:()=>document.getElementById('page')||document.body,esc:esc,haut:'.top'}),dsSec=DS.sec,dsSomm=DS.somm;dsSuivreConsole();dsSuivreThemeMenu();
+// </design-general>
 
 // Les parties : mêmes identifiants que le script Google (PARTIES_CONSOLE_). lect : ne se modifie pas.
 // pc : se fait sur le PC de l'atelier (console du PC) ; la page en ligne ne fait que l'indiquer.
@@ -1426,8 +1861,10 @@ function vueFicheMachine(r){
     {k:'photo',t:'photo',l:'Photo de la machine'},{k:'plaque',t:'photo',l:'Photo de la plaque'},{k:'notes',t:'zone',l:'Notes'},{k:'horsService',t:'case',l:'Hors service'}];
   return '<aside class="card fiche edition"><h2>'+pastille('parc','s')+(E.nouveau?'Nouvelle machine':'Modifier « '+esc(E.nomAvant)+' »')+'</h2>'+
     (E.msg?'<div class="msg '+E.msg[0]+'">'+svg('alerte')+'<div>'+E.msg[1]+'</div></div>':'')+
-    '<div class="form">'+f.filter(Boolean).map(x=>champ(x,b[x.k],x.k,{})).join('')+
-    ((b.anciens||[]).length?'<p class="hint" style="margin:0">Anciens noms : '+esc(b.anciens.join(', '))+'</p>':'')+'</div>'+
+    // Design général (lot 3) : les mêmes champs, rangés en 4 sections ; sommaire en haut de la fiche.
+    dsFicheSections(f,b,[['identite','Identité','Nom, secteur, zone',['nom','secteur','zone'],(b.anciens||[]).length?'<p class="hint" style="margin:0">Anciens noms : '+esc(b.anciens.join(', '))+'</p>':''],
+      ['machines','Machine','Type et broches',['type','marque','modele','serie','broches'],''],['medias','Photos','Machine et plaque',['photo','plaque'],''],
+      ['reglages','Mise en service, SAV et notes','Suivi',['mes','sav','notes','horsService'],'']])+
     '<div class="row" style="margin-top:14px"><button class="btn" data-pe="annuler">Annuler</button><button class="btn pri" data-pe="enregistrer">Enregistrer</button></div></aside>';
 }
 function vueTypes(r){
@@ -1454,24 +1891,27 @@ PAGES.parc=async()=>{
   h+=noteFiltre(ms.length,'machine(s)');
   h+='<div class="tb"><input class="in" id="parcQ" type="search" placeholder="Chercher une machine, un type, un n° de série…" value="'+esc(S.parcQ)+'"><span class="hint">'+ms.length+' machine(s)</span>'+
     (mod&&!E?'<span class="grow"></span><button class="btn pri" data-pe="nouveau">'+svg('plus')+'Nouvelle machine</button>':'')+'</div>';
-  h+='<div class="parc'+(sel||E?' ouvert':'')+'"><div class="mgrid">'+(ms.length?ms.map(m=>{
+  h+='<div class="parc'+(sel||E?' ouvert':'')+'"><div class="ds-parc-g"><div class="mgrid">'+(ms.length?ms.map(m=>{
     const manque=!m.serie||!m.type;
     return '<button class="mac'+(m.actif===false?' off':'')+'" data-parc="'+esc(m.id)+'"'+((sel&&sel.id===m.id)||(E&&E.item.id===m.id)?' aria-current="true"':'')+'><span class="sec-t">'+esc(secNom(m.secteur))+'</span><div class="vis">'+svg('parc')+'</div><div class="bd"><b>'+esc(m.nom)+'</b>'+repere(m)+
       '<span class="l">'+esc(m.type||'type à préciser')+(m.zone?' · '+esc(zones[m.zone]||m.zone):' · tout le secteur')+'</span>'+
       '<span class="row" style="gap:6px">'+(m.actif===false?'<span class="tag">Hors service</span>':'<span class="tag ok">✓ En service</span>')+(manque?'<span class="tag warn">! Fiche à compléter</span>':'')+'</span></div></button>'}).join(''):'<div class="vide">Aucune machine.</div>')+'</div>';
+  if(mod&&r.data.typesModifiables)h+=vueTypes(r);
+  h+='</div>';
   if(E)h+=vueFicheMachine(r);
   else if(sel){
     const ligne=(l,v)=>v?'<dt>'+l+'</dt><dd>'+esc(v)+'</dd>':'';
-    h+='<aside class="card fiche"><h2>'+pastille('parc','s')+esc(sel.nom)+'<span class="grow"></span>'+(mod&&!/^tmp-/.test(sel.id)?'<button class="btn" data-pe="modifier" data-id="'+esc(sel.id)+'">'+svg('crayon')+'Modifier</button>':'')+'<button class="btn" data-parc="">Fermer</button></h2><dl>'+
-      ligne('Secteur',secNom(sel.secteur))+ligne('Zone',sel.zone?zones[sel.zone]||sel.zone:'Tout le secteur')+ligne('Type',sel.type)+ligne('Marque',sel.marque)+ligne('Modèle',sel.modele)+
-      ligne('N° de série',sel.serie)+ligne('Mise en service',sel.mes)+ligne('SAV',sel.sav)+ligne('Broches',sel.secteur==='fraisage'&&sel.broches?sel.broches:'')+ligne('État',sel.actif===false?'Hors service':'En service')+
-      ligne('Anciens noms',liste(sel.anciens))+ligne('Notes',sel.notes)+'</dl>'+
-      (sel.photo?'<h3 style="margin:14px 0 4px;font-size:16px">Photo</h3>'+boutonPhoto(sel.photo):'')+(sel.plaque?'<h3 style="margin:14px 0 4px;font-size:16px">Plaque</h3>'+boutonPhoto(sel.plaque):'')+
+    // Design général (lot 3) : mêmes informations, rangées en 4 blocs de couleur (Identité · Machine · Photos · Suivi).
+    const bloc=(t,titre,type,l)=>dsSec({t,titre,type,corps:l?'<dl>'+l+'</dl>':'<p class="hint" style="margin:0">Rien de renseigné.</p>'});
+    h+='<aside class="card fiche"><h2>'+pastille('parc','s')+esc(sel.nom)+'<span class="grow"></span>'+(mod&&!/^tmp-/.test(sel.id)?'<button class="btn" data-pe="modifier" data-id="'+esc(sel.id)+'">'+svg('crayon')+'Modifier</button>':'')+'<button class="btn" data-parc="">Fermer</button></h2>'+
+      bloc('identite','Identité','Secteur et zone',ligne('Secteur',secNom(sel.secteur))+ligne('Zone',sel.zone?zones[sel.zone]||sel.zone:'Tout le secteur')+ligne('Anciens noms',liste(sel.anciens)))+
+      bloc('machines','Machine','Type et broches',ligne('Type',sel.type)+ligne('Marque',sel.marque)+ligne('Modèle',sel.modele)+ligne('N° de série',sel.serie)+ligne('Broches',sel.secteur==='fraisage'&&sel.broches?sel.broches:''))+
+      dsSec({t:'medias',titre:'Photos',type:'Machine et plaque',corps:(sel.photo?'<h3 style="margin:0 0 4px;font-size:16px">Photo</h3>'+boutonPhoto(sel.photo):'')+(sel.plaque?'<h3 style="margin:14px 0 4px;font-size:16px">Plaque</h3>'+boutonPhoto(sel.plaque):'')||'<p class="hint" style="margin:0">Pas de photo.</p>'})+
+      bloc('reglages','Mise en service, SAV et notes','Suivi',ligne('Mise en service',sel.mes)+ligne('SAV',sel.sav)+ligne('État',sel.actif===false?'Hors service':'En service')+ligne('Notes',sel.notes))+
       (mod&&!/^tmp-/.test(sel.id)?'<div class="row" style="margin-top:14px">'+(S.suppr===sel.id?'<button class="btn dan plein" data-pe="supprimer-ok">Oui, supprimer « '+esc(sel.nom)+' »</button><button class="btn" data-pe="supprimer-non">Annuler</button>':'<button class="btn dan" data-pe="supprimer" data-id="'+esc(sel.id)+'">Supprimer la machine</button>')+'</div>'+
         '<p class="hint" style="margin:8px 0 0">Une machine qui ne sert plus : préférez « Hors service » (son historique reste lisible).</p>':'')+'</aside>';
   }
   h+='</div>';
-  if(mod&&r.data.typesModifiables)h+=vueTypes(r);
   return h;
 };
 // Envoi au script : TOUTES les machines visibles (la page les a toutes), avec la version lue (depuis).
@@ -1527,17 +1967,19 @@ async function actionParc(b){
 const ROLES_NOMS={operateur:'Opérateur',chef:'Chef d’équipe',responsable:'Responsable',admin:'Administrateur'};
 function vueFichePersonne(r){
   const E=S.edit,b=E.item,vis=r.data.secteurs||[],zs=r.data.zones||[];
+  // Design général (lot 3) : mêmes champs en 3 blocs de couleur : Identité · Rattachement · Code tablette.
   return '<section class="card edition" style="margin-bottom:16px"><h2>'+pastille('personnes','s')+(E.nouveau?'Nouvelle personne':'Modifier « '+esc(E.nomAvant)+' »')+'</h2>'+
     (E.msg?'<div class="msg '+E.msg[0]+'">'+svg('alerte')+'<div>'+E.msg[1]+'</div></div>':'')+
-    '<div class="form">'+champ({k:'nom',t:'texte',l:'Nom (unique sur le site)',req:1},b.nom,'nom',{})+
-    (E.nomAvant&&E.nomAvant===S.moi.nom?'<p class="hint" style="margin:0">Votre propre rôle ne se change pas ici.</p>':champ({k:'role',t:'choix',l:'Rôle',rerender:1,choix:(r.data.roles||[]).map(x=>[x.id,x.nom])},b.role,'role',{}))+
+    dsSec({t:'identite',titre:'Identité',type:'Nom et rôle',corps:'<div class="form">'+champ({k:'nom',t:'texte',l:'Nom (unique sur le site)',req:1},b.nom,'nom',{})+
+    (E.nomAvant&&E.nomAvant===S.moi.nom?'<p class="hint" style="margin:0">Votre propre rôle ne se change pas ici.</p>':champ({k:'role',t:'choix',l:'Rôle',rerender:1,choix:(r.data.roles||[]).map(x=>[x.id,x.nom])},b.role,'role',{}))+'</div>'})+
+    dsSec({t:'machines',titre:'Rattachement',type:'Secteurs et zones',corps:''+
     (b.role==='admin'?'<p class="hint" style="margin:0">Administrateur : toutes les zones.</p>':
       '<fieldset class="fs"><legend>Rattachement (secteur entier ou zones)</legend><div class="row">'+vis.map(s=>'<label class="chip"><input type="checkbox" data-fm="secteurs" value="'+esc(s)+'"'+(b.secteurs.includes(s)?' checked':'')+'>Tout le secteur '+esc(secNom(s))+'</label>').join('')+'</div>'+
       '<div class="row" style="margin-top:8px">'+zs.map(z=>'<label class="chip"><input type="checkbox" data-fm="zones" value="'+esc(z.id)+'"'+(b.zones.includes(z.id)?' checked':'')+'>'+esc(z.nom)+'</label>').join('')+'</div>'+
-      (S.moi.admin?'<p class="hint" style="margin:8px 0 0">Rien de coché : la personne voit tout le site.</p>':'')+'</fieldset>')+
+      (S.moi.admin?'<p class="hint" style="margin:8px 0 0">Rien de coché : la personne voit tout le site.</p>':'')+'</fieldset>')})+
     // Code tablette : réservé aux administrateurs (décision de l'utilisateur, 2026-10-15) ; le script refuse sinon.
-    (S.moi.admin?'<div><label class="lbl" for="f-nouveauCode">'+(E.codeDefini?'Changer le code tablette':'Définir le code tablette')+' (4 à 8 chiffres ; vide = inchangé)</label><input class="in" id="f-nouveauCode" type="password" inputmode="numeric" autocomplete="new-password" maxlength="8" data-f="nouveauCode" value=""></div>':
-      '<p class="hint" style="margin:0">Code tablette : '+(E.codeDefini?'défini':'pas encore défini')+'. Seul un administrateur le définit ou le change.</p>')+'</div>'+
+    dsSec({t:'securite',cls:'ds-sans-hach',titre:'Code tablette',type:'Accès à la tablette',corps:''+(S.moi.admin?'<div><label class="lbl" for="f-nouveauCode">'+(E.codeDefini?'Changer le code tablette':'Définir le code tablette')+' (4 à 8 chiffres ; vide = inchangé)</label><input class="in" id="f-nouveauCode" type="password" inputmode="numeric" autocomplete="new-password" maxlength="8" data-f="nouveauCode" value=""></div>':
+      '<p class="hint" style="margin:0">Code tablette : '+(E.codeDefini?'défini':'pas encore défini')+'. Seul un administrateur le définit ou le change.</p>')})+
     '<div class="row" style="margin-top:14px"><button class="btn" data-pp="annuler">Annuler</button><button class="btn pri" data-pp="enregistrer">Enregistrer</button></div></section>';
 }
 PAGES.personnes=async()=>{
@@ -2080,17 +2522,18 @@ const ceListe=(c,v,choix)=>'<div class="row" style="gap:6px">'+(choix.length?cho
 function vueReglages(d,sec){
   const E=S.calEd,cal=E.cal,ops=(d.ops||[]).filter(o=>!o.archived),noms=nomsCalendrier(d),r=cal.roulement;
   let h=(E.msg?'<div class="msg '+E.msg[0]+'">'+svg('alerte')+'<div>'+E.msg[1]+'</div></div>':'');
-  h+='<section class="card edition"><h2>1. Jours travaillés et jours fermés</h2><div class="hint" style="margin-bottom:6px">Semaine habituelle</div>'+ceJours('jours',cal.jours)+
+  // Design général (lot 3, 2026-10-17) : sections numérotées à couleurs repères + sommaire ; mêmes champs, mêmes boutons.
+  h+=dsSomm()+dsSec({n:1,t:'machines',titre:'Jours travaillés et jours fermés',nom:'Jours',type:'Planning',cls:'edition',corps:'<div class="hint" style="margin-bottom:6px">Semaine habituelle</div>'+ceJours('jours',cal.jours)+
     '<h3 style="font-size:16px;margin:14px 0 6px">Périodes particulières (autres jours travaillés)</h3>'+cal.periodes.map((p,i)=>'<div class="row etape">'+ceTexte('periodes.'+i+'.du',p.du,'Du','date')+ceTexte('periodes.'+i+'.au',p.au,'Au','date')+ceJours('periodes.'+i+'.jours',p.jours)+'<button class="btn" data-cr="moins" data-k="periodes" data-i="'+i+'">Retirer</button></div>').join('')+
     '<button class="btn" data-cr="plus" data-k="periodes">'+svg('plus')+'Ajouter une période</button>'+
     '<h3 style="font-size:16px;margin:14px 0 6px">Jours fermés (fériés, fermetures)</h3>'+cal.fermes.map((p,i)=>'<div class="row etape">'+ceTexte('fermes.'+i+'.du',p.du,'Du','date')+ceTexte('fermes.'+i+'.au',p.au,'Au','date')+ceTexte('fermes.'+i+'.nom',p.nom,'Nom')+'<button class="btn" data-cr="moins" data-k="fermes" data-i="'+i+'">Retirer</button></div>').join('')+
-    '<button class="btn" data-cr="plus" data-k="fermes">'+svg('plus')+'Ajouter un jour fermé</button></section>';
-  h+='<section class="card edition" style="margin-top:16px"><h2>2. Roulement des personnes</h2><div class="row">'+ceChoix('roulement.mode',r.mode,'Change',[['semaine','par semaine'],['jour','par jour travaillé']])+ceTexte('roulement.n',r.n,'Toutes les','number',' min="1" max="12"')+ceTexte('roulement.debut',r.debut,'À partir du','date')+'</div>'+
+    '<button class="btn" data-cr="plus" data-k="fermes">'+svg('plus')+'Ajouter un jour fermé</button>'});
+  h+=dsSec({n:2,t:'identite',titre:'Roulement des personnes',nom:'Roulement',type:'Qui fait les maintenances',cls:'edition',corps:'<div class="row">'+ceChoix('roulement.mode',r.mode,'Change',[['semaine','par semaine'],['jour','par jour travaillé']])+ceTexte('roulement.n',r.n,'Toutes les','number',' min="1" max="12"')+ceTexte('roulement.debut',r.debut,'À partir du','date')+'</div>'+
     '<p class="hint">Les binômes ou équipes ci-dessous se relaient dans cet ordre.</p>'+r.equipes.map((e,i)=>'<div class="etape"><div class="row">'+ceTexte('roulement.equipes.'+i+'.nom',e.nom,'Nom')+ceTexte('roulement.equipes.'+i+'.couleur',e.couleur||'#2F6FDB','Couleur','color')+'<span class="grow"></span>'+
       '<button class="btn" data-cr="haut" data-k="roulement.equipes" data-i="'+i+'"'+(i?'':' disabled')+' aria-label="Monter">↑</button><button class="btn" data-cr="bas" data-k="roulement.equipes" data-i="'+i+'"'+(i<r.equipes.length-1?'':' disabled')+' aria-label="Descendre">↓</button><button class="btn" data-cr="moins" data-k="roulement.equipes" data-i="'+i+'">Retirer</button></div>'+
       '<div class="hint">Personnes (6 au plus)</div>'+ceListe('roulement.equipes.'+i+'.personnes',e.personnes,noms)+'</div>').join('')+
-    '<button class="btn" data-cr="plus" data-k="roulement.equipes">'+svg('plus')+'Ajouter un binôme / une équipe</button></section>';
-  h+='<section class="card edition" style="margin-top:16px"><h2>3. Quand revient chaque opération</h2>'+(ops.length?'':'<p class="hint">Aucune opération dans ce secteur : créez-les d’abord (Opérations de maintenance).</p>')+
+    '<button class="btn" data-cr="plus" data-k="roulement.equipes">'+svg('plus')+'Ajouter un binôme / une équipe</button>'});
+  h+=dsSec({n:3,t:'contenu',titre:'Quand revient chaque opération',nom:'Règles',type:'Règles du calendrier',cls:'edition',corps:''+(ops.length?'':'<p class="hint">Aucune opération dans ce secteur : créez-les d’abord (Opérations de maintenance).</p>')+
     cal.regles.map((g,i)=>{const f=ops.find(o=>o.id===g.op),cands=f&&(f.machines||[]).length?f.machines.filter(m=>(d.machines||[]).includes(m)):(d.machines||[]),cib=g.cible||((g.types||[]).length?'type':(g.machines||[]).length?'liste':'tout'),q=g.quand,p='regles.'+i;
       const types=[...new Set((d.types||[]).concat(g.types||[]))];
       return '<div class="etape"><div class="row">'+ceChoix(p+'.op',g.op,'Opération',ops.map(o=>[o.id,o.title]).concat(f||!g.op?[]:[[g.op,'(opération retirée)']]),1)+
@@ -2108,17 +2551,17 @@ function vueReglages(d,sec){
           '<div class="row">'+ceCase(p+'.qui.separe',!!g.qui.separe,'Une personne par machine (sinon la même pour toutes les machines de l’opération ce jour-là)')+'</div>'+
           (f&&!(Number(f.duree)>0)?'<p class="hint" style="color:var(--warn);margin:4px 0 0"><b>⚠ Temps estimé non renseigné</b> pour cette opération : 15 min par machine sont comptés (Opérations de maintenance › Temps estimé).</p>':''):'')+
         '<p class="hint" style="margin:6px 0 0">'+esc(descQuand(q))+'</p></div>'}).join('')+
-    (ops.length?'<button class="btn" data-cr="plus" data-k="regles">'+svg('plus')+'Ajouter une règle</button>':'')+'</section>';
+    (ops.length?'<button class="btn" data-cr="plus" data-k="regles">'+svg('plus')+'Ajouter une règle</button>':'')});
   const cg=(cal.conges||[]).slice().sort((a,b)=>String(a.du).localeCompare(String(b.du)));
-  h+='<section class="card edition" style="margin-top:16px"><h2>4. Congés et remplaçants</h2>'+cg.map(c=>{const i=cal.conges.indexOf(c);
+  h+=dsSec({n:4,t:'reglages',titre:'Congés et remplaçants',nom:'Congés',type:'Absences',cls:'edition',corps:''+cg.map(c=>{const i=cal.conges.indexOf(c);
       return '<div class="row etape">'+ceChoix('conges.'+i+'.nom',c.nom,'Personne',noms.map(n=>[n,n]))+ceTexte('conges.'+i+'.du',c.du,'Du','date')+ceTexte('conges.'+i+'.au',c.au,'Au','date')+
         '<label class="lbl" style="margin:0;min-width:200px">Remplacée par<select class="in" data-ce="rempl.'+esc(c.id)+'" data-t="opt"><option value="">Proposé automatiquement</option>'+noms.filter(n=>n!==c.nom).map(n=>'<option'+((cal.rempl||{})[c.id]===n?' selected':'')+'>'+esc(n)+'</option>').join('')+'</select></label>'+
         '<button class="btn" data-cr="moins-conge" data-id="'+esc(c.id)+'">Retirer</button></div>'}).join('')+
     '<button class="btn" data-cr="plus" data-k="conges">'+svg('plus')+'Ajouter un congé</button>'+
-    '<p class="hint" style="margin:8px 0 0">Sans remplaçant choisi, la console propose une personne présente, formée à l’opération et la moins chargée (comme l’appli).</p></section>';
+    '<p class="hint" style="margin:8px 0 0">Sans remplaçant choisi, la console propose une personne présente, formée à l’opération et la moins chargée (comme l’appli).</p>'});
   // Simulation : la charge du mois avec CES réglages (avant de les enregistrer).
   const auj=CalMaint.auj(),premier=auj.slice(0,8)+'01',d0=CalMaint.D(premier),dernier=CalMaint.S(new Date(d0.getFullYear(),d0.getMonth()+1,0,12));
-  try{h+=vueCharge(etatCalendrier(d,brouillonCalPropre(cal)),premier,dernier,'Simulation : charge du mois avec ces réglages')}catch(e){}
+  try{h+=dsSec({n:5,t:'controle',titre:'Simulation',nom:'Simulation',type:'Contrôle avant d’enregistrer',fixe:'ok',corps:vueCharge(etatCalendrier(d,brouillonCalPropre(cal)),premier,dernier,'Charge du mois avec ces réglages')})}catch(e){}
   h+='<div class="savebar"><span class="st">'+(E.sale?'<b style="color:var(--warn)">• Réglages à enregistrer.</b> Les tablettes du secteur les reçoivent à leur prochain échange.':'Rien de modifié.')+'</span>'+
     '<button class="btn" data-cr="annuler">Annuler</button><button class="btn pri" data-cr="enregistrer">Enregistrer le calendrier</button></div>';
   return h;
