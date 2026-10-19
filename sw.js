@@ -17,7 +17,7 @@ self.addEventListener('install',function(e){
   }).then(function(){return self.skipWaiting()}));
 });
 self.addEventListener('activate',function(e){
-  e.waitUntil(caches.keys().then(function(l){return Promise.all(l.filter(function(k){return k!==CACHE}).map(function(k){return caches.delete(k)}))}).then(function(){return self.clients.claim()}));
+  e.waitUntil(caches.keys().then(function(l){return Promise.all(l.filter(function(k){return k!==CACHE&&k.indexOf('pack-')===0}).map(function(k){return caches.delete(k)}))}).then(function(){return self.clients.claim()}));
 });
 
 function estPage(req,url){return req.mode==='navigate'||/\/(index\.html)?$/.test(url.pathname)}
