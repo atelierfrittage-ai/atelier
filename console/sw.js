@@ -4,7 +4,7 @@
 // Page : réseau d'abord (toujours la version publiée), copie gardée seulement si le réseau manque.
 // VERSION est posée à la construction (empreinte de la page) : chaque publication = nouveau service worker = bandeau
 // « Nouvelle version disponible » dans la page ; il ne prend la main que quand la personne recharge.
-var VERSION="ebdebd59e15a";
+var VERSION="e526adf327c0";
 var CACHE='console-atelier-'+VERSION;
 var STATIQUES=['./manifest.webmanifest','./icone-192.png','./icone-512.png'];
 var HORS_LIGNE='<!doctype html><html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'+

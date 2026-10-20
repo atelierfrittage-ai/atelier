@@ -543,6 +543,66 @@ button.sync{min-width:44px;justify-content:center}
 .ds-theme-menu .ds-theme button+button{border-left-color:#3a5560}
 .ds-theme-menu .ds-theme button[aria-pressed="true"]{background:#0e4d55;color:#fff}
 /* </design-general> */
+/* Section R&D (2026-10-20, maquette validée) : avancement toujours mot + symbole (○ ▶ ‖ • ✓ ✕) ; « Annulé » en gris
+   (ce n'est pas une erreur) ; compteurs = filtres ; liste en cartes sur téléphone. Clair et sombre (classe ds-sombre). */
+:root{--rd-plan:#4f6169;--rd-plan-bg:#EDF1F3;--rd-prod:#065E66;--rd-prod-bg:#DDF3F5;--rd-stand:#4C6676;--rd-stand-bg:#E4EAEE;
+  --rd-concl:#A85A00;--rd-concl-bg:#FFF1D6;--rd-term:#1F7A3A;--rd-term-bg:#E2F5E7;--rd-annul:#5d6a70;--rd-annul-bg:#F1F1F1}
+:root.ds-sombre{--rd-plan:#b9c8cf;--rd-plan-bg:#23343d;--rd-prod:#9FE3EA;--rd-prod-bg:#12383d;--rd-stand:#c4d4dd;--rd-stand-bg:#2a3a44;
+  --rd-concl:#F2B661;--rd-concl-bg:#3a2a10;--rd-term:#6FD08E;--rd-term-bg:#163524;--rd-annul:#a3adb2;--rd-annul-bg:#262f34}
+.rd-pt{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 12px;font-size:15px;font-weight:700;white-space:nowrap;border:1.5px solid transparent}
+.rd-pt .s{font-weight:900;width:1.1em;text-align:center}
+.rd-pt.rd-planifier{color:var(--rd-plan);background:var(--rd-plan-bg);border-color:var(--rd-plan);border-style:dashed}
+.rd-pt.rd-production{color:var(--rd-prod);background:var(--rd-prod-bg)}.rd-pt.rd-standby{color:var(--rd-stand);background:var(--rd-stand-bg)}
+.rd-pt.rd-conclure{color:var(--rd-concl);background:var(--rd-concl-bg)}.rd-pt.rd-termine{color:var(--rd-term);background:var(--rd-term-bg)}
+.rd-pt.rd-annule{color:var(--rd-annul);background:var(--rd-annul-bg)}
+.rd-cpts{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin:0 0 14px}
+.rd-cpt{display:flex;flex-direction:column;align-items:flex-start;gap:6px;border:1.5px solid var(--line);border-radius:12px;background:var(--card);padding:10px 12px;text-align:left;min-height:44px;cursor:pointer;color:var(--ink)}
+.rd-cpt .nb{font-size:28px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+.rd-cpt[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 2px var(--accent)}
+.rd-filtres{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:0 0 12px}
+.rd-filtres .in{width:auto;min-width:220px;flex:1;min-height:44px}.rd-filtres select.in{flex:0 1 280px}
+.rd-l{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);overflow:hidden}
+.rd-l td{vertical-align:middle}.rd-l td.num{font-weight:800;font-size:16px;white-space:nowrap}
+.rd-ouvrir{display:block;width:100%;min-height:44px;border:0;background:transparent;text-align:left;font:inherit;font-weight:700;font-size:16px;color:var(--ink);cursor:pointer;padding:4px 0}
+.rd-ouvrir:hover{color:var(--accent-dark);text-decoration:underline}
+.rd-orig{display:inline-flex;align-items:center;gap:5px;font-size:15px;font-weight:600;color:var(--c-reglages);border:1px solid var(--t-reglages-bd2);border-radius:6px;padding:0 8px;white-space:nowrap}
+.rd-orig.neuf{color:var(--c-identite);border-color:var(--t-identite-bd2)}
+.rd-ok{color:var(--ok)}
+.rd-av{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
+.rd-av button{display:flex;align-items:center;min-height:56px;padding:6px 8px;border-radius:12px;border:1.5px solid var(--line);background:var(--card);cursor:pointer;font:inherit}
+.rd-av button[aria-pressed="true"]{border-color:var(--accent-dark);box-shadow:inset 0 0 0 2px var(--accent-dark)}
+.rd-av button:disabled{cursor:not-allowed;opacity:.6}
+.rd-av .rd-pt{padding:2px 6px}
+.rd-dl{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:8px 16px;margin:0;font-size:16px}
+.rd-dl dt{color:var(--muted);font-weight:600}.rd-dl dd{margin:0;font-weight:600;min-width:0;overflow-wrap:anywhere;white-space:pre-wrap}
+.rd-dl dd.rd-vide{font-weight:400;color:var(--muted);font-style:italic}
+.rd-etapes{display:grid;gap:10px}
+.rd-etape{border:1px solid var(--line);border-radius:12px;background:var(--card);overflow:hidden}
+.rd-etape-h{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--c5,var(--bg));flex-wrap:wrap}
+.rd-etape-n{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;background:var(--c);color:var(--ds-sur);font-weight:800;font-size:17px;flex:none}
+.rd-etape-h .nom{font-weight:800;font-size:17px}
+.rd-etape-b{padding:10px 12px 12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(340px,100%),1fr));gap:6px 24px;font-size:15px}
+.rd-etape-b .cr{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;border-bottom:1px dashed var(--line2);padding:4px 0}
+.rd-pts{letter-spacing:1px;color:var(--accent-dark)}.rd-pts .v{opacity:.3}
+.rd-alerte{display:flex;gap:10px;align-items:flex-start;border-left:4px solid var(--warn-line);background:var(--warn-bg);border-radius:8px;padding:8px 12px;font-size:15px;margin:12px 0 0}
+.rd-alerte b{color:var(--warn)}
+.rd-param{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) auto;gap:10px;align-items:end;margin:0 0 10px}
+.rd-param .lbl{margin:0}
+.rd-chips{display:flex;flex-wrap:wrap;gap:8px}
+.rd-chips .chip[disabled]{opacity:.75;cursor:not-allowed;text-decoration:line-through}
+.rd-form{padding-bottom:96px}
+.rd-imp{max-height:420px;overflow:auto;border:1px solid var(--line);border-radius:12px}
+.rd-types li{display:flex;gap:10px;align-items:center;margin:0 0 8px}.rd-types ol{padding-left:22px;margin:0 0 12px}
+.rd-types .in{max-width:520px}
+@media (max-width:1100px){.rd-cpts,.rd-av{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:860px){
+  .rd-l table,.rd-l thead,.rd-l tbody,.rd-l tr,.rd-l td{display:block}
+  .rd-l thead{display:none}
+  .rd-l tr{border-bottom:1px solid var(--line);padding:8px 4px}
+  .rd-l td{border:0;padding:3px 10px}
+  .rd-param{grid-template-columns:1fr}
+}
+@media (max-width:520px){.rd-cpts,.rd-av{grid-template-columns:repeat(2,minmax(0,1fr))}.rd-filtres .in{min-width:0;width:100%}.rd-dl{grid-template-columns:1fr}.rd-dl dt{margin-top:6px}}
 </style>
 </head>
 <body>
@@ -1186,13 +1246,15 @@ const ICO={
   horloge:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   actualiser:'<path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/>',
   image:'<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/>',
-  logo:'<path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/><circle cx="12" cy="12" r="2.5"/>'
+  logo:'<path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/><circle cx="12" cy="12" r="2.5"/>',
+  // Section R&D (2026-10-20) : fiole de laboratoire (maquette validée).
+  rd:'<path d="M9 3h6"/><path d="M10 3v6L4.5 18.5A1.7 1.7 0 0 0 6 21h12a1.7 1.7 0 0 0 1.5-2.5L14 9V3"/><path d="M7.5 15h9"/>'
 };
 const TEINTE={accueil:['#16a3ad','#0b6f78'],tableau:['#7c6cf0','#4b3bbd'],ecran:['#4f8fae','#24566e'],tablette:['#5d7f8c','#2c4752'],
   lancements:['#e08a17','#a35f00'],calendrier:['#f2a93b','#c27206'],parc:['#4f8fae','#24566e'],personnes:['#16a3ad','#0b6f78'],
   maintenance:['#f2a93b','#c27206'],fiches:['#ef6b5b','#c0262d'],procedures:['#3b8fe0','#1d5aa6'],taches:['#3aa85b','#1f7a3a'],releve:['#16a3ad','#0b6f78'],
   message:['#e0679b','#a8336a'],acces:['#0B8A96','#065E66'],droits:['#7c6cf0','#4b3bbd'],apparence:['#e0679b','#a8336a'],version:['#3b8fe0','#1d5aa6'],
-  liaisons:['#5d6f78','#2c3e46'],aide:['#5d6f78','#2c3e46'],logo:['#16a3ad','#065E66']};
+  liaisons:['#5d6f78','#2c3e46'],aide:['#5d6f78','#2c3e46'],logo:['#16a3ad','#065E66'],rd:['#7349C2','#4C5BD4']};
 const svg=(id,cls)=>'<svg class="'+(cls||'i')+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(ICO[id]||ICO.aide)+'</svg>';
 const pastille=(id,taille)=>{const t=TEINTE[id]||['#5d6f78','#2c3e46'];return '<span class="pa'+(taille?' '+taille:'')+'" style="--c1:'+t[0]+';--c2:'+t[1]+'">'+svg(id)+'</span>'};
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -1343,7 +1405,7 @@ const DS=dsCreer({view:()=>document.getElementById('page')||document.body,esc:es
 
 // Les parties : mêmes identifiants que le script Google (PARTIES_CONSOLE_). lect : ne se modifie pas.
 // pc : se fait sur le PC de l'atelier (console du PC) ; la page en ligne ne fait que l'indiquer.
-const GROUPES=[['direct','Atelier en direct'],['plan','Planification'],['mach','Machines & personnes'],['cont','Contenus des applis'],['regl','Réglages']];
+const GROUPES=[['direct','Atelier en direct'],['plan','Planification'],['mach','Machines & personnes'],['cont','Contenus des applis'],['rd','Section R&D'],['regl','Réglages']];
 const PARTIES=[
   {id:'accueil',g:'direct',nom:'Vue d’ensemble',ico:'accueil',lect:1},
   {id:'tableau',g:'direct',nom:'Tableau de bord',ico:'tableau',lect:1},
@@ -1359,6 +1421,8 @@ const PARTIES=[
   {id:'c-taches',g:'cont',nom:'Tâches à faire',ico:'taches',app:'taches'},
   {id:'c-releve',g:'cont',nom:'Listes de la Relève',ico:'releve',lect:1},
   {id:'c-message',g:'cont',nom:'Message d’accueil',ico:'message'},
+  // Section R&D (2026-10-20) : console seulement pour l'instant (pas de tuile sur les tablettes).
+  {id:'c-rd',g:'rd',nom:'Essais R&D',ico:'rd',app:'rd'},
   {id:'acces',g:'regl',nom:'Accès des managers',ico:'acces',admin:1},
   {id:'droits',g:'regl',nom:'Qui voit quoi (tablettes)',ico:'droits'},
   {id:'apparence',g:'regl',nom:'Apparence & administration',ico:'apparence',admin:1},
@@ -1472,7 +1536,7 @@ function saisieEnCours(){
   const a=document.activeElement;
   // (Administration : la page est toujours un formulaire ; il n'y a saisie que si quelque chose a été changé.)
   if(S.adm&&!S.adm.sale&&!S.edit&&!S.dr)S.adm=null;
-  return !!(S.edit||S.dr||(S.adm&&S.adm.sale)||S.calEd||S.types||S.suppr||(S.acc&&S.acc.modifie)||(a&&a.closest&&a.closest('#page')&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)));
+  return !!(S.edit||S.dr||(S.adm&&S.adm.sale)||S.calEd||S.types||S.suppr||(S.acc&&S.acc.modifie)||rdSaisie()||(a&&a.closest&&a.closest('#page')&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)));
 }
 let nbFond=0;
 function temoinFond(){const e=document.getElementById('majFond');if(e)e.hidden=!nbFond}
@@ -1493,7 +1557,7 @@ function lecturesParties(avecSecteur){
   ajoute('parc','parc-lire');ajoute('personnes','personnes-lire');ajoute('c-message','messages-lire');ajoute('droits','droits-lire');
   ajoute('tablettes','tablettes-lire');ajoute('c-releve','releve-listes');ajoute('tableau','releves-lire');ajoute('lancements','lancements-lire');
   ajoute('acces','comptes-lire');ajoute('apparence','administration-lire');
-  if(sec){ajoute('calendrier','calendrier-lire',{secteur:sec});[['c-maint','maintenance'],['c-fiches','fiches'],['c-proc','procedures'],['c-taches','taches']].forEach(([id,app])=>ajoute(id,'contenu-lire',{app,secteur:sec}))}
+  if(sec){ajoute('calendrier','calendrier-lire',{secteur:sec});[['c-maint','maintenance'],['c-fiches','fiches'],['c-proc','procedures'],['c-taches','taches']].forEach(([id,app])=>ajoute(id,'contenu-lire',{app,secteur:sec}));ajoute('c-rd','rd-lire',{secteur:sec})}
   return l;
 }
 async function prechargerParties(avecSecteur){
@@ -1665,7 +1729,7 @@ function actionEnvoi(b){
 }
 // Fermer ou recharger la page avec des envois en attente : le navigateur demande confirmation.
 // Campagne 2026-10-17 : une saisie pas encore enregistrée (formulaire, réglages, accès) est protégée aussi.
-addEventListener('beforeunload',e=>{if(enAttente()||(S.moi&&((S.edit&&S.edit.sale)||(S.calEd&&S.calEd.sale)||(S.dr&&S.dr.sale)||(S.adm&&S.adm.sale)||(S.acc&&S.acc.modifie)||(S.types&&S.types.sale)))){e.preventDefault();e.returnValue=''}});
+addEventListener('beforeunload',e=>{if(enAttente()||(S.moi&&((S.edit&&S.edit.sale)||(S.calEd&&S.calEd.sale)||(S.dr&&S.dr.sale)||(S.adm&&S.adm.sale)||(S.acc&&S.acc.modifie)||(S.types&&S.types.sale)||rdSaisie()))){e.preventDefault();e.returnValue=''}});
 // Reprise après une reconnexion : seulement les enregistrements de la même personne.
 function reprendreEnvois(){
   if(ENVOI.pause!=='session')return;
@@ -1801,7 +1865,7 @@ function relireSite(){
 }
 function finSession(message){
   {const ab=document.getElementById('absent');if(ab)ab.remove();S.absent=0}
-  S.jeton='';S.moi=null;S.site=null;S.sitePret=null;S.charge={};S.photos={};S.sel={};S.acc=null;S.edit=null;S.types=null;S.calEd=null;S.dr=null;S.adm=null;S.msgAdm=null;S.suppr=null;S.msgCont=S.msgLanc=S.msgCal=S.msgParc=S.msgPers=S.msgMsg=S.msgDr=S.msgTab=null;ecrireJeton('');
+  S.jeton='';S.moi=null;S.site=null;S.sitePret=null;S.charge={};S.photos={};S.sel={};S.acc=null;S.edit=null;S.types=null;S.calEd=null;S.dr=null;S.adm=null;S.msgAdm=null;S.suppr=null;S.msgCont=S.msgLanc=S.msgCal=S.msgParc=S.msgPers=S.msgMsg=S.msgDr=S.msgTab=null;S.rd=null;ecrireJeton('');
   S.info=message||'';S.err='';render();
 }
 async function seDeconnecter(message){
@@ -2926,7 +2990,7 @@ function saisieCalendrier(el){
 const MODELES={
   lecture:{titre:'Lecture partout',f:p=>'lecture'},
   secteur:{titre:'Manager de secteur',f:p=>({accueil:'lecture',tableau:'lecture',ecrans:'lecture',tablettes:'lecture',aide:'lecture',parc:'lecture',personnes:'lecture',
-    calendrier:'modif',lancements:'modif','c-maint':'modif','c-fiches':'modif','c-proc':'modif','c-taches':'modif'})[p.id]||''},
+    calendrier:'modif',lancements:'modif','c-maint':'modif','c-fiches':'modif','c-proc':'modif','c-taches':'modif','c-rd':'modif'})[p.id]||''},
   rien:{titre:'Tout masquer',f:p=>''}
 };
 // Même règle que le script (nomComparable_) : deux comptes au même nom ne peuvent pas se connecter par leur nom.
@@ -3080,7 +3144,7 @@ async function actionAcces(b){
 // Lot 4 (2026-10-15) : MODIFICATIONS depuis la console en ligne. Les boutons n'apparaissent qu'avec le niveau
 // « Modification » de la partie ; le script Google vérifie de toute façon chaque écriture (partie, secteur, version).
 // Brouillon en mémoire seulement (jamais dans le navigateur) ; rien de secret dedans.
-const EDITABLES={apparence:1,acces:1,'c-maint':1,'c-fiches':1,'c-proc':1,'c-taches':1,lancements:1,calendrier:1,parc:1,personnes:1,'c-message':1,droits:1,tablettes:1};
+const EDITABLES={apparence:1,acces:1,'c-maint':1,'c-fiches':1,'c-proc':1,'c-taches':1,lancements:1,calendrier:1,parc:1,personnes:1,'c-message':1,droits:1,tablettes:1,'c-rd':1};
 const peutModif=id=>droit(id)==='modif'&&!!EDITABLES[id];
 // Identifiant tiré au hasard (crypto) : photos, fichiers des lancements, nouveaux éléments.
 function alea(n){const a=new Uint8Array(n);crypto.getRandomValues(a);return [...a].map(x=>'abcdefghijklmnopqrstuvwxyz0123456789'[x%36]).join('')}
@@ -3550,6 +3614,363 @@ async function capturePlan(machine,fid){
   return envoyerLancements([{type:'modifier',machine,fid,photo:id}],'Capture jointe au fichier.');
 }
 
+// ===============================================================================================================
+// Section R&D (2026-10-20) — partie « Essais R&D », d'après la maquette validée par l'utilisateur. Console seulement
+// (pas encore d'appli tablette). Une liste d'essais PAR SECTEUR (choisi en haut). Lecture : droit Lecture ; créer,
+// modifier, changer l'avancement (à la main), conclure, types d'essai : droit Modification du secteur ; reprise des
+// essais de l'Excel : administrateur, frittage, une seule fois. Le script Google contrôle tout (rd-lire, rd-ecrire,
+// rd-types-ecrire, rd-importer) et donne le numéro de l'essai à l'enregistrement.
+// Listes : mêmes valeurs que le bloc de fusion R-D\Sources\rd-fusion.js (contrôlé par tests/google.ts).
+const RD_AV=[['planifier','À planifier','○'],['production','En production','▶'],['standby','Stand by','‖'],['conclure','À conclure','•'],['termine','Terminé','✓'],['annule','Annulé','✕']];
+const RD_ETAPES=['Fabrication','Traitement thermique','Découpe / Sablage','Grattage','Polissage'];
+const RD_CRITERES=['Fit dimensionnel avant grattage','Fit dimensionnel après grattage / polissage','Santé matière','Satisfaction décorticage / grattage'];
+const RD_ECHELLE={mediocre:['Médiocre',1],correct:['Correct',2],bien:['Bien',3],tresbien:['Très bien',4],nonnote:['Non noté',0]};
+const RD_CHAMPS=['titre','type','machines','date','nest','contacts','parametres','objectif','conditions','controle','consignes','methodes','resultats','conclusion','avancement','photos'];
+// Reprise de l'Excel : seulement ces champs ; aucun texte qui ressemble à un nom de fichier (même motif que le script).
+const RD_IMPORT_CHAMPS=['num','titre','type','machines','date','objectif','parametres','conditions','controle','conclusion','avancement'];
+const RD_NOM_FICHIER=/\.(stl|dcm|3oxz|ply|obj|3mf|wzpack|wza|stp|step|igs|iges|zip|rar|7z|pdf|xlsx?|xlsm|csv|docx?|pptx?|jpe?g|png|bmp|gif|tiff?|txt|xml|json|cli|slm|ini|exe)\b|[A-Za-z]:[\\\/]|\\\\|[\w-]+\\[\w-]+/i;
+const RD_PATIENT='<div class="rd-alerte" role="note"><b aria-hidden="true">!</b><span>Ne jamais écrire de nom de patient ni de nom de fichier de cas.</span></div>';
+const rdAv=k=>RD_AV.find(a=>a[0]===k)||RD_AV[0];
+const rdPt=k=>{const a=rdAv(k);return '<span class="rd-pt rd-'+a[0]+'"><span class="s" aria-hidden="true">'+a[2]+'</span>'+a[1]+'</span>'};
+const rdNum=e=>e.num?String(e.num):'n° en attente';
+const rdDate=s=>/^\d{4}-\d\d-\d\d$/.test(s||'')?s.split('-').reverse().join('/'):'';
+const rdCle=sec=>'rd-lire|'+JSON.stringify({secteur:sec});
+const rdChamps=o=>{const x={};RD_CHAMPS.forEach(k=>{if(o&&o[k]!==undefined)x[k]=clone(o[k])});return x};
+const rdNotees=e=>Object.keys(e.notes||{}).filter(k=>RD_ETAPES.includes(k)).length;
+// État de la partie (mémoire de la page seulement) : vue liste / fiche / form / types / import, filtres, brouillons.
+const R=()=>S.rd||(S.rd={sec:'',vue:'liste',id:'',f:{av:'',type:'',q:'',orig:''},b:null,orig:null,sale:false,c:null,t:null,imp:null,msg:null});
+// Saisie en cours dans la partie (la page n'est pas redessinée sous les doigts ; on ne la quitte pas sans le vouloir).
+function rdSaisie(){const r=S.rd;return !!(r&&(r.sale||(r.c&&r.c.sale)||(r.t&&r.t.sale)))}
+// Prochain numéro probable (le vrai est donné par Google à l'enregistrement).
+function rdProchain(d,st){let m=(Number(d.prochain)||1)-1;(st.essais||[]).forEach(e=>{m=Math.max(m,Number(e.num)||0)});return m+1}
+const rdMsg=()=>{const m=R().msg;return m?'<div class="msg '+m[0]+'" role="status">'+svg(m[0]==='ok'?'ok':m[0]==='info'?'horloge':'alerte')+'<div>'+m[1]+'</div></div>':''};
+
+PAGES['c-rd']=async()=>{
+  const sec=unSecteur(),R0=R();
+  // Autre secteur choisi en haut : retour à la liste (une saisie en cours empêche de changer de secteur, voir les clics).
+  if(R0.sec!==sec)Object.assign(R0,{sec,vue:'liste',id:'',b:null,orig:null,sale:false,c:null,t:null,imp:null,msg:null});
+  const s2=sec;
+  if(!s2)return enTete('c-rd','Les essais de la Section R&D, secteur par secteur.')+'<div class="card vide">Aucun secteur visible.</div>';
+  const r=await lire('rd-lire',{secteur:s2});
+  if(!r.ok)return enTete('c-rd','Les essais de la Section R&D, secteur '+esc(secNom(s2))+'.')+(S.secteur==='tous'?choixSecteur():'')+refus(r);
+  const d=r.data,st=d.state||d.vierge||{types:[],essais:[]},mod=peutModif('c-rd');
+  if(R0.vue==='fiche'){const e=(st.essais||[]).find(x=>x.id===R0.id);if(e)return vueRdFiche(s2,d,st,e,mod);R0.vue='liste'}
+  if(R0.vue==='form'&&mod&&R0.b)return vueRdForm(s2,d,st);
+  if(R0.vue==='types'&&mod&&R0.t)return vueRdTypes(s2,d,st);
+  if(R0.vue==='import'&&S.moi.admin&&s2==='frittage')return vueRdImport(s2,d,st);
+  R0.vue='liste';
+  return vueRdListe(s2,d,st,mod);
+};
+
+// --- 1. Liste : compteurs (filtres), recherche, type, origine ---------------------------------------------------
+function vueRdListe(sec,d,st,mod){
+  const R0=R(),F=R0.f,tous=(st.essais||[]).slice().sort((a,b)=>(b.num||1e9)-(a.num||1e9)),nx=tous.filter(e=>e.origine==='excel').length;
+  let h=enTete('c-rd','Les essais du secteur '+esc(secNom(sec))+' : avancement, objectif, résultats. Le numéro est donné à l’enregistrement.',
+    mod?'<button class="btn pri" data-rd="nouveau">'+svg('plus')+'Créer un essai</button>':'');
+  h+=(S.secteur==='tous'?choixSecteur():'')+rdMsg();
+  h+='<p class="hint" style="margin:-6px 0 12px">Secteur '+esc(secNom(sec))+' · '+tous.length+' essai'+(tous.length>1?'s':'')+(nx?' · dont '+nx+' repris de l’Excel':'')+'</p>';
+  if(!tous.length){
+    h+='<div class="card vide"><p style="margin:0 0 10px"><b>○ Aucun essai dans ce secteur pour l’instant.</b></p>'+(mod?'<button class="btn pri" data-rd="nouveau">'+svg('plus')+'Créer le premier essai</button>':'')+
+      '<p class="hint" style="margin:10px 0 0">La suite de ce secteur commencera au n° '+rdProchain(d,st)+'.</p></div>';
+  }else{
+    h+='<div class="rd-cpts" role="group" aria-label="Avancement (touchez pour filtrer)">'+RD_AV.map(a=>'<button class="rd-cpt" data-rd="filtre-av" data-v="'+a[0]+'" aria-pressed="'+(F.av===a[0])+'"><span class="nb">'+tous.filter(e=>e.avancement===a[0]).length+'</span>'+rdPt(a[0])+'</button>').join('')+'</div>';
+    const types=[...new Set((st.types||[]).concat(tous.map(e=>e.type).filter(Boolean)))];
+    h+='<div class="rd-filtres"><label class="sr" for="rdQ">Rechercher</label><input class="in" id="rdQ" type="search" placeholder="Rechercher : n°, nom, machine…" value="'+esc(F.q)+'">'+
+      '<label class="sr" for="rdType">Type d’essai</label><select class="in" id="rdType" data-rd-type="1"><option value="">Tous les types</option>'+types.map(t=>'<option'+(F.type===t?' selected':'')+'>'+esc(t)+'</option>').join('')+'</select>'+
+      '<div class="row" role="group" aria-label="Origine">'+[['','Tous'],['neuf','Nouveaux'],['excel','Repris de l’Excel']].map(([k,t])=>'<button class="chip" data-rd="orig" data-v="'+k+'" aria-pressed="'+(F.orig===k)+'">'+t+'</button>').join('')+'</div></div>';
+    const q=F.q.trim().toLowerCase();
+    const l=tous.filter(e=>(!F.av||e.avancement===F.av)&&(!F.type||e.type===F.type)&&(!F.orig||(F.orig==='excel')===(e.origine==='excel'))&&
+      (!q||(e.num+' '+e.titre+' '+(e.machines||[]).join(' ')+' '+e.type).toLowerCase().includes(q)));
+    h+='<div class="rd-l"><table><thead><tr><th>N°</th><th>Essai</th><th>Type</th><th>Machines</th><th>Avancement</th><th>Étapes notées</th></tr></thead><tbody>'+
+      l.map(e=>{const n=rdNotees(e);return '<tr><td class="num">'+esc(rdNum(e))+'</td><td><button class="rd-ouvrir" data-rd="ouvrir" data-id="'+esc(e.id)+'">'+esc(e.titre)+repere(e)+'</button>'+
+        (e.origine==='excel'?'<span class="rd-orig">↧ Repris de l’Excel</span>':'<span class="rd-orig neuf">Nouveau</span>')+'</td><td>'+esc(e.type||'—')+'</td><td>'+esc((e.machines||[]).join(' · ')||'—')+'</td><td>'+rdPt(e.avancement)+'</td><td>'+
+        (e.origine==='excel'&&!n?'<span class="hint" title="Les notes des fiches OP de l’Excel ne sont pas reprises">— non reprises</span>':n===RD_ETAPES.length?'<b class="rd-ok">✓ '+n+' / '+RD_ETAPES.length+'</b>':(n?'• ':'○ ')+n+' / '+RD_ETAPES.length)+'</td></tr>'}).join('')+'</tbody></table>'+
+      (l.length?'':'<div class="vide">Aucun essai ne correspond. <button class="btn" data-rd="raz">Tout afficher</button></div>')+'</div>';
+    h+='<p class="hint">'+l.length+' essai'+(l.length>1?'s':'')+' affiché'+(l.length>1?'s':'')+' sur '+tous.length+'. Prochain numéro : '+rdProchain(d,st)+' (donné à l’enregistrement).</p>';
+  }
+  // Types d'essai du secteur (« Réglages R&D ») et reprise de l'Excel (administrateur, frittage, une fois).
+  const ty=st.types||[];
+  h+='<section class="card" style="margin-top:16px"><h2>'+svg('crayon')+'Types d’essai du secteur'+(mod?'<span class="grow"></span><button class="btn" data-rd="types">'+svg('crayon')+'Modifier les types</button>':'')+'</h2>'+
+    (ty.length?'<div class="row">'+ty.map(t=>'<span class="tag">'+esc(t)+'</span>').join('')+'</div>':'<p class="hint" style="margin:0">Aucun type d’essai dans ce secteur pour l’instant : à saisir par le responsable du secteur.</p>')+'</section>';
+  if(S.moi.admin&&sec==='frittage'&&!tous.some(e=>e.origine==='excel'))
+    h+='<section class="card" style="margin-top:16px"><h2>'+svg('version')+'Reprendre les essais de l’Excel (une seule fois)</h2><p class="hint" style="margin:0 0 10px">Fichier préparé à partir de la fiche R&amp;D Excel du frittage (essais 101 à 135) : n°, nom, type, machines, objectif, paramètres, conditions, contrôle, conclusion, avancement. Jamais les cas étudiés. Réservé à l’administrateur.</p><button class="btn" data-rd="import">'+svg('version')+'Importer les essais de l’Excel…</button></section>';
+  return h;
+}
+
+// --- 2. Fiche d'un essai : avancement à la main, sections colorées, suivi des étapes, conclusion --------------------
+function vueRdFiche(sec,d,st,e,mod){
+  const R0=R(),parc=d.machinesParc||[],att=!!e._attente,m2=mod&&!att;
+  const mach=n=>parc.find(m=>m.nom===n)||parc.find(m=>(m.anciens||[]).includes(n));
+  const dd=(t,v)=>'<dt>'+t+'</dt><dd'+(v?'':' class="rd-vide"')+'>'+(v?esc(v):'—')+'</dd>';
+  const plein=(...l)=>l.some(x=>Array.isArray(x)?x.length:!!x)?'ok':'vide';
+  let h='<div class="row" style="margin:0 0 12px"><button class="btn" data-rd="liste">← Liste des essais</button><span class="tag">Secteur '+esc(secNom(sec))+'</span>'+(e.origine==='excel'?'<span class="rd-orig">↧ Repris de l’Excel</span>':'')+'</div>';
+  h+='<div class="ph">'+pastille('rd','l')+'<div class="grow"><h1>'+(e.num?'Essai '+e.num:'Essai (n° en attente)')+' — '+esc(e.titre)+repere(e)+(mod?'':'<span class="ro">'+svg('oeil')+' Lecture seule</span>')+'</h1><p>'+esc(e.type||'Sans type')+
+    (e.creeLe?' · créé le '+dateFr(e.creeLe):'')+(e.creePar?' par '+esc(e.creePar):'')+'</p></div><span style="align-self:center">'+rdPt(e.avancement)+'</span>'+
+    (m2?'<button class="btn" data-rd="modifier" style="align-self:center">'+svg('crayon')+'Modifier</button>':'')+'</div>';
+  h+=rdMsg();
+  if(att)h+='<div class="msg info">'+svg('horloge')+'<div>Essai en cours d’envoi vers Google : son numéro arrive dans un instant. Les modifications seront possibles ensuite.</div></div>';
+  h+='<section class="card" style="margin-bottom:6px"><h2>Avancement</h2><p class="hint" style="margin:-6px 0 10px">Changé à la main par le responsable du secteur. Rien ne change tout seul.'+(m2?' « Terminé » : écrivez d’abord la conclusion (section 7).':'')+'</p>'+
+    (m2?'<div class="rd-av" role="group" aria-label="Choisir l’avancement">'+RD_AV.map(a=>'<button data-rd="avancement" data-v="'+a[0]+'" aria-pressed="'+(e.avancement===a[0])+'">'+rdPt(a[0])+'</button>').join('')+'</div>':rdPt(e.avancement))+'</section>';
+  h+=dsSomm();
+  h+=dsSec({n:1,t:'identite',titre:'Identité',type:'N°, nom, type',fixe:'ok',corps:'<dl class="rd-dl">'+dd('N° d’essai',rdNum(e))+dd('Nom',e.titre)+dd('Type d’essai',e.type)+dd('Secteur',secNom(sec))+dd('Date de lancement',rdDate(e.date))+dd('Contact(s)',e.contacts)+
+    dd('Créé par',(e.creePar||'')+(e.creeLe?' le '+dateFr(e.creeLe):''))+dd('Origine',e.origine==='excel'?'Repris de l’Excel (fiche R&D du frittage)':'Créé dans la console')+'</dl>'});
+  const ml=(e.machines||[]).map(n=>{const m=mach(n);return '<li><b>'+esc(n)+'</b> — '+(m?(m.serie?'n° de série '+esc(m.serie):'n° de série non renseigné')+' <span class="hint">(lu dans le parc machines)</span>'+(m.actif?'':' <span class="tag">hors service</span>')+(m.nom!==n?' <span class="hint">· aujourd’hui « '+esc(m.nom)+' »</span>':''):'<span class="hint">pas dans le parc machines</span>')+'</li>'}).join('');
+  h+=dsSec({n:2,t:'machines',titre:'Machines et plateau',type:'Machines du parc',fixe:plein(e.machines,e.nest),corps:(ml?'<ul style="margin:0 0 10px;padding-left:22px">'+ml+'</ul>':'<p class="hint" style="margin:0 0 10px">Aucune machine indiquée.</p>')+'<dl class="rd-dl">'+dd('Nest / plateau',e.nest)+'</dl>'});
+  const pl=e.parametres||[];
+  h+=dsSec({n:3,t:'machines',titre:'Paramètres modifiés',type:'Initial → modifié',fixe:plein(pl),corps:pl.length?'<table><thead><tr><th>Paramètre</th><th>Initial</th><th>Modifié</th></tr></thead><tbody>'+pl.map(p=>'<tr><td><b>'+esc(p.nom||'—')+'</b></td><td style="white-space:pre-wrap">'+esc(p.avant)+'</td><td style="white-space:pre-wrap">'+esc(p.apres)+'</td></tr>').join('')+'</tbody></table>':'<p class="hint" style="margin:0">Aucun paramètre indiqué.</p>'});
+  h+=dsSec({n:4,t:'reglages',titre:'Objectif et conditions',type:'Pourquoi, comment, quel contrôle',fixe:plein(e.objectif,e.conditions,e.controle,e.consignes),corps:'<dl class="rd-dl">'+dd('Objectif de l’essai',e.objectif)+dd('Conditions et description',e.conditions)+dd('Contrôle à mettre en place',e.controle)+dd('Consignes à chaque étape',e.consignes)+'</dl>'});
+  // Suivi des étapes (fiche OP) : notation sur tablette plus tard ; ici, ce qui est noté (ou « Pas encore noté »).
+  const pts=p=>p?'<span class="rd-pts" aria-hidden="true">'+'●'.repeat(p)+'<span class="v">'+'●'.repeat(4-p)+'</span></span>':'<span class="rd-pts" aria-hidden="true">—</span>';
+  const n=rdNotees(e);
+  h+=dsSec({n:5,t:'contenu',titre:'Suivi des étapes (fiche OP)',type:'Qui a noté, quand',fixe:n?'ok':'vide',corps:
+    '<p class="hint" style="margin:0 0 10px">'+(e.origine==='excel'?'Les notes des fiches OP de l’Excel ne sont pas reprises. ':'')+'La notation des étapes se fera sur la tablette (prochaine étape) : nom de la personne et heure enregistrés.</p><div class="rd-etapes">'+
+    RD_ETAPES.map((et,i)=>{const s=(e.notes||{})[et];return '<div class="rd-etape"><div class="rd-etape-h"><span class="rd-etape-n">'+(i+1)+'</span><span class="nom">'+esc(et)+'</span>'+
+      (s?'<span class="tag ok">✓ Noté</span><span class="hint">par '+esc(s.par||'?')+' · '+dateFr(s.le)+' '+heureFr(s.le)+'</span>':'<span class="tag">○ Pas encore noté</span>')+'</div>'+
+      (s?'<div class="rd-etape-b">'+Object.keys(s.criteres||{}).map(c=>{const v=RD_ECHELLE[s.criteres[c]]||['?',0];return '<div class="cr"><span class="hint">'+esc(c)+'</span><span>'+pts(v[1])+' <b>'+v[0]+'</b></span></div>'}).join('')+(s.remarque?'<div style="grid-column:1/-1" class="hint">Remarque : '+esc(s.remarque)+'</div>':'')+'</div>':'')+'</div>'}).join('')+'</div>'});
+  const ph=e.photos||[];
+  h+=dsSec({n:6,t:'medias',titre:'Photos des résultats',type:'Facultatif',fixe:plein(ph),corps:'<div class="row">'+ph.map(p=>'<div>'+vignette(p)+(m2?'<button class="btn dan" data-rd="photo-retirer" data-p="'+esc(p)+'">Retirer</button>':'')+'</div>').join('')+
+    (m2&&ph.length<12?'<label class="btn">'+svg('image')+'Ajouter une photo<input type="file" accept="image/*" hidden data-rdphoto="'+esc(e.id)+'"></label>':'')+(ph.length||m2?'':'<p class="hint" style="margin:0">Aucune photo.</p>')+'</div>'});
+  // 7. Résultats et conclusion : saisis ici (Modification) ; « Conclure l'essai » = Terminé, conclusion obligatoire.
+  const c=R0.c&&R0.c.id===e.id?R0.c:{id:e.id,methodes:e.methodes||'',resultats:e.resultats||'',conclusion:e.conclusion||''};
+  const zone=(k,t)=>'<div class="field"><label class="lbl" for="rdr-'+k+'">'+t+'</label><textarea class="in" id="rdr-'+k+'" rows="3" data-rdr="'+k+'" placeholder="À remplir à la fin de l’essai">'+esc(c[k])+'</textarea></div>';
+  h+=dsSec({n:7,t:'controle',titre:'Résultats et conclusion',type:'Rempli par le responsable',fixe:m2?'':plein(e.methodes,e.resultats,e.conclusion),corps:m2?
+    '<div class="form">'+zone('methodes','Méthodes de contrôle réellement effectuées')+zone('resultats','Résumé des résultats')+zone('conclusion','Conclusion')+'</div>'+RD_PATIENT+
+    '<div class="row" style="margin-top:12px"><span class="hint" style="flex:1">'+(e.concluPar?'Conclu par : '+esc(e.concluPar)+(e.concluLe?' · le '+dateFr(e.concluLe):''):'Conclu par : — · le : —')+'</span>'+
+    '<button class="btn" data-rd="resultats">Enregistrer les résultats</button>'+(e.avancement!=='termine'?'<button class="btn pri" data-rd="conclure">'+svg('ok')+'Conclure l’essai</button>':'')+'</div>'
+    :'<dl class="rd-dl">'+dd('Méthodes de contrôle réellement effectuées',e.methodes)+dd('Résumé des résultats',e.resultats)+dd('Conclusion',e.conclusion)+dd('Conclu par',(e.concluPar||'')+(e.concluLe?' le '+dateFr(e.concluLe):''))+'</dl>'});
+  return h;
+}
+
+// --- 3. Créer / modifier un essai (mêmes sections ; machines du parc du secteur, hors service non proposées) --------
+function vueRdForm(sec,d,st){
+  const R0=R(),b=R0.b,neuf=!R0.orig,types=(st.types||[]).slice(),parc=d.machinesParc||[];
+  if(b.type&&!types.includes(b.type))types.push(b.type); // ancien type déjà porté par l'essai : gardé
+  const enService=parc.filter(m=>m.actif).map(m=>m.nom),hors=parc.filter(m=>!m.actif).map(m=>m.nom);
+  const plusProposees=(b.machines||[]).filter(n=>!enService.includes(n));
+  const ch=(k,t,o)=>{o=o||{};const id='rdf-'+k,req=o.req?' data-ds-req':'';
+    return '<div class="field"><label class="lbl" for="'+id+'"><span>'+t+(o.req?' <span class="ds-req">*</span>':'')+'</span></label>'+
+      (o.zone?'<textarea class="in" id="'+id+'" rows="3" data-rdf="'+k+'"'+req+' placeholder="'+esc(o.ph||'')+'">'+esc(b[k]||'')+'</textarea>'
+        :'<input class="in" id="'+id+'" data-rdf="'+k+'"'+req+(o.type?' type="'+o.type+'"':'')+' placeholder="'+esc(o.ph||'')+'" value="'+esc(b[k]||'')+'">')+
+      (o.req?'<p class="ds-manque-t">• À compléter : '+o.req+'</p>':'')+'</div>'};
+  let h='<div class="rd-form"><div class="row" style="margin:0 0 12px"><button class="btn" data-rd="annuler">← '+(neuf?'Liste des essais':'Retour à la fiche')+'</button><span class="tag">Secteur '+esc(secNom(sec))+'</span></div>';
+  h+='<div class="ph">'+pastille('rd','l')+'<div class="grow"><h1>'+(neuf?'Nouvel essai':'Modifier l’essai '+esc(rdNum(R0.orig)))+'</h1><p>Secteur '+esc(secNom(sec))+' · '+(neuf?'n° donné à l’enregistrement (prochain : '+rdProchain(d,st)+')':'le numéro ne change pas')+'</p></div></div>';
+  h+=rdMsg()+dsSomm();
+  h+=dsSec({n:1,t:'identite',titre:'Identité',type:'Nom et type',corps:'<div class="form">'+ch('titre','Nom de l’essai',{req:'donnez un nom court.',ph:'Nom court de l’essai'})+
+    '<div class="field"><label class="lbl" for="rdf-type"><span>Type d’essai'+(types.length?' <span class="ds-req">*</span>':'')+'</span></label><select class="in" id="rdf-type" data-rdf="type"'+(types.length?' data-ds-req':'')+'><option value="">'+(types.length?'Choisir…':'(aucun type dans ce secteur)')+'</option>'+
+      types.map(t=>'<option'+(b.type===t?' selected':'')+'>'+esc(t)+'</option>').join('')+'</select>'+(types.length?'<p class="ds-manque-t">• À compléter : choisissez un type.</p>':'<p class="hint" style="margin:4px 0 0">Aucun type d’essai dans ce secteur : à saisir par le responsable (« Modifier les types » dans la liste des essais).</p>')+'</div>'+
+    ch('date','Date de lancement',{type:'date'})+ch('contacts','Contact(s)',{ph:'Facultatif'})+'</div>'});
+  h+=dsSec({n:2,t:'machines',titre:'Machines et plateau',type:'Choisies dans le parc du secteur',corps:'<div class="rd-chips" role="group" aria-label="Machines">'+
+    enService.map(n=>'<button class="chip" data-rd="machine" data-m="'+esc(n)+'" aria-pressed="'+(b.machines||[]).includes(n)+'">'+esc(n)+'</button>').join('')+
+    plusProposees.map(n=>'<button class="chip" data-rd="machine" data-m="'+esc(n)+'" aria-pressed="true" title="Plus proposée : touchez pour la retirer">'+esc(n)+' (plus proposée)</button>').join('')+
+    hors.filter(n=>!plusProposees.includes(n)).map(n=>'<button class="chip" disabled title="Hors service : non proposée">'+esc(n)+' · hors service</button>').join('')+
+    (enService.length||plusProposees.length?'':'<span class="hint">Aucune machine en service dans ce secteur (parc machines).</span>')+'</div>'+
+    '<p class="hint">La liste vient du parc machines. Une machine hors service n’est pas proposée ; le n° de série se lit dans le parc.</p><div class="form">'+ch('nest','Nest / plateau',{ph:'Repère interne du plateau (jamais un cas)'})+'</div>'});
+  const pl=b.parametres||[];
+  h+=dsSec({n:3,t:'machines',titre:'Paramètres modifiés',type:'Initial → modifié',corps:pl.map((p,i)=>'<div class="rd-param">'+[['nom','Paramètre','Nom du paramètre'],['avant','Initial','Valeur de départ'],['apres','Modifié','Nouvelle valeur']].map(([k,t,ph])=>
+      '<div class="field"><label class="lbl" for="rdp-'+i+'-'+k+'">'+t+'</label><input class="in" id="rdp-'+i+'-'+k+'" data-rdp="'+i+'|'+k+'" placeholder="'+ph+'" value="'+esc(p[k]||'')+'"></div>').join('')+
+      '<button class="btn" data-rd="param-moins" data-i="'+i+'" aria-label="Retirer ce paramètre">Retirer</button></div>').join('')+
+    '<button class="btn ds-ajout" data-rd="param-plus">'+svg('plus')+'Ajouter un paramètre</button>'});
+  h+=dsSec({n:4,t:'reglages',titre:'Objectif et conditions',type:'Pourquoi, comment, quel contrôle',corps:'<div class="form">'+ch('objectif','Objectif de l’essai',neuf?{req:'écrivez l’objectif.',zone:1,ph:'Ce que l’essai doit montrer'}:{zone:1,ph:'Ce que l’essai doit montrer'})+
+    ch('conditions','Conditions de l’essai et description',{zone:1,ph:'Facultatif'})+ch('controle','Contrôle à mettre en place',{ph:'Facultatif'})+
+    ch('consignes','Consignes supplémentaires à chaque étape',{zone:1,ph:'À saisir par le responsable (facultatif)'})+'</div>'+RD_PATIENT});
+  h+='<div class="savebar"><span class="st">'+(neuf?'Avancement de départ : '+rdPt('planifier'):(R0.sale?'<b style="color:var(--warn)">• Modifications à enregistrer.</b>':'Rien de modifié.'))+'</span>'+
+    '<button class="btn" data-rd="annuler">Annuler</button><button class="btn pri" data-rd="enregistrer">Enregistrer l’essai</button></div></div>';
+  return h;
+}
+
+// --- 4. Types d'essai du secteur (« Réglages R&D ») -------------------------------------------------------------
+function vueRdTypes(sec,d,st){
+  const R0=R(),T=R0.t;
+  let h='<div class="row" style="margin:0 0 12px"><button class="btn" data-rd="types-annuler">← Liste des essais</button><span class="tag">Secteur '+esc(secNom(sec))+'</span></div>';
+  h+='<div class="ph">'+pastille('rd','l')+'<div class="grow"><h1>Types d’essai du secteur '+esc(secNom(sec))+'</h1><p>Proposés à la création d’un essai de ce secteur. Un type retiré reste sur les essais qui l’ont déjà.</p></div></div>'+rdMsg();
+  h+='<section class="card rd-types">'+(sec==='frittage'?'<p class="hint" style="margin:0 0 10px">Au départ : les 8 types de l’Excel du frittage.</p>':'')+
+    (T.liste.length?'<ol>'+T.liste.map((t,i)=>'<li><label class="sr" for="rdt-'+i+'">Type '+(i+1)+'</label><input class="in" id="rdt-'+i+'" data-rdt="'+i+'" value="'+esc(t)+'" placeholder="Nom du type"><button class="btn" data-rd="types-moins" data-i="'+i+'">Retirer</button></li>').join('')+'</ol>'
+      :'<p class="hint">Aucun type pour l’instant : à saisir par le responsable du secteur.</p>')+
+    '<button class="btn" data-rd="types-plus">'+svg('plus')+'Ajouter un type</button></section>';
+  h+='<div class="savebar"><span class="st">'+(T.sale?'<b style="color:var(--warn)">• Modifications à enregistrer.</b>':'Rien de modifié.')+'</span><button class="btn" data-rd="types-annuler">Annuler</button><button class="btn pri" data-rd="types-enregistrer">Enregistrer les types</button></div>';
+  return h;
+}
+
+// --- 5. Reprise de l'Excel (administrateur, frittage, une fois) : fichier JSON préparé, contrôlé, montré, puis envoyé --
+function vueRdImport(sec,d,st){
+  const R0=R(),I=R0.imp||(R0.imp={});
+  let h='<div class="row" style="margin:0 0 12px"><button class="btn" data-rd="import-annuler">← Liste des essais</button><span class="tag">Secteur Frittage</span></div>';
+  h+='<div class="ph">'+pastille('rd','l')+'<div class="grow"><h1>Reprendre les essais de l’Excel</h1><p>Une seule fois. Le fichier (import-excel-rd.json) a été préparé à partir de la fiche R&amp;D Excel : il ne contient ni cas étudiés, ni numéros de commande, ni noms de fichiers.</p></div></div>';
+  h+='<section class="card"><h2>1. Choisir le fichier</h2><label class="btn">'+svg('version')+'Choisir le fichier import-excel-rd.json<input type="file" accept=".json,application/json" hidden data-rd-import="1"></label>'+(I.nom?' <span class="hint">'+esc(I.nom)+'</span>':'')+'</section>';
+  if(I.erreurs&&I.erreurs.length)h+='<div class="msg err" role="alert">'+svg('alerte')+'<div><b>Import impossible :</b><ul style="margin:6px 0 0">'+I.erreurs.slice(0,8).map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul></div></div>';
+  if(I.err)h+='<div class="msg err" role="alert">'+svg('alerte')+'<div><b>'+esc(I.err)+'</b></div></div>';
+  if(I.essais&&!(I.erreurs||[]).length){
+    const l=I.essais,nums=l.map(e=>e.num).sort((a,b)=>a-b),parc=d.machinesParc||[];
+    const noms=[...new Set(l.flatMap(e=>e.machines||[]))].sort((a,b)=>a.localeCompare(b,'fr',{numeric:true}));
+    h+='<section class="card" style="margin-top:16px"><h2>2. Vérifier</h2><p style="margin:0 0 10px"><b>'+l.length+' essais</b>, n° '+nums[0]+' à '+nums[nums.length-1]+'.</p><div class="row" style="margin:0 0 12px">'+
+      RD_AV.map(a=>{const n=l.filter(e=>e.avancement===a[0]).length;return n?rdPt(a[0])+' <b>'+n+'</b>':''}).join(' ')+'</div>'+
+      '<p class="hint" style="margin:0 0 8px">Relisez les noms ci-dessous : aucun nom de patient ne doit y figurer.</p>'+
+      '<div class="rd-imp"><table><thead><tr><th>N°</th><th>Essai</th><th>Type</th><th>Machines</th><th>Avancement</th></tr></thead><tbody>'+
+      l.slice().sort((a,b)=>a.num-b.num).map(e=>'<tr><td><b>'+e.num+'</b></td><td>'+esc(e.titre)+'</td><td>'+esc(e.type)+'</td><td>'+esc((e.machines||[]).map(m=>I.carte[m]||m).join(' · '))+'</td><td>'+rdPt(e.avancement)+'</td></tr>').join('')+'</tbody></table></div></section>';
+    // Les noms de machines de l'Excel ne sont pas toujours ceux du parc : l'administrateur choisit (rien n'est deviné).
+    h+='<section class="card" style="margin-top:16px"><h2>3. Machines : nom de l’Excel → machine du parc</h2><p class="hint" style="margin:0 0 10px">Choisissez la machine du parc (le n° de série y est lu) ou gardez le nom de l’Excel.</p><table><tbody>'+
+      noms.map((n,i)=>'<tr><td><b>'+esc(n)+'</b></td><td><label class="sr" for="rdm-'+i+'">Machine du parc pour '+esc(n)+'</label><select class="in" id="rdm-'+i+'" data-rd-map="'+esc(n)+'"><option value="">Garder « '+esc(n)+' » (pas dans le parc)</option>'+
+        parc.map(m=>'<option value="'+esc(m.nom)+'"'+(I.carte[n]===m.nom?' selected':'')+'>'+esc(m.nom)+(m.serie?' — '+esc(m.serie):'')+(m.actif?'':' (hors service)')+'</option>').join('')+'</select></td></tr>').join('')+'</tbody></table></section>';
+    h+='<section class="card" style="margin-top:16px"><h2>4. Importer</h2><p class="hint" style="margin:0 0 10px">Les essais gardent leurs n° '+nums[0]+' à '+nums[nums.length-1]+' ; les nouveaux essais du frittage continuent à 136. Refusé par Google si des essais portent déjà ces numéros.</p>'+
+      '<button class="btn pri" data-rd="import-envoyer"'+(I.envoi?' disabled aria-busy="true"':'')+'>'+svg('version')+(I.envoi?'Import en cours…':'Importer les '+l.length+' essais')+'</button></section>';
+  }
+  return h;
+}
+// Un texte (ou un nom de champ) ressemble-t-il à un nom de fichier ? (tout l'objet, comme le script)
+const rdSuspect=(o,p)=>{p=p||0;if(p>6)return true;if(typeof o==='string')return RD_NOM_FICHIER.test(o);if(Array.isArray(o))return o.some(x=>rdSuspect(x,p+1));
+  if(o&&typeof o==='object')return Object.keys(o).some(k=>RD_NOM_FICHIER.test(k)||/cas/i.test(k)||rdSuspect(o[k],p+1));return false};
+// Contrôle du fichier choisi (le script refait tous les contrôles).
+function rdLireImport(texte,st,parc){
+  const er=[];let o=null;
+  try{o=JSON.parse(texte)}catch(x){return {erreurs:['Fichier illisible (ce n’est pas le fichier d’import).']}}
+  if(!o||o.format!=='rd-import-excel'||o.secteur!=='frittage'||!Array.isArray(o.essais)||!o.essais.length)return {erreurs:['Ce n’est pas le fichier d’import des essais de l’Excel du frittage.']};
+  const vus={};
+  o.essais.forEach((e,i)=>{
+    if(!e||typeof e!=='object'){er.push('Essai '+(i+1)+' illisible.');return}
+    const autres=Object.keys(e).filter(k=>!RD_IMPORT_CHAMPS.includes(k));if(autres.length)er.push('Essai '+(e.num||i+1)+' : champ non permis « '+autres[0]+' ».');
+    if(!(Number.isInteger(e.num)&&e.num>0)||vus[e.num])er.push('Essai '+(i+1)+' : numéro invalide ou en double.');vus[e.num]=1;
+    if(!String(e.titre||'').trim())er.push('Essai '+e.num+' : sans nom.');
+    if(!RD_AV.some(a=>a[0]===e.avancement))er.push('Essai '+e.num+' : avancement inconnu.');
+    if(rdSuspect(e))er.push('Essai '+e.num+' : un texte ressemble à un nom de fichier.');
+  });
+  const deja=(st.essais||[]).filter(e=>vus[e.num]||e.origine==='excel');
+  if(deja.length)er.push('Des essais du frittage portent déjà ces numéros, ou l’Excel a déjà été repris (n° '+deja.slice(0,5).map(e=>e.num).join(', ')+') : import refusé.');
+  // Correspondance proposée : même nom (sans tenir compte des majuscules) ou ancien nom d'une machine du parc.
+  const carte={},cmp=x=>String(x).trim().toLowerCase();
+  o.essais.forEach(e=>(e.machines||[]).forEach(n=>{if(carte[n]!==undefined)return;const m=parc.find(p=>cmp(p.nom)===cmp(n)||(p.anciens||[]).some(a=>cmp(a)===cmp(n)));carte[n]=m?m.nom:''}));
+  return {essais:o.essais,erreurs:er,carte};
+}
+
+// --- Enregistrements (temps masqué, comme les autres parties) --------------------------------------------------
+// Création : sans version ; modification : fusion champ par champ à partir de l'essai tel qu'il a été ouvert (updated).
+function enregistrerRd(sec,item,origine,libelle,reprise){
+  const cle=rdCle(sec),id=item.id,esp='rd|'+sec+'|'+id;
+  const trouve=d=>((d.state||{}).essais||[]).find(x=>x.id===id);
+  const version=d=>{const o=trouve(d);return o?(o.updated||0):undefined};
+  const nouvelle=j=>{const o=(((j.data||{}).state||{}).essais||[]).find(x=>x.id===id);return o?(o.updated||0):undefined};
+  const apres=(j,base)=>Object.assign({},base,{rev:j.data.rev,state:j.data.state,vierge:null});
+  if(origine){
+    const f={lire:d=>rdChamps(trouve(d)),
+      ecrire:(d,p)=>{const st=d.state=d.state||{types:[],essais:[]},l=st.essais=st.essais||[],i=l.findIndex(x=>x.id===id);const o=Object.assign({},i>=0?l[i]:{},p,{id,_attente:true});if(i<0)l.push(o);else l[i]=o;return d},
+      corps:(p,d)=>({secteur:sec,essai:Object.assign({},p,{id}),base:{updated:version(d)||0}})};
+    enregistrer(tacheFusion({cle,op:'rd-ecrire',page:'c-rd',libelle,esp,vu:origine.updated||0,version,nouvelle,apres,reprise},f,()=>rdChamps(item),rdChamps(origine)));
+    return;
+  }
+  enregistrer({cle,op:'rd-ecrire',page:'c-rd',libelle,esp,
+    construire:()=>({secteur:sec,essai:Object.assign(rdChamps(item),{id})}),
+    vue:d=>{const st=d.state=d.state||clone(d.vierge||{types:[],essais:[]}),l=st.essais=st.essais||[];
+      if(!l.some(x=>x.id===id))l.push(Object.assign(rdChamps(item),{id,num:0,avancement:'planifier',origine:'',creePar:S.moi&&S.moi.nom||'',creeLe:Date.now(),notes:{},_attente:true}));return d},
+    nouvelle,apres,reprise,
+    // Réponse de Google : le numéro donné à l'essai.
+    refus:j=>{if(S.rd&&j&&j.data&&j.data.num)S.rd.msg=['ok','Essai n° '+j.data.num+' enregistré : « '+esc(item.titre)+' ».']}});
+}
+function enregistrerRdTypes(sec,types,depuis){
+  const cle=rdCle(sec),cfg=d=>Number(((d.state||d.vierge)||{}).cfgTs)||0;
+  enregistrer({cle,op:'rd-types-ecrire',page:'c-rd',libelle:'types d’essai ('+secNom(sec)+')',esp:'rdtypes|'+sec,vu:depuis,version:cfg,
+    construire:d=>({secteur:sec,types,depuis:cfg(d)}),
+    vue:d=>{const st=d.state=d.state||clone(d.vierge||{types:[],essais:[]});st.types=types.slice();return d},
+    nouvelle:j=>Number(((j.data||{}).state||{}).cfgTs)||undefined,
+    apres:(j,base)=>Object.assign({},base,{rev:j.data.rev,state:j.data.state,vierge:null})});
+}
+async function rdEssai(id){const sec=R().sec,r=await lire('rd-lire',{secteur:sec});const st=r.ok?(r.data.state||{essais:[]}):{essais:[]};return {sec,r,e:(st.essais||[]).find(x=>x.id===id)}}
+
+async function actionRd(b){
+  const R0=R(),act=b.dataset.rd,sec=R0.sec;
+  const page=()=>chargerPage(),haut=()=>{chargerPage().then(()=>scrollTo(0,0))};
+  if(act==='filtre-av'){R0.f.av=R0.f.av===b.dataset.v?'':b.dataset.v;return page()}
+  if(act==='orig'){R0.f.orig=b.dataset.v;return page()}
+  if(act==='raz'){R0.f={av:'',type:'',q:'',orig:''};return page()}
+  if(act==='ouvrir'){R0.vue='fiche';R0.id=b.dataset.id;R0.c=null;R0.msg=null;return haut()}
+  if(act==='liste'){if(R0.c&&R0.c.sale){R0.msg=['warn','Enregistrez ou annulez d’abord les résultats en cours.'];return page()}R0.vue='liste';R0.c=null;R0.msg=null;return haut()}
+  if(act==='nouveau'){
+    R0.orig=null;R0.sale=false;R0.msg=null;R0.vue='form';
+    R0.b={id:'e'+alea(16),titre:'',type:'',machines:[],date:new Date().toISOString().slice(0,10),nest:'',contacts:'',parametres:[{nom:'',avant:'',apres:''}],objectif:'',conditions:'',controle:'',consignes:''};
+    return haut();
+  }
+  if(act==='modifier'){const {e}=await rdEssai(R0.id);if(!e||e._attente)return page();R0.orig=clone(e);R0.b=Object.assign(rdChamps(e),{id:e.id});if(!(R0.b.parametres||[]).length)R0.b.parametres=[{nom:'',avant:'',apres:''}];R0.sale=false;R0.msg=null;R0.vue='form';return haut()}
+  if(act==='annuler'){R0.vue=R0.orig?'fiche':'liste';R0.b=null;R0.orig=null;R0.sale=false;R0.msg=null;return haut()}
+  if(act==='machine'&&R0.b){const m=b.dataset.m,l=R0.b.machines=R0.b.machines||[];R0.b.machines=l.includes(m)?l.filter(x=>x!==m):l.concat(m);R0.sale=true;return page()}
+  if(act==='param-plus'&&R0.b){R0.b.parametres=(R0.b.parametres||[]).concat({nom:'',avant:'',apres:''}).slice(0,30);R0.sale=true;return page()}
+  if(act==='param-moins'&&R0.b){R0.b.parametres.splice(+b.dataset.i,1);R0.sale=true;return page()}
+  if(act==='enregistrer'&&R0.b){
+    const x=clone(R0.b),neuf=!R0.orig,r=await lire('rd-lire',{secteur:sec}),st=r.ok?(r.data.state||r.data.vierge||{types:[]}):{types:[]};
+    x.titre=String(x.titre||'').trim();x.parametres=(x.parametres||[]).filter(p=>p.nom||p.avant||p.apres);
+    const manque=!x.titre?'Donnez un nom à l’essai.':neuf&&(st.types||[]).length&&!x.type?'Choisissez le type d’essai.':neuf&&!String(x.objectif||'').trim()?'Écrivez l’objectif de l’essai.':'';
+    // Relecture du 20/10 : aucun texte qui ressemble à un nom de fichier de cas (le script refait le contrôle).
+    const manque2=manque||(rdSuspect(rdChamps(x))?'Pas de nom de fichier ni de nom de patient : un texte ressemble à un nom de fichier de cas (.stl, .dcm, chemin…). Retirez-le.':'');
+    if(manque2){R0.msg=['err','<b>'+manque2+'</b>'];return haut()}
+    const sauve={b:clone(R0.b),orig:clone(R0.orig),sec};
+    enregistrerRd(sec,x,R0.orig,(neuf?'nouvel essai':'essai '+rdNum(R0.orig))+' « '+x.titre.slice(0,40)+' »',()=>{const r2=R();Object.assign(r2,{sec:sauve.sec,vue:'form',b:sauve.b,orig:sauve.orig,sale:true})});
+    R0.vue='fiche';R0.id=x.id;R0.b=null;R0.orig=null;R0.sale=false;R0.c=null;R0.msg=neuf?['info','Essai envoyé à Google : son numéro arrive dans un instant.']:null;
+    return haut();
+  }
+  // Fiche : avancement à la main, résultats, conclusion, photos.
+  if(act==='avancement'||act==='resultats'||act==='conclure'||act==='photo-retirer'){
+    const {e}=await rdEssai(R0.id);if(!e||e._attente)return page();
+    const c=R0.c&&R0.c.id===e.id?R0.c:null,item=Object.assign(rdChamps(e),{id:e.id});
+    if(act==='avancement'){
+      const v=b.dataset.v;if(v===e.avancement)return;
+      if(v==='termine'&&!String((c?c.conclusion:e.conclusion)||'').trim()){R0.msg=['warn','<b>Écrivez d’abord la conclusion</b> (section 7, Résultats et conclusion), puis touchez « Conclure l’essai ».'];await page();const z=document.getElementById('rdr-conclusion');if(z){z.scrollIntoView({block:'center'});z.focus()}return}
+      if(v==='termine'&&c)Object.assign(item,{methodes:c.methodes,resultats:c.resultats,conclusion:c.conclusion});
+      item.avancement=v;
+      enregistrerRd(sec,item,e,'avancement de l’essai '+rdNum(e)+' : '+rdAv(v)[1]);if(v==='termine')R0.c=null;R0.msg=null;return page();
+    }
+    if(act==='photo-retirer'){item.photos=(item.photos||[]).filter(p=>p!==b.dataset.p);enregistrerRd(sec,item,e,'photo retirée (essai '+rdNum(e)+')');return page()}
+    if(c)Object.assign(item,{methodes:c.methodes,resultats:c.resultats,conclusion:c.conclusion});
+    if(act==='conclure'){
+      if(!String(item.conclusion||'').trim()){R0.msg=['warn','<b>Écrivez la conclusion avant de conclure l’essai.</b>'];await page();const z=document.getElementById('rdr-conclusion');if(z){z.scrollIntoView({block:'center'});z.focus()}return}
+      item.avancement='termine';
+    }
+    if(rdSuspect(rdChamps(item))){R0.msg=['err','<b>Pas de nom de fichier ni de nom de patient : un texte ressemble à un nom de fichier de cas (.stl, .dcm, chemin…). Retirez-le.</b>'];return page()}
+    if(act==='resultats'&&e.avancement==='termine'&&e.conclusion&&!String(item.conclusion||'').trim()){R0.msg=['warn','<b>Un essai terminé garde sa conclusion : elle ne peut pas être vidée.</b>'];return page()}
+    enregistrerRd(sec,item,e,(act==='conclure'?'conclusion de l’essai ':'résultats de l’essai ')+rdNum(e));
+    R0.c=null;R0.msg=null;return page();
+  }
+  // Types d'essai du secteur.
+  if(act==='types'){const r=await lire('rd-lire',{secteur:sec}),st=r.ok?(r.data.state||r.data.vierge||{}):{};R0.t={liste:(st.types||[]).slice(),depuis:Number(st.cfgTs)||0,sale:false};R0.vue='types';R0.msg=null;return haut()}
+  if(act==='types-plus'&&R0.t){R0.t.liste.push('');R0.t.sale=true;await page();const l=document.querySelectorAll('[data-rdt]');if(l.length)l[l.length-1].focus();return}
+  if(act==='types-moins'&&R0.t){R0.t.liste.splice(+b.dataset.i,1);R0.t.sale=true;return page()}
+  if(act==='types-annuler'){R0.t=null;R0.vue='liste';R0.msg=null;return haut()}
+  if(act==='types-enregistrer'&&R0.t){
+    const vus=[],l=[];R0.t.liste.forEach(t=>{t=String(t||'').replace(/\s+/g,' ').trim().slice(0,60);if(t&&!vus.includes(t.toLowerCase())){vus.push(t.toLowerCase());l.push(t)}});
+    enregistrerRdTypes(sec,l,R0.t.depuis);R0.t=null;R0.vue='liste';R0.msg=['ok','Types d’essai enregistrés ('+l.length+').'];return haut();
+  }
+  // Reprise de l'Excel.
+  if(act==='import'){R0.imp={};R0.vue='import';R0.msg=null;return haut()}
+  if(act==='import-annuler'){R0.imp=null;R0.vue='liste';return haut()}
+  if(act==='import-envoyer'&&R0.imp&&R0.imp.essais&&!R0.imp.envoi){
+    const I=R0.imp,essais=I.essais.map(e=>Object.assign({},e,{machines:[...new Set((e.machines||[]).map(m=>I.carte[m]||m))]}));
+    I.envoi=true;I.err='';await page();
+    await attendreFile();
+    let j=null;try{j=await appel('rd-importer',{essais})}catch(x){I.envoi=false;if(x.message!=='session'){I.err=x.message;page()}return}
+    I.envoi=false;
+    if(j.status===200){const cle=rdCle('frittage');GEN[cle]=(GEN[cle]||0)+1;delete S.charge[cle];delete CONF[cle];R0.imp=null;R0.vue='liste';R0.f={av:'',type:'',q:'',orig:''};
+      R0.msg=['ok','<b>'+j.data.importes+' essais repris de l’Excel.</b> Ils gardent leurs numéros ; les nouveaux essais du frittage continuent la suite.'];return haut()}
+    I.err=(j.data&&j.data.error)||'Import refusé.';return page();
+  }
+}
+// Saisie dans les champs de la partie (aucun envoi : seulement le brouillon en mémoire).
+function rdChamp(el){
+  const R0=S.rd;if(!R0)return false;
+  if(el.dataset.rdf&&R0.b){R0.b[el.dataset.rdf]=el.value;R0.sale=true;return true}
+  if(el.dataset.rdp&&R0.b){const [i,k]=el.dataset.rdp.split('|');if(R0.b.parametres[+i])R0.b.parametres[+i][k]=el.value;R0.sale=true;return true}
+  if(el.dataset.rdr){if(!R0.c||R0.c.id!==R0.id){const t=k=>{const z=document.getElementById('rdr-'+k);return z?z.value:''};R0.c={id:R0.id,methodes:t('methodes'),resultats:t('resultats'),conclusion:t('conclusion')}}R0.c[el.dataset.rdr]=el.value;R0.c.sale=true;return true}
+  if(el.dataset.rdt&&R0.t){R0.t.liste[+el.dataset.rdt]=el.value;R0.t.sale=true;return true}
+  return false;
+}
+async function rdFichier(el){
+  const R0=S.rd;if(!R0||!el.files||!el.files[0])return;
+  if(el.dataset.rdImport){const f=el.files[0],r=await lire('rd-lire',{secteur:'frittage'}),st=r.ok?(r.data.state||{essais:[]}):{essais:[]};
+    if(f.size>400000){R0.imp={nom:f.name,erreurs:['Fichier trop grand pour un import.']};return chargerPage()}
+    R0.imp=Object.assign({nom:f.name},rdLireImport(await f.text(),st,r.ok?r.data.machinesParc||[]:[]));return chargerPage()}
+  if(el.dataset.rdphoto){
+    const lab=el.closest('label'),tx=lab&&lab.childNodes[1];if(tx&&tx.nodeType===3)tx.textContent=' Envoi…';
+    try{const id=await envoyerPhoto(el.files[0]),{sec,e}=await rdEssai(el.dataset.rdphoto);if(!e)return;
+      const item=Object.assign(rdChamps(e),{id:e.id});item.photos=(item.photos||[]).concat(id).slice(0,12);enregistrerRd(sec,item,e,'photo ajoutée (essai '+rdNum(e)+')');R0.msg=null;chargerPage()}
+    catch(x){if(x.message!=='session'){R0.msg=['err','<b>'+esc(x.message)+'</b>'];chargerPage()}}
+  }
+}
+
 function vPC(){
   const p=P(S.page);
   if(p.id==='aide')return enTete('aide','Comment se servir de la console en ligne.')+'<section class="card det">'+
@@ -3586,6 +4007,9 @@ document.addEventListener('click',async e=>{
   if((b.dataset.go||b.dataset.sec!==undefined)&&S.dr&&S.dr.sale){S.dr.msg=['warn','Enregistrez ou annulez d’abord les réglages en cours.'];chargerPage();return}
   if(b.dataset.go&&S.adm&&S.adm.sale){S.adm.msg=['warn','Enregistrez ou annulez d’abord les réglages en cours.'];chargerPage();return}
   if(b.dataset.ad){S.dernierGeste=Date.now();actionAdmin(b).catch(x=>{if(x.message!=='session'&&S.adm){S.adm.msg=['err','<b>'+esc(x.message)+'</b>'];chargerPage()}});return}
+  // Section R&D (2026-10-20) : une saisie en cours (essai, résultats, types) n'est pas perdue en changeant de page.
+  if((b.dataset.go||b.dataset.sec!==undefined)&&S.page==='c-rd'&&rdSaisie()){R().msg=['warn','Enregistrez ou annulez d’abord la modification en cours.'];chargerPage();return}
+  if(b.dataset.rd){S.dernierGeste=Date.now();actionRd(b).catch(x=>{if(x.message!=='session'){R().msg=['err','<b>'+esc(x.message)+'</b>'];chargerPage()}});return}
   if(b.dataset.ed){S.dernierGeste=Date.now();actionEdition(b).catch(x=>{if(x.message!=='session'){S.msgCont=['err','<b>'+esc(x.message)+'</b>'];chargerPage()}});return}
   if(b.dataset.lan){actionLancements(b).catch(x=>{if(x.message!=='session'){S.msgLanc=['err','<b>'+esc(x.message)+'</b>'];chargerPage()}});return}
   if(b.dataset.cg){actionConges(b).catch(x=>{if(x.message!=='session'){S.msgCal=['err','<b>'+esc(x.message)+'</b>'];chargerPage()}});return}
@@ -3594,7 +4018,7 @@ document.addEventListener('click',async e=>{
   if(b.dataset.msg){actionMessages(b).catch(x=>{if(x.message!=='session'){S.msgMsg=['err','<b>'+esc(x.message)+'</b>'];chargerPage()}});return}
   if(b.dataset.dr){actionDroits(b).catch(x=>{if(x.message!=='session'){if(S.dr)S.dr.msg=['err','<b>'+esc(x.message)+'</b>'];else S.msgDr=['err','<b>'+esc(x.message)+'</b>'];chargerPage()}});return}
   if(b.dataset.tab){actionTablettes(b).catch(x=>{if(x.message!=='session'){S.msgTab=['err','<b>'+esc(x.message)+'</b>'];chargerPage()}});return}
-  if(b.dataset.go||b.dataset.sec!==undefined){S.edit=null;S.types=null;S.suppr=null;S.dr=null;if(b.dataset.go)S.adm=null;S.msgAdm=null;S.msgCont=S.msgLanc=S.msgCal=S.msgParc=S.msgPers=S.msgMsg=S.msgDr=S.msgTab=null;S.viderHisto=false}
+  if(b.dataset.go||b.dataset.sec!==undefined){if(S.rd)Object.assign(S.rd,{vue:'liste',b:null,orig:null,sale:false,c:null,t:null,imp:null,msg:null});S.edit=null;S.types=null;S.suppr=null;S.dr=null;if(b.dataset.go)S.adm=null;S.msgAdm=null;S.msgCont=S.msgLanc=S.msgCal=S.msgParc=S.msgPers=S.msgMsg=S.msgDr=S.msgTab=null;S.viderHisto=false}
   if(b.dataset.go){S.page=b.dataset.go;S.menu=false;try{history.replaceState(null,'','#'+S.page)}catch(x){}render();scrollTo(0,0);return}
   if(b.dataset.act==='menu'){S.menu=!S.menu;const ap=document.querySelector('.app');if(ap)ap.classList.toggle('menu',S.menu);b.setAttribute('aria-expanded',S.menu);if(S.menu)scrollTo(0,0);return}
   if(b.dataset.sec!==undefined){S.secteur=b.dataset.sec;S.semaine='';render();return}
@@ -3623,6 +4047,11 @@ document.addEventListener('click',async e=>{
   }
 });
 document.addEventListener('change',async e=>{const el=e.target;
+  // Section R&D : champs du brouillon, filtre par type, correspondance des machines, fichiers (photo, import).
+  if(el.dataset&&(el.dataset.rdf||el.dataset.rdp||el.dataset.rdr||el.dataset.rdt)){rdChamp(el);if(el.tagName==='SELECT')chargerPage();return}
+  if(el.dataset&&el.dataset.rdType&&S.rd){S.rd.f.type=el.value;return chargerPage()}
+  if(el.dataset&&el.dataset.rdMap!=null&&S.rd&&S.rd.imp){S.rd.imp.carte[el.dataset.rdMap]=el.value;return chargerPage()}
+  if(el.dataset&&(el.dataset.rdImport||el.dataset.rdphoto))return rdFichier(el);
   if(el.dataset&&(el.dataset.ce||el.dataset.ceL))return saisieCalendrier(el);
   if(el.dataset&&el.dataset.drCible&&S.dr){S.dr.cible=el.value;S.dr.msg=null;return chargerPage()}
   if(el.dataset&&el.dataset.admLogo&&el.files&&el.files[0]&&S.adm){try{S.adm.b.apparence.logo=await admLogo(el.files[0]);S.adm.sale=true}catch(x){S.adm.msg=['err','<b>'+esc(x.message)+'</b>']}return chargerPage()}
@@ -3646,7 +4075,7 @@ document.addEventListener('change',async e=>{const el=e.target;
     return;
   }
   if(e.target.id==='accFin'){const v=e.target.value;changeBrouillon(x=>{x.fin=/^\d{4}-\d\d-\d\d$/.test(v)?v:''})}});
-document.addEventListener('input',e=>{if(e.target.dataset&&(e.target.dataset.adm||e.target.dataset.admTuile||e.target.dataset.admZone!=null)&&e.target.tagName!=='SELECT'&&e.target.type!=='color'){saisieAdmin(e.target);return}if(e.target.dataset&&e.target.dataset.ce&&e.target.type!=='checkbox'&&e.target.tagName!=='SELECT'){saisieCalendrier(e.target);return}if(e.target.dataset&&e.target.dataset.ty&&S.types){S.types.liste[+e.target.dataset.ty][e.target.dataset.tk]=e.target.value;return}if(e.target.dataset&&e.target.dataset.f&&e.target.type!=='checkbox'&&e.target.tagName!=='SELECT'){champSaisi(e.target);return}if(e.target.id==='parcQ'){S.parcQ=e.target.value;clearTimeout(S.tq);S.tq=setTimeout(async()=>{await chargerPage();const q=document.getElementById('parcQ');if(q){q.focus();q.setSelectionRange(q.value.length,q.value.length)}},250)}});
+document.addEventListener('input',e=>{if(e.target.dataset&&rdChamp(e.target))return;if(e.target.id==='rdQ'&&S.rd){S.rd.f.q=e.target.value;clearTimeout(S.tq);S.tq=setTimeout(async()=>{await chargerPage();const q=document.getElementById('rdQ');if(q){q.focus();q.setSelectionRange(q.value.length,q.value.length)}},250);return}if(e.target.dataset&&(e.target.dataset.adm||e.target.dataset.admTuile||e.target.dataset.admZone!=null)&&e.target.tagName!=='SELECT'&&e.target.type!=='color'){saisieAdmin(e.target);return}if(e.target.dataset&&e.target.dataset.ce&&e.target.type!=='checkbox'&&e.target.tagName!=='SELECT'){saisieCalendrier(e.target);return}if(e.target.dataset&&e.target.dataset.ty&&S.types){S.types.liste[+e.target.dataset.ty][e.target.dataset.tk]=e.target.value;return}if(e.target.dataset&&e.target.dataset.f&&e.target.type!=='checkbox'&&e.target.tagName!=='SELECT'){champSaisi(e.target);return}if(e.target.id==='parcQ'){S.parcQ=e.target.value;clearTimeout(S.tq);S.tq=setTimeout(async()=>{await chargerPage();const q=document.getElementById('parcQ');if(q){q.focus();q.setSelectionRange(q.value.length,q.value.length)}},250)}});
 
 // --- Application installable (2026-10-17) : console en ligne seulement (jamais la console du PC). -----------------
 // Service worker de /console/ (sw.js à côté de la page) : page et fichiers statiques seulement, jamais de données ni
@@ -3686,7 +4115,7 @@ document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)r
     APP.demande=true;APP.attente.postMessage({type:'activer'})}});
 // Hors ligne : message clair à l'écran de connexion (la page vient de la copie gardée).
 addEventListener('offline',()=>{if(!S.jeton)render()});addEventListener('online',()=>{if(!S.jeton)render()});
-addEventListener('hashchange',()=>{const h=decodeURIComponent(location.hash.slice(1));if(P(h)&&h!==S.page&&!(S.edit&&S.edit.sale)){S.page=h;S.edit=null;if(S.moi)render()}});
+addEventListener('hashchange',()=>{const h=decodeURIComponent(location.hash.slice(1));if(P(h)&&h!==S.page&&!(S.edit&&S.edit.sale)&&!rdSaisie()){S.page=h;S.edit=null;if(S.moi)render()}});
 // Démarrage : session de cet onglet encore valable ? (le script le dit)
 (async()=>{
   // Console du PC : écran télé ouvert au démarrage (réglé dans « Écrans télé »), comme l'ancienne console.
