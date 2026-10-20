@@ -182,6 +182,23 @@ th{font-size:15px;color:var(--muted);text-transform:uppercase;letter-spacing:.05
 .op.a{background:var(--warn-bg);border-color:#f3d7a6;color:var(--warn)}
 .op.f{background:var(--ok-bg);border-color:#bfe2c8;color:var(--ok)}
 .op.p{background:#f3f6f7;border-color:var(--line);color:#41545C}
+/* Pastille d'une personne (2026-10-19) : point + nom en gras sur fond teinté de SA couleur (persPastille : équipe du
+   roulement, sinon palette fixe selon le nom ; contraste texte / fond calculé ≥ 4,5:1 en clair et en sombre). */
+.pns{display:inline-flex;flex-wrap:wrap;gap:3px 4px;max-width:100%;vertical-align:middle}
+.pn{display:inline-block;max-width:100%;box-sizing:border-box;padding:0 .5em 0 .4em;border:1.5px solid var(--pc);border-radius:.8em;background:var(--pb);color:var(--pf);font-weight:700;line-height:1.45;white-space:normal;overflow-wrap:break-word;vertical-align:middle;text-transform:none;letter-spacing:normal;text-align:left}
+.pn::before{content:"";display:inline-block;width:.6em;height:.6em;margin-right:.35em;border-radius:50%;background:var(--pc);vertical-align:.02em}
+:where(.ds-sombre) .pn{background:var(--pbs);color:var(--pfs)}
+.op .pns{margin-top:3px}.op small.qui{opacity:1}/* Charge par jour (2026-10-19) : couleur toujours avec un symbole (✓ • ✕). */
+.cj-wrap{overflow-x:auto;padding:8px}.cj{border-collapse:separate;border-spacing:3px;width:auto;min-width:100%}
+.cj th{font-weight:700;color:var(--muted);text-align:center;padding:2px 4px;white-space:nowrap;border:0;vertical-align:middle}.cj thead th.auj{color:var(--accent)}
+.cj tbody th{text-align:left;color:var(--ink);position:sticky;left:0;background:var(--card);z-index:1;padding-right:8px}
+.cj td{padding:0;text-align:center;min-width:64px;border:0;vertical-align:middle}.cj td.auj{background:var(--accent-soft);border-radius:8px}
+.cj-c{position:relative;display:flex;align-items:center;justify-content:center;gap:4px;width:100%;min-height:44px;border:2px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);font:inherit;font-size:15px;cursor:pointer;padding:2px 4px;overflow:hidden}
+.cj-c[aria-pressed="true"]{outline:3px solid var(--accent);outline-offset:1px}.cj-c b{font-variant-numeric:tabular-nums}.cj-c small{font-size:15px;color:var(--warn)}
+.cj-c.ok{border-color:var(--ok);background:var(--ok-bg)}.cj-c.proche{border-color:var(--warn-line);background:var(--warn-bg)}.cj-c.trop{border-color:var(--err);background:var(--err-bg)}
+.cj-c i{position:absolute;left:0;bottom:0;height:5px;background:var(--accent);border-radius:0 3px 0 0}
+.cj-s{font-weight:800}.cj-s.ok{color:var(--ok)}.cj-s.proche{color:var(--warn)}.cj-s.trop{color:var(--err)}.cj-t{font-weight:700;white-space:nowrap;padding:0 6px}
+.cj-det{margin:0 0 12px;padding-left:20px;font-size:15px}.cj-det li{margin:6px 0}small.cj-rep{color:var(--accent-dark);font-weight:700}small.cj-dep{color:var(--err);font-weight:700}
 .leg{display:flex;gap:14px;flex-wrap:wrap;font-size:15px;color:var(--muted);margin:10px 0}
 /* Contenus */
 .cont{display:grid;grid-template-columns:minmax(260px,360px) minmax(0,1fr);gap:16px;align-items:start}
@@ -650,24 +667,57 @@ var CalMaint=(function(){
     return out.filter(function(o){return o.date||o.annulee}).sort(function(a,b){return (a.date||a.origine)<(b.date||b.origine)?-1:1});
   }
   function occurrences(st,du,au){
-    var out=brutes(st,du,au),memo={};
+    var out=placer(st,brutes(st,du,au),{});
+    // Temps maximum par jour (2026-10-19) : une machine peut être reportée à un jour travaillé suivant. Elle apparaît le
+    // jour où elle est prévue : on cherche aussi les échéances des REPORT_MAX jours d'avant dont une machine arrive ici.
+    // Sans limite et sans report dans le passé figé : rien de plus (résultat identique à avant).
+    if(!maxJour(st)&&!figeAvecReport(st))return out;
+    var avant=placer(st,brutes(st,ajoute(du,-REPORT_MAX),ajoute(du,-1)),{}),l=[];
+    eclater(out).forEach(function(o){if(o.annulee||!o.reporte||o.date<=au)l.push(o)});
+    eclater(avant).forEach(function(o){if(o.reporte&&o.date>=du&&o.date<=au)l.push(o)});
+    return l.sort(function(a,b){return (a.date||a.origine)<(b.date||b.origine)?-1:(a.date||a.origine)>(b.date||b.origine)?1:0});
+  }
+  // Personnes posées sur des occurrences brutes : passé figé, sinon répartition équilibrée du mois.
+  function placer(st,out,memo){
+    var mx=maxJour(st);
     out.forEach(function(o){
       // Passé figé (décision 2026-10-16) : la personne prévue avant le dernier changement de réglage reste la même.
-      var fg=figee(st,o);if(fg){poser(o,fg);o.figee=true;return}
+      var fg=lireFige(st,o);if(fg){poser(o,fg.r,fg.d);o.figee=true;return}
       if(!o.equi||!o.date)return;
-      var r=repartitionMois(st,o.date.slice(0,7),memo)[o.regle.id+'|'+o.origine];if(!r)return;
-      poser(o,r);
+      var R=repartitionMois(st,o.date.slice(0,7),memo),k=o.regle.id+'|'+o.origine,r=mx?R.res[k]:R[k];if(!r)return;
+      poser(o,r,mx?R.dep[k]:null);
       // Aucune personne éligible ce jour-là (toutes en congé, liste vide) : dit clairement.
       if(!o.noms.length)o.aucunDispo=true;
     });
     return out;
   }
   // Personnes d'une occurrence : liste (toutes les machines) ou {machine: [nom]} (une personne par machine).
-  function poser(o,r){
-    o.rempl=[];
+  // dp (temps max, 2026-10-19) = {machine: {date, dep}} : machine reportée à « date », ou dep = « dépasse le temps max ».
+  function poser(o,r,dp){
+    o.rempl=[];delete o.depl;
     if(Array.isArray(r)){o.noms=r.slice();o.prevus=r.slice();delete o.nomsM;return}
     var u=[];o.machines.forEach(function(m){(r[m]||[]).forEach(function(n){if(u.indexOf(n)<0)u.push(n)})});
     o.nomsM=r;o.noms=u;o.prevus=u.slice();
+    if(dp)for(var m in dp)if(Object.prototype.hasOwnProperty.call(dp,m)){o.depl=dp;break}
+  }
+  // Une occurrence dont des machines sont reportées devient plusieurs : la part du jour prévu (o, sans les machines
+  // reportées ; absente s'il n'en reste aucune) et une par jour de report (reporte = jour prévu au départ). Même règle,
+  // même origine : les exceptions et le passé figé restent attachés à l'échéance. depasse = machines laissées ce jour-là
+  // au-delà du temps max (personne n'avait la place jusqu'à l'échéance suivante).
+  function eclater(l){
+    var out=[];
+    l.forEach(function(o){
+      if(!o.depl||!o.date){out.push(o);return}
+      var jours={},ordre=[],ici=[],dep=[];
+      o.machines.forEach(function(m){var x=o.depl[m],d=x&&x.date&&x.date>o.date?x.date:o.date;if(x&&x.dep&&d===o.date)dep.push(m);
+        if(d===o.date){ici.push(m);return}if(!jours[d]){jours[d]=[];ordre.push(d)}jours[d].push(m)});
+      var part=function(base,ms,date){var c={},k;for(k in base)if(Object.prototype.hasOwnProperty.call(base,k))c[k]=base[k];
+        var nm={},u=[];ms.forEach(function(m){nm[m]=(base.nomsM&&base.nomsM[m])||[];nm[m].forEach(function(n){if(u.indexOf(n)<0)u.push(n)})});
+        c.date=date;c.machines=ms;c.nomsM=nm;c.noms=u;c.prevus=u.slice();c.rempl=[];delete c.depl;return c};
+      if(ici.length){var b=part(o,ici,o.date);if(dep.length)b.depasse=dep;out.push(b)}
+      ordre.sort().forEach(function(d){var c=part(o,jours[d],d);c.reporte=o.date;out.push(c)});
+    });
+    return out;
   }
   // --- Passé figé (2026-10-16) ------------------------------------------------------------------------------------
   // cal.fige = {jusqu: 'AAAA-MM-JJ', n: [noms], m: [machines], r: {règle: {AAMMJJ (date prévue): « 0,2 » | « 1:0;2:3 »}}} :
@@ -676,15 +726,26 @@ var CalMaint=(function(){
   // prévues jusqu'à la veille, prise AVANT chaque changement de réglage (calendrier, temps estimé) par l'appareil qui le
   // fait, et partagée avec le calendrier (même version maj) : toutes les tablettes, la console et l'écran télé lisent la
   // même chose. Une exception avec des personnes choisies à la main pour ce jour-là reste prioritaire.
-  function figee(st,o){
+  // Temps max (2026-10-19) : « 1:0:2 » = machine 1 → personne 0, reportée de 2 jours (calendaires) après le jour prévu ;
+  // « 1:0:0:1 » = laissée le jour prévu au-delà du temps max. Une ancienne tablette lit seulement « 1:0 » (jour prévu) :
+  // la forme reste faite de chiffres, deux-points, virgules et points-virgules (ancien bloc fusion : gardée telle quelle).
+  function figee(st,o){var x=lireFige(st,o);return x?x.r:null}
+  function lireFige(st,o){
     var f=st.cal&&st.cal.fige;if(!f||!f.r||!o.date||o.date>f.jusqu)return null;
     var x=(st.cal.exc||{})[o.regle.id+'|'+o.origine];if(x&&Array.isArray(x.noms)&&x.noms.length)return null;
     var v=(f.r[o.regle.id]||{})[o.origine.slice(2).replace(/-/g,'')];if(typeof v!=='string')return null;
     var nom=function(i){return f.n[+i]},l=function(s){return s?s.split(',').map(nom).filter(Boolean):[]};
-    if(v.indexOf(':')<0)return l(v);
+    if(v.indexOf(':')<0)return {r:l(v),d:null};
     // Machines dans l'ordre alphabétique, comme le calcul (même objet, même JSON sur tous les appareils).
-    var tmp={},out={};v.split(';').forEach(function(p){var k=p.split(':'),m=f.m[+k[0]];if(m)tmp[m]=l(k[1])});
-    Object.keys(tmp).sort().forEach(function(m){out[m]=tmp[m]});return out;
+    var tmp={},out={},dp=null;v.split(';').forEach(function(p){var k=p.split(':'),m=f.m[+k[0]];if(!m)return;tmp[m]=l(k[1]);
+      var j=Math.round(Number(k[2])||0);if(j>0&&j<=REPORT_MAX||k[3]==='1'){dp=dp||{};dp[m]={date:j>0?ajoute(o.date,j):o.date,dep:k[3]==='1'}}});
+    Object.keys(tmp).sort().forEach(function(m){out[m]=tmp[m]});return {r:out,d:dp};
+  }
+  // Passé figé qui contient au moins une machine reportée (ou au-delà du temps max).
+  function figeAvecReport(st){
+    var f=st.cal&&st.cal.fige;if(!f||!f.r)return false;
+    for(var a in f.r)if(Object.prototype.hasOwnProperty.call(f.r,a))for(var b in f.r[a])if(/:\d+:\d+/.test(f.r[a][b]))return true;
+    return false;
   }
   // Photographie : du 1er du mois précédent à la veille, avec les réglages ACTUELS (avant le changement). null s'il n'y a
   // ni règle « répartition équilibrée » ni passé déjà figé (hors répartition équilibrée, rien ne change).
@@ -696,9 +757,17 @@ var CalMaint=(function(){
     if(!aEquilibre(cal)&&!cal.fige&&!aEquilibre(apres))return null;
     today=today||auj();var hier=ajoute(today,-1),d=D(today);d.setDate(1);d.setMonth(d.getMonth()-1);var du=S(d),n=[],ms=[],r={};
     var rang=function(l,x){var i=l.indexOf(x);if(i<0){l.push(x);i=l.length-1}return i};
-    occurrences(st,du,hier).forEach(function(o){if(!o.date||o.date>hier)return;
-      var v=o.nomsM?o.machines.filter(function(m){return o.nomsM[m]}).map(function(m){return rang(ms,m)+':'+o.nomsM[m].map(function(x){return rang(n,x)}).join(',')}).join(';'):o.noms.map(function(x){return rang(n,x)}).join(',');
-      (r[o.regle.id]=r[o.regle.id]||{})[o.origine.slice(2).replace(/-/g,'')]=v});
+    var l=occurrences(st,du,hier);
+    // Temps max (2026-10-19) : une échéance passée garde aussi ses machines reportées, même à aujourd'hui ou plus tard
+    // (leur jour et leur personne sont décidés) ; et chaque machine son report (« :2 ») ou « au-delà du max » (« :0:1 »).
+    if(maxJour(st)||figeAvecReport(st))l=l.filter(function(o){return !o.reporte}).concat(occurrences(st,du,ajoute(hier,REPORT_MAX)).filter(function(o){return o.reporte&&o.reporte>=du&&o.reporte<=hier}));
+    var parts={};
+    l.forEach(function(o){var base=o.reporte||o.date;if(!base||base>hier)return;
+      var k=o.regle.id+'\u0001'+o.origine.slice(2).replace(/-/g,''),p=parts[k]=parts[k]||{l:[],liste:null};
+      if(!o.nomsM){p.liste=o.noms.map(function(x){return rang(n,x)}).join(',');return}
+      o.machines.filter(function(m){return o.nomsM[m]}).forEach(function(m){var j=o.reporte?ecart(o.reporte,o.date):0,dp=o.depasse&&o.depasse.indexOf(m)>=0;
+        p.l.push(rang(ms,m)+':'+o.nomsM[m].map(function(x){return rang(n,x)}).join(',')+(j>0?':'+j:dp?':0:1':''))})});
+    Object.keys(parts).forEach(function(k){var i=k.indexOf('\u0001'),p=parts[k];(r[k.slice(0,i)]=r[k.slice(0,i)]||{})[k.slice(i+1)]=p.liste!==null?p.liste:p.l.join(';')});
     return {jusqu:hier,n:n,m:ms,r:r};
   }
   // --- Répartition équilibrée (2026-10-16) -------------------------------------------------------------------------
@@ -731,8 +800,98 @@ var CalMaint=(function(){
   function repartitionMois(st,mois,memo){
     if(memo[mois])return memo[mois];
     var v=versionRep(st,mois);for(var ci=0;ci<CACHE_REP.length;ci++)if(CACHE_REP[ci].v===v)return (memo[mois]=CACHE_REP[ci].r);
-    var r0=repartitionCalc(st,mois);CACHE_REP.unshift({v:v,r:r0});if(CACHE_REP.length>8)CACHE_REP.pop();
+    // Temps max : le mois tient compte des machines reportées du mois d'avant sur ses premiers jours (calcul en chaîne
+    // depuis le mois de départ moisAncre, le même quel que soit le mois affiché).
+    var r0;if(!maxJour(st))r0=repartitionCalc(st,mois);
+    else{var pm=moisDecale(mois,-1);r0=repartitionMax(st,mois,pm>=moisAncre(st,mois)?repartitionMois(st,pm,memo):null)}
+    CACHE_REP.unshift({v:v,r:r0});if(CACHE_REP.length>24)CACHE_REP.pop();
     return (memo[mois]=r0);
+  }
+  // --- Temps maximum par personne et par jour (2026-10-19) ----------------------------------------------------------
+  // cal.maxJour (minutes) : pour les règles en répartition équilibrée, chaque machine va à la personne éligible la moins
+  // chargée CE JOUR-LÀ qui a encore la place (puis la moins chargée du mois). Personne n'a la place : la machine passe au
+  // jour travaillé suivant (même choix), jamais le jour de l'échéance suivante de la même règle ni plus de REPORT_MAX jours
+  // après ; toujours pas de place : la moins chargée du jour prévu, marquée « dépasse le temps max » (jamais perdue).
+  // Les règles « roulement » / « toujours les mêmes » ne bougent pas et comptent dans la charge du jour. Ordre fixe
+  // (date, règle, échéance, machine) : même résultat sur toutes les tablettes, la console et l'écran télé.
+  var REPORT_MAX=31;
+  function maxJour(st){var n=Math.round(Number(st&&st.cal&&st.cal.maxJour)||0);return n>0?n:0}
+  function finMois(mois){return S(new Date(+mois.slice(0,4),+mois.slice(5,7),0,12))}
+  function moisDecale(mois,n){return S(new Date(+mois.slice(0,4),+mois.slice(5,7)-1+n,1,12)).slice(0,7)}
+  // Mois de départ de la chaîne (relecture 2026-10-19) : il ne dépend PAS du mois affiché (sinon le résultat changerait
+  // selon la vue) : le plus récent de (mois de la plus ancienne règle, mois d'avant le passé figé). Jamais la date du jour : le passé ancien ne change pas au 1er du mois (décision 2026-10-19).
+  // Le passé figé est repris à chaque changement de réglage : la chaîne reste courte. Avant ce mois : pas de report entrant.
+  function moisAncre(st,mois){
+    var a='';(st.cal.regles||[]).forEach(function(g){var p=creeeLe(g);if(g.debut&&g.debut>p)p=g.debut;if(!p)p=(st.cal.roulement||{}).debut||'2026-01-05';if(!a||p<a)a=p});
+    a=(a||mois).slice(0,7);
+    var f=st.cal.fige&&st.cal.fige.jusqu?moisDecale(st.cal.fige.jusqu.slice(0,7),-1):'';
+    return f>a?f:a;
+  }
+  // prev = résultat du mois d'avant (ou null) : ses machines placées après sa fin (report) comptent ici.
+  // Renvoie {res: {règle|origine: {machine: [nom]}}, dep: {règle|origine: {machine: {date, dep}}}, report: [{d, n, w}]}.
+  function repartitionMax(st,mois,prev){
+    var mx=maxJour(st),d0=mois+'-01',d1=finMois(mois),fin=ajoute(d1,REPORT_MAX),cal=st.cal;
+    var ch={},nb={},jr={},res={},dep={},report=[];
+    var aj=function(d,n,w){var x=jr[d]=jr[d]||{};x[n]=(x[n]||0)+w};
+    var plus=function(n,w,k){ch[n]=(ch[n]||0)+w;nb[n]=(nb[n]||0)+k};
+    // Report du mois d'avant : charge de ces jours, et du mois quand il tombe dedans.
+    (prev?prev.report:[]).forEach(function(p){aj(p.d,p.n,p.w);if(p.d>d1)report.push(p);else plus(p.n,p.w,1)});
+    var l=brutes(st,d0,fin).filter(function(o){return o.date&&o.date>=d0});
+    l.sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:a.regle.id<b.regle.id?-1:a.regle.id>b.regle.id?1:a.origine<b.origine?-1:a.origine>b.origine?1:0});
+    // Charge fixe de chaque jour (jusqu'à fin) : règles qui ne bougent pas, passé figé (à son jour de report).
+    var fixe=function(o,cb){
+      var fg=lireFige(st,o);
+      if(fg){o.machines.forEach(function(m){var w=poids(st,o.op,m),x=fg.d&&fg.d[m],d=x?x.date:o.date;((Array.isArray(fg.r)?fg.r:fg.r[m])||[]).forEach(function(n){cb(d,n,w)})});return fg}
+      if(!o.equi){var pv=o.prevus.map(function(n){var c=absent(cal,n,o.date);return c?(cal.rempl||{})[c.id]||'':n}).filter(Boolean);
+        o.machines.forEach(function(m){var w=poids(st,o.op,m);pv.forEach(function(n){cb(o.date,n,w)})});return true}
+      return null;
+    };
+    l.forEach(function(o){fixe(o,aj)});
+    // Prochaine échéance de chaque règle (jour effectif, exceptions comprises) : borne du report.
+    var echeances={};
+    var limite=function(o){
+      var g=o.regle,e=echeances[g.id];
+      if(!e){e=echeances[g.id]=[];datesRegle(cal,g,ajoute(d0,-REPORT_MAX),ajoute(fin,REPORT_MAX+7),{}).forEach(function(d){var x=(cal.exc||{})[g.id+'|'+d],t=x&&x.date!==undefined&&x.date!==null?x.date:d;if(t)e.push(t)});e.sort()}
+      for(var i=0;i<e.length;i++)if(e[i]>o.date)return e[i]<ajoute(o.date,REPORT_MAX+1)?e[i]:ajoute(o.date,REPORT_MAX+1);
+      return ajoute(o.date,REPORT_MAX+1);
+    };
+    // Personne qui a la place ce jour-là : la moins chargée du jour, puis du mois, puis moins d'échéances, puis le nom.
+    var choisirJour=function(el,d,w,place){var b=null,j=jr[d]||{};el.forEach(function(n){if(place&&(j[n]||0)+w>mx)return;
+      var c=j[n]||0,cb=b===null?0:j[b]||0;if(b===null||c<cb||(c===cb&&((ch[n]||0)<(ch[b]||0)||((ch[n]||0)===(ch[b]||0)&&(nb[n]||0)<(nb[b]||0)))))b=n});return b};
+    // Jour par jour : d'abord ce qui ne bouge pas, puis les machines « équilibrées » du jour, la plus longue d'abord (elle
+    // trouve plus facilement une personne qui a encore la place), puis règle, échéance, machine.
+    var parJour={},jours=[];
+    l.forEach(function(o){if(o.date>d1)return;if(!parJour[o.date]){parJour[o.date]=[];jours.push(o.date)}parJour[o.date].push(o)});
+    jours.forEach(function(jour){
+      var items=[];
+      parJour[jour].forEach(function(o){
+        var k=o.regle.id+'|'+o.origine,fg=fixe(o,function(d,n,w){if(d>d1)report.push({d:d,n:n,w:w});else plus(n,w,1)});
+        if(fg){if(fg!==true){res[k]=fg.r;if(fg.d)dep[k]=fg.d}return}
+        res[k]={};var el=eligibles(st,o.regle,o.date),lim=limite(o);
+        o.machines.forEach(function(m){items.push({o:o,k:k,m:m,w:poids(st,o.op,m),el:el,lim:lim})});
+      });
+      items.sort(function(a,b){return b.w-a.w||(a.o.regle.id<b.o.regle.id?-1:a.o.regle.id>b.o.regle.id?1:a.o.origine<b.o.origine?-1:a.o.origine>b.o.origine?1:a.m<b.m?-1:a.m>b.m?1:0)});
+      items.forEach(function(it){
+        var o=it.o,w=it.w,d=o.date,n=choisirJour(it.el,d,w,true),dp=false;
+        while(!n){d=ajoute(d,1);while(d<it.lim&&!travaille(cal,d))d=ajoute(d,1);if(d>=it.lim)break;n=choisirJour(eligibles(st,o.regle,d),d,w,true)}
+        if(!n){d=o.date;n=choisirJour(it.el,d,w,false);dp=!!n}
+        res[it.k][it.m]=n?[n]:[];
+        if(n){aj(d,n,w);if(d>d1)report.push({d:d,n:n,w:w});else plus(n,w,1)}
+        if(n&&(d!==o.date||dp))(dep[it.k]=dep[it.k]||{})[it.m]={date:d,dep:dp};
+      });
+    });
+    // Machines dans l'ordre alphabétique (même objet, même JSON sur tous les appareils, comme le passé figé).
+    Object.keys(res).forEach(function(k){var r=res[k];if(Array.isArray(r))return;var o={};Object.keys(r).sort().forEach(function(m){o[m]=r[m]});res[k]=o});
+    return {res:res,dep:dep,report:report};
+  }
+  // Charge de chaque personne jour par jour (vue « Charge par jour ») : {date: {nom: {min, l: [{op, m, w, reporte, depasse}]}}}.
+  function chargeJours(st,du,au){
+    var r={};
+    occurrences(st,du,au).forEach(function(o){if(!o.date||o.date<du||o.date>au)return;
+      o.machines.forEach(function(m){var w=poids(st,o.op,m);((o.nomsM&&o.nomsM[m])||o.noms).forEach(function(n){var j=r[o.date]=r[o.date]||{},x=j[n]=j[n]||{min:0,l:[]};x.min+=w;
+        x.l.push({op:o.op,m:m,w:w,reporte:o.reporte||'',depasse:!!(o.depasse&&o.depasse.indexOf(m)>=0),regle:o.regle.id,origine:o.origine,
+          propose:(o.rempl||[]).some(function(r){return !r.valide&&r.par===n})})})})});
+    return r;
   }
   function repartitionCalc(st,mois){
     var d0=mois+'-01',d1=S(new Date(+mois.slice(0,4),+mois.slice(5,7),0,12)),ch={},nb={},res={};
@@ -765,9 +924,12 @@ var CalMaint=(function(){
   // précédente (une avance est permise) et avant l'occurrence suivante.
   // Machine suivie broche par broche (fraisage) : faite quand chaque broche en service a sa réponse « faite » ou
   // « pas faite » (une broche à tour de rôle : dès que la broche du tour en a une).
+  // Machine reportée (temps max, 2026-10-19) : sans échéance précédente, la fenêtre commence au jour prévu au départ
+  // (reporte) ; une maintenance faite ce jour-là compte.
   function faite(st,o,m,suivante,precedente){
     if(suivi(st,o.op,m)){var x=brochesOcc(st,o,m,suivante,precedente);return x.fini?(x.e||{id:'',end:D(o.date).getTime(),hs:true}):null}
-    for(var i=0;i<st.journal.length;i++){var e=st.journal[i];if(e.result==='ok'&&e.fid===o.op.id&&e.machine===m){var j=S(new Date(e.end));if((precedente?j>precedente:j>=o.date)&&(!suivante||j<suivante))return e}}
+    var bas=o.reporte||o.date;
+    for(var i=0;i<st.journal.length;i++){var e=st.journal[i];if(e.result==='ok'&&e.fid===o.op.id&&e.machine===m){var j=S(new Date(e.end));if((precedente?j>precedente:j>=bas)&&(!suivante||j<suivante))return e}}
     return null;
   }
   // --- Broches (fraisage, 2026-10-16) -----------------------------------------------------------------------------
@@ -827,9 +989,9 @@ var CalMaint=(function(){
   // État broche par broche d'une occurrence (même fenêtre que faite) :
   // {tour, axes, br:[{b, st:'ok'|'p'|'hs'|'todo', e, raison}], n (faites), tot (sans les hors service), fini, commence, e}.
   function brochesOcc(st,o,m,suivante,precedente){
-    var ax=axesM(st,m),rep={},der=null;
+    var ax=axesM(st,m),rep={},der=null,bas=o.reporte||o.date;
     groupes(st,o.op.id,m,ax).forEach(function(g){
-      if(!((precedente?g.date>precedente:g.date>=o.date)&&(!suivante||g.date<suivante)))return;
+      if(!((precedente?g.date>precedente:g.date>=bas)&&(!suivante||g.date<suivante)))return;
       // Une réponse définitive (faite, pas faite, hors service) n'est pas effacée par un « à reprendre » ; sinon la plus récente.
       Object.keys(g.rep).forEach(function(b){var x=g.rep[b],y=rep[b];if(!y||(x.rep!=='r'||y.rep==='r')&&(y.rep==='r'||x.e.end>=y.e.end))rep[b]=x});
       g.entrees.forEach(function(e){if(!der||e.end>der.end)der=e});
@@ -872,7 +1034,11 @@ var CalMaint=(function(){
     return out;
   }
   // Le jour d'un premier passage tombe-t-il dans la fenêtre de l'occurrence l[i] (comme faite : après la précédente) ?
-  function dansFenetre(date,l,i){return i>=0&&(i>0?date>l[i-1].date:date>=l[i].date)&&(!l[i+1]||date<l[i+1].date)}
+  function dansFenetre(date,l,i){return i>=0&&(i>0?date>l[i-1].date:date>=(l[i].reporte||l[i].date))&&(!l[i+1]||date<borne(l[i+1]))}
+  // Fin de la fenêtre d'une occurrence : le jour PRÉVU de l'échéance suivante (relecture 2026-10-19). Quand celle-ci est
+  // reportée (temps max), son jour de report ne compte pas : une maintenance faite le jour prévu de l'échéance suivante
+  // ne compte pas aussi pour la précédente.
+  function borne(o){return o?o.reporte||o.date:''}
   // Fiche machine : pour chaque opération suivie broche par broche sur la machine, chaque broche avec sa dernière fois
   // faite, sa prochaine échéance et son état (ok | jour | bientot | retard | hs | na).
   function ficheBroches(st,m,now){
@@ -886,7 +1052,7 @@ var CalMaint=(function(){
       if((f.machines||[]).length&&f.machines.indexOf(m)<0)return;
       for(j=0;j<l.length;j++)if(l[j].date<=today)i=j;
       var h=function(o){var t=(o.regle.avant||'23:59').split(':'),d=D(o.date);d.setHours(+t[0],+t[1],0,0);return d.getTime()};
-      var cur=i>=0?brochesOcc(st,l[i],m,l[i+1]?l[i+1].date:'',i>0?l[i-1].date:''):null,prochaine={};
+      var cur=i>=0?brochesOcc(st,l[i],m,borne(l[i+1]),i>0?l[i-1].date:''):null,prochaine={};
       if(f.broches==='tour'){
         // Calendrier des broches à venir : la broche du tour à l'échéance en cours (si pas faite), puis les suivantes.
         var k=0,start=cur&&!cur.fini?i:i+1;
@@ -919,7 +1085,7 @@ var CalMaint=(function(){
       // Seule compte la dernière occurrence passée (ou d'aujourd'hui) : faite → on regarde la suivante ; sinon en retard.
       var l=parCle[k],m=k.slice(k.indexOf('|')+1),choix=null,etat='ok',last=0,i=-1,j;
       for(j=0;j<l.length;j++)if(l[j].date<=today)i=j;
-      var fait=i>=0?faite(st,l[i],m,l[i+1]?l[i+1].date:'',i>0?l[i-1].date:''):null;
+      var fait=i>=0?faite(st,l[i],m,borne(l[i+1]),i>0?l[i-1].date:''):null;
       if(fait)last=fait.end;
       if(i>=0&&!fait){choix=l[i];etat=l[i].date<today?'retard':heure(l[i])<now?'retard':'jour'}
       else if(l[i+1]){choix=l[i+1];etat=ecart(today,choix.date)<=1?'bientot':'ok'}
@@ -928,7 +1094,7 @@ var CalMaint=(function(){
       var x={f:choix.op,m:m,last:last,due:heure(choix),etat:etat,qui:qn.join(' + ')||(choix.aucunDispo?'Personne de disponible':''),nb:qn.length,occ:choix};
       // Broches (2026-10-16) : état broche par broche de l'occurrence montrée (celle qui est faite, sinon celle à faire).
       if(suivi(st,choix.op,m)){
-        var oc=fait?l[i]:choix,jo=l.indexOf(oc);x.bro=brochesOcc(st,oc,m,l[jo+1]?l[jo+1].date:'',jo>0?l[jo-1].date:'');
+        var oc=fait?l[i]:choix,jo=l.indexOf(oc);x.bro=brochesOcc(st,oc,m,borne(l[jo+1]),jo>0?l[jo-1].date:'');
         // Maintenance commencée à une échéance passée et pas finie : ses broches restantes restent à faire, en retard ;
         // la nouvelle échéance démarre normalement pour toutes les broches.
         if(!seen[choix.op.id+'|'+m]){seen[choix.op.id+'|'+m]=1;
@@ -962,7 +1128,8 @@ var CalMaint=(function(){
   }
   return {personnesCal:personnesCal,D:D,S:S,ajoute:ajoute,lundi:lundi,ecart:ecart,auj:auj,travaille:travaille,ferme:ferme,equipeDu:equipeDu,datesRegle:datesRegle,occurrences:occurrences,faite:faite,etats:etats,absent:absent,
     dureeOp:dureeOp,poids:poids,chargeMois:chargeMois,eligibles:eligibles,DUREE_DEFAUT:DUREE_DEFAUT,figer:figer,
-    axesM:axesM,parBroche:parBroche,suivi:suivi,horsService:horsService,hsDe:hsDe,brochesDe:brochesDe,groupes:groupes,brochesOcc:brochesOcc,brocheDuTour:brocheDuTour,ouvertes:ouvertes,ficheBroches:ficheBroches,dansFenetre:dansFenetre};
+    maxJour:maxJour,chargeJours:chargeJours,REPORT_MAX:REPORT_MAX,
+    axesM:axesM,parBroche:parBroche,suivi:suivi,horsService:horsService,hsDe:hsDe,brochesDe:brochesDe,groupes:groupes,brochesOcc:brochesOcc,brocheDuTour:brocheDuTour,ouvertes:ouvertes,ficheBroches:ficheBroches,dansFenetre:dansFenetre,borne:borne};
 })();
 // </calendrier>
 // ---------------------------------------------------------------------------------------------------------------
@@ -2448,9 +2615,11 @@ function descQuand(q){
 function occurrencesEtat(st,du,au){
   const C=CalMaint;let large=[];try{large=C.occurrences(st,C.ajoute(du,-35),C.ajoute(au,35)).filter(o=>o.date)}catch(e){}
   const suite={};large.forEach(o=>o.machines.forEach(m=>{const k=o.regle.id+'|'+m;(suite[k]=suite[k]||[]).push(o)}));
-  const faite=(o,m)=>{const l=suite[o.regle.id+'|'+m]||[],i=l.indexOf(o);try{return C.faite(st,o,m,l[i+1]?l[i+1].date:'',i>0?l[i-1].date:'')}catch(e){return null}};
+  // Fin de fenêtre = jour PRÉVU de l'échéance suivante (borne : son report éventuel ne compte pas), relecture 2026-10-19.
+  const fin=x=>x?(C.borne?C.borne(x):x.date):'';
+  const faite=(o,m)=>{const l=suite[o.regle.id+'|'+m]||[],i=l.indexOf(o);try{return C.faite(st,o,m,fin(l[i+1]),i>0?l[i-1].date:'')}catch(e){return null}};
   // Broches : état broche par broche de l'occurrence (null hors fraisage ou sans étape « ↻ »).
-  const bro=(o,m)=>{if(!C.suivi||!C.suivi(st,o.op,m))return null;const l=suite[o.regle.id+'|'+m]||[],i=l.indexOf(o);try{return C.brochesOcc(st,o,m,l[i+1]?l[i+1].date:'',i>0?l[i-1].date:'')}catch(e){return null}};
+  const bro=(o,m)=>{if(!C.suivi||!C.suivi(st,o.op,m))return null;const l=suite[o.regle.id+'|'+m]||[],i=l.indexOf(o);try{return C.brochesOcc(st,o,m,fin(l[i+1]),i>0?l[i-1].date:'')}catch(e){return null}};
   return {occ:large.filter(o=>o.date>=du&&o.date<=au),faite,bro};
 }
 // Charge de chacun sur une période : machines à faire par personne (remplaçants compris, validés ou proposés).
@@ -2465,8 +2634,8 @@ function vueCharge(st,du,au,titre){
   // La barre suit le temps estimé (équilibre visible) ; machines et h:mm écrits à côté.
   const {ch,rempl,mn}=chargePeriode(st,du,au),noms=Object.keys(ch).sort((a,b)=>(mn[b]||0)-(mn[a]||0)||ch[b]-ch[a]||a.localeCompare(b,'fr')),max=Math.max(1,...Object.values(mn)),hmn=x=>Math.floor(x/60)+' h '+String(x%60).padStart(2,'0');
   const vus=new Set(),rl=rempl.filter(r=>{const k=r.absent+'|'+r.par+'|'+r.conge.id;if(vus.has(k))return false;vus.add(k);return true});
-  return '<section class="card" style="margin-top:16px"><h2>'+svg('personnes')+esc(titre)+'</h2>'+(noms.length?'<table><tbody>'+noms.map(n=>'<tr><td style="width:30%"><b>'+esc(n)+'</b></td><td><div style="background:var(--accent-soft);border-radius:6px;height:14px;width:'+Math.round((mn[n]||0)/max*100)+'%"></div></td><td style="width:1%;white-space:nowrap">'+ch[n]+' machine(s) · '+hmn(mn[n]||0)+'</td></tr>').join('')+'</tbody></table>':'<p class="hint">Rien de prévu sur la période.</p>')+
-    (rl.length?'<h3 style="font-size:16px;margin:14px 0 6px">Remplacements</h3><ul style="margin:0;padding-left:20px">'+rl.map(r=>'<li>'+esc(r.absent)+' (congé du '+esc(dFr(r.conge.du))+' au '+esc(dFr(r.conge.au))+') : '+(r.par?esc(r.par)+(r.valide?' <span class="tag ok">validé</span>':' <span class="tag warn">proposé</span>'):'<span class="tag err">personne de disponible</span>')+'</li>').join('')+'</ul>':'')+'</section>';
+  return '<section class="card" style="margin-top:16px"><h2>'+svg('personnes')+esc(titre)+'</h2>'+(noms.length?'<table><tbody>'+noms.map(n=>'<tr><td style="width:30%">'+persPastille(n,st.cal)+'</td><td><div style="background:var(--accent-soft);border-radius:6px;height:14px;width:'+Math.round((mn[n]||0)/max*100)+'%"></div></td><td style="width:1%;white-space:nowrap">'+ch[n]+' machine(s) · '+hmn(mn[n]||0)+'</td></tr>').join('')+'</tbody></table>':'<p class="hint">Rien de prévu sur la période.</p>')+
+    (rl.length?'<h3 style="font-size:16px;margin:14px 0 6px">Remplacements</h3><ul style="margin:0;padding-left:20px">'+rl.map(r=>'<li>'+persPastille(r.absent,st.cal)+' (congé du '+esc(dFr(r.conge.du))+' au '+esc(dFr(r.conge.au))+') : '+(r.par?persPastille(r.par,st.cal)+(r.valide?' <span class="tag ok">validé</span>':' <span class="tag warn">proposé</span>'):'<span class="tag err">personne de disponible</span>')+'</li>').join('')+'</ul>':'')+'</section>';
 }
 function vueSemaine(st,cal){
   const C=CalMaint,auj=C.auj(),lun=S.semaine||C.lundi(auj);
@@ -2486,7 +2655,8 @@ function vueSemaine(st,cal){
         const bt=b?(b.tour&&b.br[0]?' · B'+b.br[0].b:'')+(!b.tour&&b.commence&&!b.fini?' ◐ '+b.n+'/'+b.tot:'')+(b.br.some(x=>x.st==='hs')?' · ⊘ '+b.br.filter(x=>x.st==='hs').map(x=>'B'+x.b).join(' '):''):'';
         // Échéance close avec une broche « pas faite » (2026-10-16) : reste verte, mention « ✕ B4 pas faite », raison au survol.
         const pf=f&&b&&b.fini?b.br.filter(x=>x.st==='p'):[];
-        return '<span class="op '+c+'"'+(pf.length?' title="'+esc(pf.map(x=>'B'+x.b+' pas faite : '+(x.raison||'raison non écrite')).join(' ; '))+'"':'')+'>'+sy+' '+esc((o.op.title||'')+bt)+(pf.length?'<small style="color:#8E1B21;font-weight:700">✕ '+esc(pf.map(x=>'B'+x.b).join(', '))+' pas faite'+(pf.length>1?'s':'')+'</small>':'')+'<small>'+esc(f?'faite par '+(f.op||'')+(f.end?' le '+dateFr(f.end):''):(((o.nomsM&&o.nomsM[m])||o.noms||[]).join(' + ')||(o.aucunDispo?'⚠ personne de disponible':'')))+'</small></span>'}).join('')+'</div>';
+        return '<span class="op '+c+'"'+(pf.length?' title="'+esc(pf.map(x=>'B'+x.b+' pas faite : '+(x.raison||'raison non écrite')).join(' ; '))+'"':'')+'>'+sy+' '+esc((o.op.title||'')+bt)+(pf.length?'<small style="color:#8E1B21;font-weight:700">✕ '+esc(pf.map(x=>'B'+x.b).join(', '))+' pas faite'+(pf.length>1?'s':'')+'</small>':'')+// Qui (2026-10-19) : noms en pastilles de couleur (même couleur que la tablette et l'écran télé).
+        (f?'<small class="qui">faite par '+(f.op?persPastille(f.op,cal):'')+esc(f.end?' le '+dateFr(f.end):'')+'</small>':(l=>l.length?persPastilles(l,cal):'<small>'+esc(o.aucunDispo?'⚠ personne de disponible':'')+'</small>')((o.nomsM&&o.nomsM[m])||o.noms||[]))+(o.reporte?'<small class="cj-rep">↷ déplacée du '+esc(jjmm(o.reporte))+' (temps max)</small>':'')+((o.depasse||[]).includes(m)?'<small class="cj-dep">⚠ dépasse le temps max</small>':'')+'</span>'}).join('')+'</div>';
     });
   });
   h+='</div>';
@@ -2511,6 +2681,82 @@ function vueMois(st,cal){
   h+='</div>';
   return h+vueCharge(st,premier,dernier,'Charge du mois par personne (remplaçants compris)');
 }
+// Charge par jour (2026-10-19) : personnes × jours (semaine ou mois), minutes de chacun (h:mm), total ; repère par
+// rapport au temps maximum du jour s'il est réglé (✓ sous le max, • proche : 80 % ou plus, ✕ au-dessus) ; sans max,
+// une simple barre. Toucher une case : les opérations et machines de cette personne ce jour-là (moteur CalMaint).
+const hmc=n=>Math.floor(n/60)+':'+String(n%60).padStart(2,'0'),hmLong=n=>Math.floor(n/60)+' h '+String(n%60).padStart(2,'0');
+const jjmm=s=>String(s).slice(8,10)+'/'+String(s).slice(5,7);
+// --- Couleur d'une personne (2026-10-19, demande de l'utilisateur : « faire ressortir la couleur des noms ») ----------
+// UNE couleur par personne, la même sur la tablette, la console et l'écran télé : celle de son binôme / équipe du
+// roulement (cal.roulement.equipes[].couleur, première équipe qui la contient) ; hors roulement (ou équipe sans couleur) :
+// une couleur d'une petite palette fixe tirée du nom (même calcul sur tous les appareils, casse et espaces ignorés),
+// en évitant si possible les couleurs déjà prises par les équipes (pas de confusion avec un binôme).
+// Affichage : « pastille » = point de la couleur + nom écrit en gras, fond teinté + texte foncé de la même teinte ; le
+// contraste texte / fond est calculé ici (≥ 4,5:1, visé 5,5:1) en clair (--pb/--pf) ET en sombre (--pbs/--pfs).
+// Le nom reste toujours écrit (jamais la couleur seule) ; les symboles d'état ✓ ✕ • restent à part.
+// Bloc recopié À L'IDENTIQUE dans Maintenance-niveau-1.html, console-en-ligne/index.html, console/ecran-maintenance.html.
+const PERS_PALETTE=['#2F6FDB','#7A4CC2','#0E7C86','#B8327A','#795548','#5B6B73'];
+const persCle=n=>String(n==null?'':n).trim().toLocaleLowerCase('fr');
+function persCouleur(nom,cal){
+  const k=persCle(nom),eqs=cal&&cal.roulement&&Array.isArray(cal.roulement.equipes)?cal.roulement.equipes:[];
+  for(const e of eqs)if(e&&/^#[0-9a-fA-F]{6}$/.test(e.couleur||'')&&Array.isArray(e.personnes)&&e.personnes.some(p=>persCle(p)===k))return e.couleur.toUpperCase();
+  const pris=eqs.map(e=>String(e&&e.couleur||'').toUpperCase()),libres=PERS_PALETTE.filter(x=>pris.indexOf(x)<0),l=libres.length?libres:PERS_PALETTE;
+  let h=0;for(let i=0;i<k.length;i++)h=(Math.imul(h,31)+k.charCodeAt(i))|0;
+  return l[(h>>>0)%l.length];
+}
+const PERS_TEINTES={};
+function persTeintes(hex){
+  if(PERS_TEINTES[hex])return PERS_TEINTES[hex];
+  const rgb=[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16)),mix=(a,b,t)=>a.map((x,i)=>Math.round(x+(b[i]-x)*t));
+  const lum=c=>{const v=c.map(x=>{x/=255;return x<=0.03928?x/12.92:Math.pow((x+0.055)/1.055,2.4)});return 0.2126*v[0]+0.7152*v[1]+0.0722*v[2]};
+  const ctr=(a,b)=>{const x=lum(a),y=lum(b);return (Math.max(x,y)+0.05)/(Math.min(x,y)+0.05)};
+  const hx=c=>'#'+c.map(x=>x.toString(16).padStart(2,'0')).join('').toUpperCase();
+  // Texte : la couleur assombrie (clair) ou éclaircie (sombre) pas à pas jusqu'au contraste visé.
+  const texte=(fond,vers)=>{let t=0,c=rgb;while(ctr(c,fond)<5.5&&t<1){t=Math.min(1,t+0.05);c=mix(rgb,vers,t)}return c};
+  const fond=mix(rgb,[255,255,255],0.84),fondS=mix(rgb,[24,37,45],0.7),txt=texte(fond,[0,0,0]),txtS=texte(fondS,[255,255,255]);
+  return PERS_TEINTES[hex]={c:hex,fond:hx(fond),txt:hx(txt),fondS:hx(fondS),txtS:hx(txtS),ctr:ctr(txt,fond),ctrS:ctr(txtS,fondS)};
+}
+const persEsc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+// Une pastille (cls : classe en plus, ex. « grand » pour l'écran télé) ; plusieurs : côte à côte, retour à la ligne permis.
+function persPastille(nom,cal,cls){
+  const t=persTeintes(persCouleur(nom,cal));
+  return '<span class="pn'+(cls?' '+cls:'')+'" style="--pc:'+t.c+';--pb:'+t.fond+';--pf:'+t.txt+';--pbs:'+t.fondS+';--pfs:'+t.txtS+'">'+persEsc(nom)+'</span>';
+}
+function persPastilles(noms,cal,cls){return '<span class="pns">'+(noms||[]).map(n=>persPastille(n,cal,cls)).join(' ')+'</span>'}
+function etatCharge(min,mx){return !mx?'':min>mx?'trop':min>=mx*0.8?'proche':'ok'}
+function vueChargeJour(st,cal){
+  const C=CalMaint,auj=C.auj(),per=S.cjPer==='mois'?'mois':'semaine',mx=C.maxJour?C.maxJour(st):0;
+  let du,au,nav;
+  if(per==='semaine'){const lun=S.semaine||C.lundi(auj);du=lun;au=C.ajoute(lun,6);
+    nav='<button class="btn" data-semaine="'+C.ajoute(lun,-7)+'">‹ Semaine précédente</button><button class="btn" data-semaine="">Cette semaine</button><button class="btn" data-semaine="'+C.ajoute(lun,7)+'">Semaine suivante ›</button><span class="hint">Semaine du '+esc(C.D(lun).toLocaleDateString('fr-FR',{day:'numeric',month:'long'}))+'</span>'}
+  else{const premier=S.mois||auj.slice(0,8)+'01',d0=C.D(premier);du=premier;au=C.S(new Date(d0.getFullYear(),d0.getMonth()+1,0,12));
+    nav='<button class="btn" data-mois="'+C.S(new Date(d0.getFullYear(),d0.getMonth()-1,1,12))+'">‹ Mois précédent</button><button class="btn" data-mois="">Ce mois-ci</button><button class="btn" data-mois="'+C.S(new Date(d0.getFullYear(),d0.getMonth()+1,1,12))+'">Mois suivant ›</button><span class="hint">'+esc(d0.toLocaleDateString('fr-FR',{month:'long',year:'numeric'}))+'</span>'}
+  let j={};try{j=C.chargeJours?C.chargeJours(st,du,au):{}}catch(e){}
+  const jours=[];for(let d=du;d<=au;d=C.ajoute(d,1))if(C.travaille(cal,d)||j[d])jours.push(d);
+  const noms=new Set();Object.values(j).forEach(x=>Object.keys(x).forEach(n=>noms.add(n)));
+  ((cal.roulement||{}).equipes||[]).forEach(e=>(e.personnes||[]).forEach(n=>noms.add(n)));(cal.regles||[]).forEach(g=>g.qui&&g.qui.type==='equilibre'&&(g.qui.noms||[]).forEach(n=>noms.add(n)));
+  const pers=[...noms].sort((a,b)=>a<b?-1:a>b?1:0),plus=Math.max(1,...jours.flatMap(d=>Object.values(j[d]||{}).map(x=>x.min)));
+  let h='<div class="row" style="margin-bottom:10px">'+nav+'</div>'+
+    '<div class="row" role="group" aria-label="Période" style="margin-bottom:10px"><button class="chip" data-cjper="semaine" aria-pressed="'+(per==='semaine')+'">Semaine</button><button class="chip" data-cjper="mois" aria-pressed="'+(per==='mois')+'">Mois</button></div>'+
+    '<p class="hint" style="margin:0 0 10px">'+(mx?'Temps maximum par personne et par jour : <b>'+esc(hmLong(mx))+'</b>. <span class="cj-s ok">✓</span> sous le max · <span class="cj-s proche">•</span> proche (80 % ou plus) · <span class="cj-s trop">✕</span> au-dessus.':'Temps maximum par jour non réglé (Réglages › 3) : la barre montre le temps de chacun.')+' Touchez une case pour voir les opérations.</p>';
+  if(!pers.length)return h+'<div class="card vide">Personne de prévu sur cette période.</div>';
+  h+='<div class="card cj-wrap"><table class="cj"><thead><tr><th scope="col">Personne</th>'+jours.map(d=>'<th scope="col"'+(d===auj?' class="auj"':'')+'>'+esc(C.D(d).toLocaleDateString('fr-FR',{weekday:'short'}))+'<br>'+esc(jjmm(d))+'</th>').join('')+'<th scope="col">Total</th></tr></thead><tbody>';
+  pers.forEach(n=>{let tot=0;
+    h+='<tr><th scope="row">'+persPastille(n,cal)+'</th>'+jours.map(d=>{const x=(j[d]||{})[n],m=x?x.min:0;tot+=m;const sel=S.cjSel===d+'|'+n;
+      if(!m)return '<td'+(d===auj?' class="auj"':'')+'><span class="hint">–</span></td>';
+      const e=etatCharge(m,mx),sy=e==='trop'?'✕':e==='proche'?'•':e==='ok'?'✓':'',rep=x.l.some(y=>y.reporte),dep=x.l.some(y=>y.depasse);
+      return '<td'+(d===auj?' class="auj"':'')+'><button class="cj-c '+(e||'sans')+'" data-cj="'+esc(d+'|'+n)+'" aria-pressed="'+sel+'" aria-label="'+esc(n+', '+jjmm(d)+' : '+hmLong(m)+(e==='trop'?', au-dessus du maximum':e==='proche'?', proche du maximum':e==='ok'?', sous le maximum':''))+'">'+
+        (sy?'<span class="cj-s '+e+'">'+sy+'</span>':'')+'<b>'+hmc(m)+'</b>'+(rep||dep?'<small>'+(rep?'↷':'')+(dep?'⚠':'')+'</small>':'')+(mx?'':'<i style="width:'+Math.round(m*100/plus)+'%"></i>')+'</button></td>'}).join('')+
+      '<td class="cj-t">'+hmc(tot)+'</td></tr>'});
+  h+='</tbody></table></div><p class="hint">↷ = machine déplacée d’un autre jour (temps max) · ⚠ = dépasse le temps max (personne n’avait la place) · h:mm = heures:minutes estimées.</p>';
+  // Détail de la case touchée.
+  const [sd,sn]=(S.cjSel||'').split('|'),x=sd&&(j[sd]||{})[sn];
+  if(x){const e=etatCharge(x.min,mx);
+    h+='<section class="card" style="margin-top:12px" aria-live="polite"><h2>'+persPastille(sn,cal)+' · '+esc(C.D(sd).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'}))+'</h2><p><b>'+esc(hmLong(x.min))+'</b> prévues'+(mx?' · maximum '+esc(hmLong(mx))+' : <span class="cj-s '+e+'">'+(e==='trop'?'✕':e==='proche'?'•':'✓')+'</span> '+(e==='trop'?'au-dessus':e==='proche'?'proche du maximum':'sous le maximum'):'')+'</p>'+
+      '<ul class="cj-det">'+x.l.map(y=>'<li><b>'+esc(y.op.title)+'</b> — '+esc(y.m)+' · '+esc(hmLong(y.w))+(y.reporte?'<br><small class="cj-rep">↷ déplacée du '+esc(jjmm(y.reporte))+' (temps max)</small>':'')+(y.depasse?'<br><small class="cj-dep">⚠ dépasse le temps max (personne n’avait la place jusqu’à l’échéance suivante)</small>':'')+(y.propose?'<br><small class="cj-rep">Remplaçant proposé, pas encore validé : pas compté dans la répartition</small>':'')+'</li>').join('')+'</ul>'+
+      '<button class="btn" data-cj="'+esc(S.cjSel)+'">Fermer le détail</button></section>'}
+  return h;
+}
 // --- Réglages : brouillon S.calEd (une copie du calendrier), enregistré d'un bloc (calendrier-ecrire, depuis = maj).
 const ceCase=(c,v,l)=>'<label class="chip"><input type="checkbox" data-ce="'+c+'" data-t="bool"'+(v?' checked':'')+'>'+l+'</label>';
 const ceJours=(c,l)=>'<div class="row" style="gap:6px">'+JOURS_SEM.map(([n,t])=>'<label class="chip"><input type="checkbox" data-ce-l="'+c+'" data-t="num" value="'+n+'"'+((l||[]).includes(n)?' checked':'')+'>'+t+'</label>').join('')+'</div>';
@@ -2534,6 +2780,9 @@ function vueReglages(d,sec){
       '<div class="hint">Personnes (6 au plus)</div>'+ceListe('roulement.equipes.'+i+'.personnes',e.personnes,noms)+'</div>').join('')+
     '<button class="btn" data-cr="plus" data-k="roulement.equipes">'+svg('plus')+'Ajouter un binôme / une équipe</button>'});
   h+=dsSec({n:3,t:'contenu',titre:'Quand revient chaque opération',nom:'Règles',type:'Règles du calendrier',cls:'edition',corps:''+(ops.length?'':'<p class="hint">Aucune opération dans ce secteur : créez-les d’abord (Opérations de maintenance).</p>')+
+    // Temps maximum par personne et par jour (2026-10-19) : saisi par le responsable, vide = pas de limite.
+    '<div class="etape"><div class="row">'+ceTexte('maxJour',cal.maxJour>0?cal.maxJour:'','Temps maximum par personne et par jour (minutes)','number',' min="0" max="1440" step="5" placeholder="Pas de limite"')+'<span class="tag'+(cal.maxJour>0?' acc':'')+'">'+(cal.maxJour>0?'= '+esc(hmLong(cal.maxJour))+' par jour':'Pas de limite')+'</span></div>'+
+    '<p class="hint" style="margin:6px 0 0">Pour les règles en <b>répartition équilibrée</b> : chaque machine va à une personne qui a encore la place ce jour-là. Si personne n’a la place, la machine passe au jour travaillé suivant (avant l’échéance suivante) ; sinon elle reste ce jour-là avec « ⚠ dépasse le temps max ». Les machines sont alors toujours partagées (le choix « Une seule personne fait toutes les machines » ne s’applique plus). Les règles « roulement » et « personnes fixes » ne bougent pas mais comptent dans la journée. Laissez vide pour ne pas limiter. Un changement ne vaut qu’à partir d’aujourd’hui.</p></div>'+
     cal.regles.map((g,i)=>{const f=ops.find(o=>o.id===g.op),cands=f&&(f.machines||[]).length?f.machines.filter(m=>(d.machines||[]).includes(m)):(d.machines||[]),cib=g.cible||((g.types||[]).length?'type':(g.machines||[]).length?'liste':'tout'),q=g.quand,p='regles.'+i;
       const types=[...new Set((d.types||[]).concat(g.types||[]))];
       return '<div class="etape"><div class="row">'+ceChoix(p+'.op',g.op,'Opération',ops.map(o=>[o.id,o.title]).concat(f||!g.op?[]:[[g.op,'(opération retirée)']]),1)+
@@ -2548,7 +2797,11 @@ function vueReglages(d,sec){
         (g.qui.type==='fixe'?'<div class="hint">Personnes (4 au plus)</div>'+ceListe(p+'.qui.noms',g.qui.noms,noms):'')+
         // Répartition équilibrée (2026-10-16, moteur CalMaint de l'appli) : personnes éligibles, option « une par machine ».
         (g.qui.type==='equilibre'?'<div class="hint">Chaque échéance va à la personne la moins chargée en temps sur le mois, parmi celles cochées (aucune = toutes celles du roulement), jamais en congé ce jour-là. Un changement ne vaut qu’à partir d’aujourd’hui : les échéances passées gardent la personne prévue.</div>'+ceListe(p+'.qui.noms',g.qui.noms,noms)+
-          '<div class="row">'+ceCase(p+'.qui.separe',!!g.qui.separe,'Une personne par machine (sinon la même pour toutes les machines de l’opération ce jour-là)')+'</div>'+
+          // Libellé du 2026-10-19 (même texte que la tablette ; même donnée qui.separe).
+          '<div class="row">'+ceChoix(p+'.qui.separe',g.qui.separe?'1':'0','Les machines d’une même échéance',[['0','Une seule personne fait toutes les machines'],['1','Partager les machines entre plusieurs personnes']],0,'bool')+'</div>'+
+          '<p class="hint" style="margin:4px 0 0">'+(g.qui.separe?'Chaque machine va à une personne différente si possible : petits morceaux de temps pour chacun. Les broches d’une même machine restent à la même personne.':'Moins de relais, mais un gros bloc de temps pour une personne.')+'</p>'+
+          // Temps max (2026-10-19) : il partage toujours les machines.
+          (cal.maxJour>0?'<p class="hint" style="margin:4px 0 0"><b>Avec le temps maximum par jour ('+esc(hmLong(cal.maxJour))+'), les machines sont toujours partagées : ce choix ne s’applique pas.</b> Chacune va à la personne la moins chargée ce jour-là qui a encore la place.</p>':'')+
           (f&&!(Number(f.duree)>0)?'<p class="hint" style="color:var(--warn);margin:4px 0 0"><b>⚠ Temps estimé non renseigné</b> pour cette opération : 15 min par machine sont comptés (Opérations de maintenance › Temps estimé).</p>':''):'')+
         '<p class="hint" style="margin:6px 0 0">'+esc(descQuand(q))+'</p></div>'}).join('')+
     (ops.length?'<button class="btn" data-cr="plus" data-k="regles">'+svg('plus')+'Ajouter une règle</button>':'')});
@@ -2574,11 +2827,14 @@ function vueReglagesLecture(d){
     ((cal.fermes||[]).length?'<p>Jours fermés : '+esc(cal.fermes.map(p=>(p.nom||'Fermé')+' '+dFr(p.du)+(p.au!==p.du?' → '+dFr(p.au):'')).join(' ; '))+'</p>':'')+
     '<h3>Roulement</h3><p>'+esc((r.mode==='jour'?'Par jour travaillé':'Par semaine')+(r.n>1?', toutes les '+r.n:'')+(r.debut?', à partir du '+dFr(r.debut):''))+'</p>'+
     ((r.equipes||[]).length?'<ul>'+r.equipes.map(e=>'<li><b>'+esc(e.nom)+'</b> : '+esc(e.personnes.join(', '))+'</li>').join('')+'</ul>':'')+
-    '<h3>Règles</h3>'+((cal.regles||[]).length?'<ul>'+cal.regles.map(g=>{const f=ops.find(o=>o.id===g.op);return '<li><b>'+esc(f?f.title:'(opération retirée)')+'</b> : '+esc(descQuand(g.quand))+((g.types||[]).length?' · types '+g.types.join(', '):(g.machines||[]).length?' · '+g.machines.join(', '):'')+(g.avant?' · avant '+g.avant:'')+(g.qui.type==='fixe'?' · '+g.qui.noms.join(', '):g.qui.type==='equilibre'?' · répartition équilibrée'+(g.qui.noms.length?' entre '+g.qui.noms.join(', '):'')+(g.qui.separe?' (une personne par machine)':''):' · roulement')+(g.acc?' · accompagnant obligatoire':'')+'</li>'}).join('')+'</ul>':'<p class="hint">Aucune règle.</p>')+'</section>';
+    '<h3>Temps maximum par personne et par jour</h3><p>'+(cal.maxJour>0?esc(hmLong(cal.maxJour)):'Pas de limite')+'</p>'+
+    '<h3>Règles</h3>'+((cal.regles||[]).length?'<ul>'+cal.regles.map(g=>{const f=ops.find(o=>o.id===g.op);return '<li><b>'+esc(f?f.title:'(opération retirée)')+'</b> : '+esc(descQuand(g.quand))+((g.types||[]).length?' · types '+g.types.join(', '):(g.machines||[]).length?' · '+g.machines.join(', '):'')+(g.avant?' · avant '+g.avant:'')+(g.qui.type==='fixe'?' · '+g.qui.noms.join(', '):g.qui.type==='equilibre'?' · répartition équilibrée'+(g.qui.noms.length?' entre '+g.qui.noms.join(', '):'')+(g.qui.separe?' · machines partagées':''):' · roulement')+(g.acc?' · accompagnant obligatoire':'')+'</li>'}).join('')+'</ul>':'<p class="hint">Aucune règle.</p>')+'</section>';
 }
 // Brouillon nettoyé avant l'envoi : listes cohérentes (le script et l'appli le nettoient aussi : bloc <fusion>).
 function brouillonCalPropre(c){
   const x=JSON.parse(JSON.stringify(c));
+  // Temps max : vide ou 0 = pas de limite (champ retiré : calendrier identique à avant).
+  if(!(Number(x.maxJour)>0))delete x.maxJour;else x.maxJour=Math.min(1440,Math.round(Number(x.maxJour)));
   x.regles=(x.regles||[]).map(g=>{const cib=g.cible;delete g.cible;if(g.qui&&g.qui.type!=='equilibre')delete g.qui.separe;if(g.qui&&g.qui.type!=='equilibre')g.qui.noms=(g.qui.noms||[]).slice(0,4);if(cib==='tout'){g.types=[];g.machines=[]}else if(cib==='type')g.machines=[];else if(cib==='liste')g.types=[];return g});
   return x;
 }
@@ -2613,7 +2869,7 @@ PAGES.calendrier=async()=>{
   if(typeof CalMaint==='undefined')return h+'<div class="card vide">Moteur du calendrier absent.</div>';
   const d=r.data,vue=S.calVue||'semaine',cal=d.cal||CAL_VIDE();S.calNoms=nomsCalendrier(d);
   if(S.msgCal)h+='<div class="msg '+S.msgCal[0]+'" role="status">'+svg(S.msgCal[0]==='ok'?'ok':'alerte')+'<div>'+S.msgCal[1]+'</div></div>';
-  h+='<div class="row" role="group" aria-label="Vue" style="margin-bottom:12px">'+[['semaine','Semaine'],['mois','Mois'],['reglages','Réglages']].map(([k,t])=>'<button class="chip" data-calvue="'+k+'" aria-pressed="'+(vue===k)+'">'+t+'</button>').join('')+'</div>';
+  h+='<div class="row" role="group" aria-label="Vue" style="margin-bottom:12px">'+[['semaine','Semaine'],['mois','Mois'],['charge','Charge par jour'],['reglages','Réglages']].map(([k,t])=>'<button class="chip" data-calvue="'+k+'" aria-pressed="'+(vue===k)+'">'+t+'</button>').join('')+'</div>';
   if(vue==='reglages'){
     if(!mod)return h+vueReglagesLecture(d);
     if(!S.calEd||S.calEd.sec!==sec){const c=JSON.parse(JSON.stringify(cal));c.regles.forEach(g=>{g.cible=(g.types||[]).length?'type':(g.machines||[]).length?'liste':'tout'});S.calEd={sec,cal:c,orig:JSON.parse(JSON.stringify(c)),depuis:d.cal?d.cal.maj||0:0,sale:false}}
@@ -2621,7 +2877,7 @@ PAGES.calendrier=async()=>{
   }
   const st=etatCalendrier(d);
   if(!st.cal||!(st.cal.regles||[]).length)h+='<div class="card vide">Aucune règle dans le calendrier de ce secteur'+(mod?' : réglez-le dans « Réglages ».':'.')+'</div>';
-  else h+=vue==='mois'?vueMois(st,st.cal):vueSemaine(st,st.cal);
+  else h+=vue==='mois'?vueMois(st,st.cal):vue==='charge'?vueChargeJour(st,st.cal):vueSemaine(st,st.cal);
   if(mod&&vue==='semaine'&&d.cal)h+=vueConges(st,sec);
   return h;
 };
@@ -2651,7 +2907,7 @@ async function actionCalendrier(b){
 function saisieCalendrier(el){
   const E=S.calEd;if(!E)return;
   if(el.dataset.ce){
-    const c=el.dataset.ce,t=el.dataset.t;let v=t==='bool'?el.checked:t==='num'?Math.round(Number(el.value)||0):el.value;
+    const c=el.dataset.ce,t=el.dataset.t;let v=t==='bool'?(el.type==='checkbox'?el.checked:el.value==='1'):t==='num'?Math.round(Number(el.value)||0):el.value;
     if(t==='opt'&&!v){const k=c.split('.').slice(1).join('.');delete E.cal.rempl[k]}else ecrireChemin(E.cal,c,v);
   }
   if(el.dataset.ceL){const c=el.dataset.ceL,l=[...document.querySelectorAll('[data-ce-l="'+c+'"]:checked')].map(x=>x.dataset.t==='num'?Number(x.value):x.value);ecrireChemin(E.cal,c,l)}
@@ -3316,6 +3572,9 @@ document.addEventListener('click',async e=>{
   if((b.dataset.go||b.dataset.sec!==undefined||b.dataset.calvue)&&S.calEd&&S.calEd.sale){S.calEd.msg=['warn','Enregistrez ou annulez d’abord les réglages en cours.'];chargerPage();return}
   if(b.dataset.cr){actionCalendrier(b).catch(x=>{if(x.message!=='session'&&S.calEd){S.calEd.msg=['err','<b>'+esc(x.message)+'</b>'];chargerPage()}});return}
   if(b.dataset.calvue){S.calVue=b.dataset.calvue;S.msgCal=null;chargerPage();return}
+  // Charge par jour (2026-10-19) : période et case touchée (affichage seulement).
+  if(b.dataset.cjper){S.cjPer=b.dataset.cjper==='mois'?'mois':'semaine';S.cjSel=null;chargerPage();return}
+  if(b.dataset.cj!==undefined){S.cjSel=S.cjSel===b.dataset.cj?null:b.dataset.cj;chargerPage();return}
   if(b.dataset.calsec){if(S.calEd&&S.calEd.sale){S.calEd.msg=['warn','Enregistrez ou annulez d’abord les réglages en cours.'];chargerPage();return}S.calSecAff=b.dataset.calsec;S.calEd=null;S.msgCal=null;chargerPage();return}
   if(b.dataset.mois!==undefined){S.mois=b.dataset.mois;chargerPage();return}
   if((b.dataset.go||b.dataset.sec!==undefined||b.dataset.item||b.dataset.parc!==undefined)&&S.edit&&S.edit.sale){S.edit.msg=['warn','Enregistrez ou annulez d’abord la modification en cours.'];chargerPage();return}
