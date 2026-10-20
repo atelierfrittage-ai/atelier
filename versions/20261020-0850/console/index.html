@@ -2425,9 +2425,12 @@ function pageContenu(id){
     h+=S.secteur==='tous'?choixSecteur():'';
     const r=await lire('contenu-lire',{app:p.app,secteur:sec});
     if(!r.ok)return h+refus(r);
-    const st=r.data.state;
-    if(!st)return h+'<div class="card vide">Aucune donnée pour ce secteur : les tablettes du secteur ne les ont pas encore envoyées.</div>';
-    const mod=peutModif(id),cle=id+'|'+sec,E=S.edit&&S.edit.cle===cle?S.edit:null;
+    // Secteur encore vide chez Google (2026-10-19) : avec le droit de modifier, « Nouveau » crée le premier contenu, à
+    // partir de l'état de départ donné par le script (vierge : catégories, postes…). Sans ce droit (ou avec un ancien
+    // script, qui ne donne pas « vierge ») : un message simple.
+    const st0=r.data.state,mod=peutModif(id),st=st0||(mod&&r.data.vierge)||null;
+    if(!st)return h+'<div class="card vide">Rien pour l’instant dans ce secteur : aucune tablette du secteur n’a encore envoyé de contenu.</div>';
+    const cle=id+'|'+sec,E=S.edit&&S.edit.cle===cle?S.edit:null;
     // Campagne 2026-10-17 (M1) : l'éditeur propose les machines EN SERVICE du secteur d'après le parc (comme l'appli
     // Maintenance des tablettes), plus celles déjà cochées ; le script les donne (machinesParc), sinon le parc lu ici.
     let mp=r.data.machinesParc;
@@ -2441,7 +2444,7 @@ function pageContenu(id){
     h+='<div class="cont"><div class="liste" role="list">'+l.map(o=>'<button class="it" role="listitem" data-item="'+esc(cle)+'" data-id="'+esc(o.id)+'"'+(o===sel?' aria-current="true"':'')+'>'+pastille(p.ico,'s')+'<span>'+esc(o[A.titre]||'(sans titre)')+repere(o)+'<small>'+esc(A.sous(o))+'</small></span></button>').join('')+'</div>'+
       (E?vueFormulaire(p,stF):'<section class="card det"><h2>'+esc(sel[A.titre]||'')+(mod?'<span class="grow"></span><button class="btn" data-ed="modifier" data-id="'+esc(sel.id)+'">'+svg('crayon')+'Modifier</button>'+
         (S.suppr===sel.id?'<button class="btn dan plein" data-ed="supprimer-ok">Oui, supprimer</button><button class="btn" data-ed="supprimer-non">Annuler</button>':'<button class="btn dan" data-ed="supprimer" data-id="'+esc(sel.id)+'">Supprimer</button>'):'')+'</h2>'+A.detail(sel)+'</section>')+'</div>';
-    if(p.app==='taches'&&(st.postes||[]).length)h+='<p class="hint">Postes : '+esc(st.postes.map(x=>x.name+(x.start?' ('+x.start+')':'')).join(' · '))+'</p>';
+    if(p.app==='taches'&&st0&&(st.postes||[]).length)h+='<p class="hint">Postes : '+esc(st.postes.map(x=>x.name+(x.start?' ('+x.start+')':'')).join(' · '))+'</p>';
     return h;
   };
 }
@@ -3218,7 +3221,9 @@ function enregistrerContenu(app,sec,page,item,vu,edit,retire,origine){
     esp,vu:vu===null?undefined:vu,version:vu===null?undefined:version,
     construire:d=>{const v=version(d),bases=vu===null?{}:{[id]:taches?{empreinte:v}:{updated:v}};
       return item?{app,secteur:sec,items:[item],bases}:{app,secteur:sec,supprimer:id,bases}},
-    vue:d=>{const st=d.state=d.state||{},l=st[A.liste]=st[A.liste]||[],i=l.findIndex(x=>x.id===id);
+    // Premier élément d'un secteur vide (2026-10-19) : l'état affiché pendant l'envoi part de l'état de départ (vierge :
+    // catégories, postes), sinon un « Nouveau » ouvert avant la réponse n'aurait plus de catégories à proposer.
+    vue:d=>{const st=d.state=d.state||JSON.parse(JSON.stringify(d.vierge||{})),l=st[A.liste]=st[A.liste]||[],i=l.findIndex(x=>x.id===id);
       if(item){if(i<0)l.push(Object.assign({},item,{_attente:true}));else l[i]=Object.assign({},l[i],item,{_attente:true})}
       else if(i>=0){if(taches)l[i]=Object.assign({},l[i],{archived:true});else l.splice(i,1)}
       return d},
