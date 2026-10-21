@@ -53,7 +53,7 @@ svg.i{width:20px;height:20px;flex:none}
 .msg.info{background:var(--accent-soft);border:1px solid #9ED6DC}
 .msg svg{margin-top:2px}
 /* Coquille */
-.app{display:grid;grid-template-columns:252px minmax(0,1fr);min-height:100vh}
+.app{display:grid;grid-template-columns:208px minmax(0,1fr);min-height:100vh}
 .nav{background:var(--nav);color:#d3e0e5;position:sticky;top:0;height:100vh;overflow-y:auto;padding:14px 10px 20px;display:flex;flex-direction:column;gap:2px}
 .brand{display:flex;gap:10px;align-items:center;padding:4px 8px 14px}
 .brand b{display:block;color:#fff;font-size:17px;line-height:1.2}
@@ -66,6 +66,55 @@ svg.i{width:20px;height:20px;flex:none}
 .nav .bdg{font-size:15px;font-weight:700;border-radius:999px;padding:1px 8px;background:#2b4651;color:#cfe3e8}
 .nav .bdg.r{background:var(--err);color:#fff}
 .nav .foot{margin-top:auto;padding:14px 10px 0;font-size:15px;color:#8fa6af}
+/* <menu-v2> Menu de gauche plus étroit (2026-10-21, maquette validée : variante B) : 208 px, groupes qui se déroulent
+   (titre cliquable ▸/▾, nombre de parties, groupe de la page affichée ouvert), bouton « Réduire le menu » → 64 px, une
+   icône par groupe, nom en bulle, liste du groupe à côté. AFFICHAGE SEULEMENT : les parties restent celles des droits. */
+.nav.nv{padding:12px 8px 16px;gap:2px;overflow-x:hidden}
+.nav.nv .foot{padding:14px 4px 0}
+.nav.nv .ds-theme-menu .ds-theme button{padding:6px 8px}
+.nav.nv .brand{padding:2px 4px 10px}
+.nav.nv .brand b{font-size:16px}
+.nav.nv .pt{padding:6px 8px;gap:9px}
+.nv-g{display:flex;flex-direction:column;gap:2px}
+.nv-g+.nv-g{border-top:1px solid #1f3640;padding-top:2px}
+.nav .nv-gt{display:flex;align-items:center;gap:8px;width:100%;min-height:44px;border:0;background:transparent;color:#a9bcc4;text-align:left;padding:6px 8px;border-radius:10px;font-weight:700;font-size:15px;cursor:pointer}
+.nav .nv-gt:hover{background:var(--nav2);color:#fff}
+.nav .nv-gt .t{flex:1;line-height:1.2}
+.nav .nv-gt .gi{display:none}
+.nav .nv-gt .n{font-size:15px;font-weight:700;min-width:26px;text-align:center;border-radius:999px;padding:0 7px;background:#2b4651;color:#cfe3e8;font-variant-numeric:tabular-nums}
+.nav .nv-gt .chev{width:18px;height:18px;flex:none;transition:transform .15s}
+.nav .nv-gt[aria-expanded="true"]{color:#fff}
+.nav .nv-gt[aria-expanded="true"] .chev{transform:rotate(90deg)}
+.nav .nv-gt.ici:not([aria-expanded="true"]) .t::after{content:" •";color:#5fd0da}
+.nv-l{display:flex;flex-direction:column;gap:2px;padding:0 0 4px}
+.nv-l[hidden]{display:none}
+.nav .lect{width:18px;height:18px;flex:none;color:#a9bcc4}
+.nav .nv-reduire{display:flex;align-items:center;gap:8px;min-height:44px;width:100%;border:1px solid #2b4651;background:transparent;color:#d3e0e5;border-radius:10px;padding:6px 10px;font-weight:600;font-size:15px;cursor:pointer;margin:0 0 6px}
+.nav .nv-reduire:hover{background:var(--nav2);color:#fff}
+.nav .nv-reduire svg{width:20px;height:20px;flex:none}
+.nv-vol-titre{display:none}
+.nv-bulle{position:fixed;z-index:70;background:#15242b;color:#fff;font-weight:700;font-size:15px;padding:8px 12px;border-radius:10px;pointer-events:none;box-shadow:0 12px 32px rgba(8,20,26,.35);white-space:nowrap}
+:where(.ds-sombre) .nv-bulle{background:#e6eef1;color:#0f1a20}
+@media (prefers-reduced-motion:reduce){.nav .nv-gt .chev{transition:none}}
+/* Mode « icônes seules » : écran large seulement (au téléphone, le menu ☰ garde les groupes dépliables). */
+@media (min-width:861px){
+  .app:has(>.nav.reduit){grid-template-columns:64px minmax(0,1fr)}
+  .nav.nv.reduit{padding:12px 8px;align-items:center}
+  .nav.reduit .brand{padding:2px 0 10px}.nav.reduit .brand>div{display:none}
+  .nav.reduit .nv-reduire{width:48px;padding:0;justify-content:center}.nav.reduit .nv-reduire .t{display:none}
+  .nav.reduit .nv-g{align-items:center;border-top:0;padding-top:0}
+  .nav.reduit .nv-gt{width:48px;height:48px;padding:0;justify-content:center}
+  .nav.reduit .nv-gt .t,.nav.reduit .nv-gt .n,.nav.reduit .nv-gt .chev{display:none}
+  .nav.reduit .nv-gt .gi{display:inline-grid}
+  .nav.reduit .nv-gt.ici{background:#0e4d55;box-shadow:inset 3px 0 0 #5fd0da}
+  .nav.reduit .nv-gt[aria-expanded="true"]{background:var(--nav2)}
+  .nav.reduit .nv-l{display:none}
+  .nav.reduit .nv-l.vol{display:flex;position:fixed;left:72px;z-index:60;width:260px;max-height:calc(100vh - 16px);overflow-y:auto;background:var(--nav);border:1px solid #2b4651;border-radius:14px;padding:8px;box-shadow:0 12px 32px rgba(8,20,26,.35)}
+  .nav.reduit .nv-l.vol .nv-vol-titre{display:block;color:#fff;font-weight:800;font-size:15px;padding:6px 8px 8px;border-bottom:1px solid #2b4651;margin-bottom:4px}
+  .nav.reduit .foot{display:none}
+}
+@media (max-width:860px){.nav .nv-reduire{display:none}}
+/* </menu-v2> */
 .main{min-width:0;display:flex;flex-direction:column}
 .top{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:14px;padding:10px 24px;background:rgba(243,246,247,.95);border-bottom:1px solid var(--line);flex-wrap:wrap}
 .secsel{display:inline-flex;gap:3px;background:#e3eaed;padding:4px;border-radius:12px;flex-wrap:wrap}
@@ -264,7 +313,7 @@ ol.file{margin:8px 0 0;padding-left:22px}
 .menu-btn{display:none}
 button.sync{min-width:44px;justify-content:center}
 @media (max-width:1500px){.who>div{display:none}.who .btn .t{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}.top{gap:10px;padding:8px 16px}}
-@media (max-width:1180px){.app{grid-template-columns:220px minmax(0,1fr)}#sync .t{display:none}}
+@media (max-width:1180px){.app{grid-template-columns:208px minmax(0,1fr)}#sync .t{display:none}}
 @media (max-width:1280px){.g3{grid-template-columns:1fr}.parc.ouvert{grid-template-columns:minmax(0,1fr) 340px}}
 @media (max-width:1000px){.cont{grid-template-columns:1fr}.parc.ouvert{grid-template-columns:1fr}.fiche{position:static;max-height:none}}
 @media (max-width:860px){.app{grid-template-columns:1fr}.nav{position:static;height:auto;display:none}.app.menu .nav{display:flex}.menu-btn{display:inline-flex}.top{position:static}#page{padding:16px}.card{overflow-x:auto}.g3,.accg,.cont,.parc.ouvert{grid-template-columns:minmax(0,1fr)}.savebar{left:8px;right:8px}#bandeauEnvoi{padding:12px 16px 0}}
@@ -603,10 +652,57 @@ button.sync{min-width:44px;justify-content:center}
   .rd-param{grid-template-columns:1fr}
 }
 @media (max-width:520px){.rd-cpts,.rd-av{grid-template-columns:repeat(2,minmax(0,1fr))}.rd-filtres .in{min-width:0;width:100%}.rd-dl{grid-template-columns:1fr}.rd-dl dt{margin-top:6px}}
+/* --- Étiquettes QR du parc (2026-10-21, maquette validée) : réglages à gauche, aperçu des planches A4 à droite. Les
+   étiquettes sont dessinées en millimètres (taille réelle) : l'aperçu est seulement réduit à l'écran. */
+.qr-g{display:grid;grid-template-columns:340px minmax(0,1fr);gap:18px;align-items:start}
+.qr-g>.card h2{display:flex;align-items:center;gap:8px;margin:0 0 12px}
+.qr-etape{margin:0 0 16px}
+.qr-etape h3{display:flex;align-items:center;gap:8px;margin:0 0 8px;font-size:16px}
+.qr-etape h3 .n{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--accent-dark);color:#fff;font-size:15px;flex:none}
+:where(.ds-sombre) .qr-etape h3 .n{color:var(--ds-sur,#0f1a20);background:var(--accent)}
+.qr-etape .chip[aria-pressed="true"]::before{content:"✓";font-weight:800}
+.qr-case{display:flex;align-items:center;gap:10px;min-height:44px;font-weight:600;font-size:15px;cursor:pointer}
+.qr-case input{width:22px;height:22px;flex:none}
+.qr-recap{margin:8px 0 10px;font-size:16px}
+.btn.qr-imprimer{width:100%;min-height:56px;font-size:17px}
+.qr-kv{display:grid;grid-template-columns:max-content 1fr;gap:6px 14px;margin:14px 0 0;font-size:15px}
+.qr-kv dt{color:var(--muted);font-weight:600}.qr-kv dd{margin:0;font-weight:600}
+.qr-apercu{background:var(--line2);border-radius:14px;padding:4px;overflow:hidden;min-width:0}
+.qr-planches{display:flex;flex-direction:column;gap:6mm;width:210mm}
+.qr-planche{width:210mm;height:297mm;padding:.5mm 0;box-sizing:border-box;background:#fff;color:#111;display:grid;grid-template-columns:repeat(3,70mm);grid-template-rows:repeat(8,37mm);box-shadow:0 4px 20px rgba(0,0,0,.25)}
+.qr-lab{display:flex;gap:2.5mm;align-items:center;padding:2mm 2.5mm;box-sizing:border-box;overflow:hidden;color:#111;background:#fff;outline:1px dashed #c9d3d8;outline-offset:-1px;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+.qr-lab.vide{background:repeating-linear-gradient(135deg,#f6f8f9 0 8px,#fff 8px 16px)}
+.qr-lab.vide span{margin:auto;color:#5d6f78;font-size:4mm;font-weight:600}
+.qr-lab-qr{width:30mm;height:30mm;flex:none}
+.qr-lab-qr svg{width:100%;height:100%;display:block}
+.qr-lab-tx{min-width:0;flex:1;align-self:stretch;display:flex;flex-direction:column;justify-content:center;gap:1mm;overflow:hidden}
+.qr-lab-tx b{font-weight:800;line-height:1.05;overflow-wrap:anywhere;color:#000}
+.qr-lab-tx .lz{font-size:4.1mm;font-weight:700;line-height:1.15}
+.qr-lab-tx .sc{font-size:4mm;line-height:1.15;color:#333}
+.qr-grande{display:flex;justify-content:center;background:var(--line2);border-radius:10px;padding:10px;overflow:hidden}
+.qr-grande .qr-lab{width:70mm;height:37mm;outline:1px solid #c9d3d8;flex:none}
+#qrImpression{display:none}
+@page etiquettes{size:A4 portrait;margin:0}
+@media print{
+  body.qr-imprime>*:not(#qrImpression){display:none!important}
+  body.qr-imprime{background:#fff!important;margin:0}
+  body.qr-imprime #qrImpression{display:block}
+  #qrImpression .qr-planche{page:etiquettes;break-after:page;box-shadow:none;margin:0}
+  #qrImpression .qr-planche:last-child{break-after:auto}
+  #qrImpression .qr-lab{outline:0}
+  #qrImpression .qr-lab.vide{background:#fff}
+  #qrImpression .qr-lab.vide span{visibility:hidden}
+  #qrImpression *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+@media (max-width:1100px){.qr-g{grid-template-columns:minmax(0,1fr)}}
 </style>
 </head>
 <body>
 <div id="racine"></div>
+<!-- Étiquettes QR du parc (2026-10-21) : QRCode.js (commun\vendeur\), remplacé par son contenu à la construction. -->
+<script>/* QRCode.js 1.0.0 — licence MIT — https://github.com/davidshimjs/qrcodejs (commun/vendeur/LICENCES.txt) */
+var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this.parsedData=[];for(var b=[],d=0,e=this.data.length;e>d;d++){var f=this.data.charCodeAt(d);f>65536?(b[0]=240|(1835008&f)>>>18,b[1]=128|(258048&f)>>>12,b[2]=128|(4032&f)>>>6,b[3]=128|63&f):f>2048?(b[0]=224|(61440&f)>>>12,b[1]=128|(4032&f)>>>6,b[2]=128|63&f):f>128?(b[0]=192|(1984&f)>>>6,b[1]=128|63&f):b[0]=f,this.parsedData=this.parsedData.concat(b)}this.parsedData.length!=this.data.length&&(this.parsedData.unshift(191),this.parsedData.unshift(187),this.parsedData.unshift(239))}function b(a,b){this.typeNumber=a,this.errorCorrectLevel=b,this.modules=null,this.moduleCount=0,this.dataCache=null,this.dataList=[]}function i(a,b){if(void 0==a.length)throw new Error(a.length+"/"+b);for(var c=0;c<a.length&&0==a[c];)c++;this.num=new Array(a.length-c+b);for(var d=0;d<a.length-c;d++)this.num[d]=a[d+c]}function j(a,b){this.totalCount=a,this.dataCount=b}function k(){this.buffer=[],this.length=0}function m(){return"undefined"!=typeof CanvasRenderingContext2D}function n(){var a=!1,b=navigator.userAgent;return/android/i.test(b)&&(a=!0,aMat=b.toString().match(/android ([0-9]\.[0-9])/i),aMat&&aMat[1]&&(a=parseFloat(aMat[1]))),a}function r(a,b){for(var c=1,e=s(a),f=0,g=l.length;g>=f;f++){var h=0;switch(b){case d.L:h=l[f][0];break;case d.M:h=l[f][1];break;case d.Q:h=l[f][2];break;case d.H:h=l[f][3]}if(h>=e)break;c++}if(c>l.length)throw new Error("Too long data");return c}function s(a){var b=encodeURI(a).toString().replace(/\%[0-9a-fA-F]{2}/g,"a");return b.length+(b.length!=a?3:0)}a.prototype={getLength:function(){return this.parsedData.length},write:function(a){for(var b=0,c=this.parsedData.length;c>b;b++)a.put(this.parsedData[b],8)}},b.prototype={addData:function(b){var c=new a(b);this.dataList.push(c),this.dataCache=null},isDark:function(a,b){if(0>a||this.moduleCount<=a||0>b||this.moduleCount<=b)throw new Error(a+","+b);return this.modules[a][b]},getModuleCount:function(){return this.moduleCount},make:function(){this.makeImpl(!1,this.getBestMaskPattern())},makeImpl:function(a,c){this.moduleCount=4*this.typeNumber+17,this.modules=new Array(this.moduleCount);for(var d=0;d<this.moduleCount;d++){this.modules[d]=new Array(this.moduleCount);for(var e=0;e<this.moduleCount;e++)this.modules[d][e]=null}this.setupPositionProbePattern(0,0),this.setupPositionProbePattern(this.moduleCount-7,0),this.setupPositionProbePattern(0,this.moduleCount-7),this.setupPositionAdjustPattern(),this.setupTimingPattern(),this.setupTypeInfo(a,c),this.typeNumber>=7&&this.setupTypeNumber(a),null==this.dataCache&&(this.dataCache=b.createData(this.typeNumber,this.errorCorrectLevel,this.dataList)),this.mapData(this.dataCache,c)},setupPositionProbePattern:function(a,b){for(var c=-1;7>=c;c++)if(!(-1>=a+c||this.moduleCount<=a+c))for(var d=-1;7>=d;d++)-1>=b+d||this.moduleCount<=b+d||(this.modules[a+c][b+d]=c>=0&&6>=c&&(0==d||6==d)||d>=0&&6>=d&&(0==c||6==c)||c>=2&&4>=c&&d>=2&&4>=d?!0:!1)},getBestMaskPattern:function(){for(var a=0,b=0,c=0;8>c;c++){this.makeImpl(!0,c);var d=f.getLostPoint(this);(0==c||a>d)&&(a=d,b=c)}return b},createMovieClip:function(a,b,c){var d=a.createEmptyMovieClip(b,c),e=1;this.make();for(var f=0;f<this.modules.length;f++)for(var g=f*e,h=0;h<this.modules[f].length;h++){var i=h*e,j=this.modules[f][h];j&&(d.beginFill(0,100),d.moveTo(i,g),d.lineTo(i+e,g),d.lineTo(i+e,g+e),d.lineTo(i,g+e),d.endFill())}return d},setupTimingPattern:function(){for(var a=8;a<this.moduleCount-8;a++)null==this.modules[a][6]&&(this.modules[a][6]=0==a%2);for(var b=8;b<this.moduleCount-8;b++)null==this.modules[6][b]&&(this.modules[6][b]=0==b%2)},setupPositionAdjustPattern:function(){for(var a=f.getPatternPosition(this.typeNumber),b=0;b<a.length;b++)for(var c=0;c<a.length;c++){var d=a[b],e=a[c];if(null==this.modules[d][e])for(var g=-2;2>=g;g++)for(var h=-2;2>=h;h++)this.modules[d+g][e+h]=-2==g||2==g||-2==h||2==h||0==g&&0==h?!0:!1}},setupTypeNumber:function(a){for(var b=f.getBCHTypeNumber(this.typeNumber),c=0;18>c;c++){var d=!a&&1==(1&b>>c);this.modules[Math.floor(c/3)][c%3+this.moduleCount-8-3]=d}for(var c=0;18>c;c++){var d=!a&&1==(1&b>>c);this.modules[c%3+this.moduleCount-8-3][Math.floor(c/3)]=d}},setupTypeInfo:function(a,b){for(var c=this.errorCorrectLevel<<3|b,d=f.getBCHTypeInfo(c),e=0;15>e;e++){var g=!a&&1==(1&d>>e);6>e?this.modules[e][8]=g:8>e?this.modules[e+1][8]=g:this.modules[this.moduleCount-15+e][8]=g}for(var e=0;15>e;e++){var g=!a&&1==(1&d>>e);8>e?this.modules[8][this.moduleCount-e-1]=g:9>e?this.modules[8][15-e-1+1]=g:this.modules[8][15-e-1]=g}this.modules[this.moduleCount-8][8]=!a},mapData:function(a,b){for(var c=-1,d=this.moduleCount-1,e=7,g=0,h=this.moduleCount-1;h>0;h-=2)for(6==h&&h--;;){for(var i=0;2>i;i++)if(null==this.modules[d][h-i]){var j=!1;g<a.length&&(j=1==(1&a[g]>>>e));var k=f.getMask(b,d,h-i);k&&(j=!j),this.modules[d][h-i]=j,e--,-1==e&&(g++,e=7)}if(d+=c,0>d||this.moduleCount<=d){d-=c,c=-c;break}}}},b.PAD0=236,b.PAD1=17,b.createData=function(a,c,d){for(var e=j.getRSBlocks(a,c),g=new k,h=0;h<d.length;h++){var i=d[h];g.put(i.mode,4),g.put(i.getLength(),f.getLengthInBits(i.mode,a)),i.write(g)}for(var l=0,h=0;h<e.length;h++)l+=e[h].dataCount;if(g.getLengthInBits()>8*l)throw new Error("code length overflow. ("+g.getLengthInBits()+">"+8*l+")");for(g.getLengthInBits()+4<=8*l&&g.put(0,4);0!=g.getLengthInBits()%8;)g.putBit(!1);for(;;){if(g.getLengthInBits()>=8*l)break;if(g.put(b.PAD0,8),g.getLengthInBits()>=8*l)break;g.put(b.PAD1,8)}return b.createBytes(g,e)},b.createBytes=function(a,b){for(var c=0,d=0,e=0,g=new Array(b.length),h=new Array(b.length),j=0;j<b.length;j++){var k=b[j].dataCount,l=b[j].totalCount-k;d=Math.max(d,k),e=Math.max(e,l),g[j]=new Array(k);for(var m=0;m<g[j].length;m++)g[j][m]=255&a.buffer[m+c];c+=k;var n=f.getErrorCorrectPolynomial(l),o=new i(g[j],n.getLength()-1),p=o.mod(n);h[j]=new Array(n.getLength()-1);for(var m=0;m<h[j].length;m++){var q=m+p.getLength()-h[j].length;h[j][m]=q>=0?p.get(q):0}}for(var r=0,m=0;m<b.length;m++)r+=b[m].totalCount;for(var s=new Array(r),t=0,m=0;d>m;m++)for(var j=0;j<b.length;j++)m<g[j].length&&(s[t++]=g[j][m]);for(var m=0;e>m;m++)for(var j=0;j<b.length;j++)m<h[j].length&&(s[t++]=h[j][m]);return s};for(var c={MODE_NUMBER:1,MODE_ALPHA_NUM:2,MODE_8BIT_BYTE:4,MODE_KANJI:8},d={L:1,M:0,Q:3,H:2},e={PATTERN000:0,PATTERN001:1,PATTERN010:2,PATTERN011:3,PATTERN100:4,PATTERN101:5,PATTERN110:6,PATTERN111:7},f={PATTERN_POSITION_TABLE:[[],[6,18],[6,22],[6,26],[6,30],[6,34],[6,22,38],[6,24,42],[6,26,46],[6,28,50],[6,30,54],[6,32,58],[6,34,62],[6,26,46,66],[6,26,48,70],[6,26,50,74],[6,30,54,78],[6,30,56,82],[6,30,58,86],[6,34,62,90],[6,28,50,72,94],[6,26,50,74,98],[6,30,54,78,102],[6,28,54,80,106],[6,32,58,84,110],[6,30,58,86,114],[6,34,62,90,118],[6,26,50,74,98,122],[6,30,54,78,102,126],[6,26,52,78,104,130],[6,30,56,82,108,134],[6,34,60,86,112,138],[6,30,58,86,114,142],[6,34,62,90,118,146],[6,30,54,78,102,126,150],[6,24,50,76,102,128,154],[6,28,54,80,106,132,158],[6,32,58,84,110,136,162],[6,26,54,82,110,138,166],[6,30,58,86,114,142,170]],G15:1335,G18:7973,G15_MASK:21522,getBCHTypeInfo:function(a){for(var b=a<<10;f.getBCHDigit(b)-f.getBCHDigit(f.G15)>=0;)b^=f.G15<<f.getBCHDigit(b)-f.getBCHDigit(f.G15);return(a<<10|b)^f.G15_MASK},getBCHTypeNumber:function(a){for(var b=a<<12;f.getBCHDigit(b)-f.getBCHDigit(f.G18)>=0;)b^=f.G18<<f.getBCHDigit(b)-f.getBCHDigit(f.G18);return a<<12|b},getBCHDigit:function(a){for(var b=0;0!=a;)b++,a>>>=1;return b},getPatternPosition:function(a){return f.PATTERN_POSITION_TABLE[a-1]},getMask:function(a,b,c){switch(a){case e.PATTERN000:return 0==(b+c)%2;case e.PATTERN001:return 0==b%2;case e.PATTERN010:return 0==c%3;case e.PATTERN011:return 0==(b+c)%3;case e.PATTERN100:return 0==(Math.floor(b/2)+Math.floor(c/3))%2;case e.PATTERN101:return 0==b*c%2+b*c%3;case e.PATTERN110:return 0==(b*c%2+b*c%3)%2;case e.PATTERN111:return 0==(b*c%3+(b+c)%2)%2;default:throw new Error("bad maskPattern:"+a)}},getErrorCorrectPolynomial:function(a){for(var b=new i([1],0),c=0;a>c;c++)b=b.multiply(new i([1,g.gexp(c)],0));return b},getLengthInBits:function(a,b){if(b>=1&&10>b)switch(a){case c.MODE_NUMBER:return 10;case c.MODE_ALPHA_NUM:return 9;case c.MODE_8BIT_BYTE:return 8;case c.MODE_KANJI:return 8;default:throw new Error("mode:"+a)}else if(27>b)switch(a){case c.MODE_NUMBER:return 12;case c.MODE_ALPHA_NUM:return 11;case c.MODE_8BIT_BYTE:return 16;case c.MODE_KANJI:return 10;default:throw new Error("mode:"+a)}else{if(!(41>b))throw new Error("type:"+b);switch(a){case c.MODE_NUMBER:return 14;case c.MODE_ALPHA_NUM:return 13;case c.MODE_8BIT_BYTE:return 16;case c.MODE_KANJI:return 12;default:throw new Error("mode:"+a)}}},getLostPoint:function(a){for(var b=a.getModuleCount(),c=0,d=0;b>d;d++)for(var e=0;b>e;e++){for(var f=0,g=a.isDark(d,e),h=-1;1>=h;h++)if(!(0>d+h||d+h>=b))for(var i=-1;1>=i;i++)0>e+i||e+i>=b||(0!=h||0!=i)&&g==a.isDark(d+h,e+i)&&f++;f>5&&(c+=3+f-5)}for(var d=0;b-1>d;d++)for(var e=0;b-1>e;e++){var j=0;a.isDark(d,e)&&j++,a.isDark(d+1,e)&&j++,a.isDark(d,e+1)&&j++,a.isDark(d+1,e+1)&&j++,(0==j||4==j)&&(c+=3)}for(var d=0;b>d;d++)for(var e=0;b-6>e;e++)a.isDark(d,e)&&!a.isDark(d,e+1)&&a.isDark(d,e+2)&&a.isDark(d,e+3)&&a.isDark(d,e+4)&&!a.isDark(d,e+5)&&a.isDark(d,e+6)&&(c+=40);for(var e=0;b>e;e++)for(var d=0;b-6>d;d++)a.isDark(d,e)&&!a.isDark(d+1,e)&&a.isDark(d+2,e)&&a.isDark(d+3,e)&&a.isDark(d+4,e)&&!a.isDark(d+5,e)&&a.isDark(d+6,e)&&(c+=40);for(var k=0,e=0;b>e;e++)for(var d=0;b>d;d++)a.isDark(d,e)&&k++;var l=Math.abs(100*k/b/b-50)/5;return c+=10*l}},g={glog:function(a){if(1>a)throw new Error("glog("+a+")");return g.LOG_TABLE[a]},gexp:function(a){for(;0>a;)a+=255;for(;a>=256;)a-=255;return g.EXP_TABLE[a]},EXP_TABLE:new Array(256),LOG_TABLE:new Array(256)},h=0;8>h;h++)g.EXP_TABLE[h]=1<<h;for(var h=8;256>h;h++)g.EXP_TABLE[h]=g.EXP_TABLE[h-4]^g.EXP_TABLE[h-5]^g.EXP_TABLE[h-6]^g.EXP_TABLE[h-8];for(var h=0;255>h;h++)g.LOG_TABLE[g.EXP_TABLE[h]]=h;i.prototype={get:function(a){return this.num[a]},getLength:function(){return this.num.length},multiply:function(a){for(var b=new Array(this.getLength()+a.getLength()-1),c=0;c<this.getLength();c++)for(var d=0;d<a.getLength();d++)b[c+d]^=g.gexp(g.glog(this.get(c))+g.glog(a.get(d)));return new i(b,0)},mod:function(a){if(this.getLength()-a.getLength()<0)return this;for(var b=g.glog(this.get(0))-g.glog(a.get(0)),c=new Array(this.getLength()),d=0;d<this.getLength();d++)c[d]=this.get(d);for(var d=0;d<a.getLength();d++)c[d]^=g.gexp(g.glog(a.get(d))+b);return new i(c,0).mod(a)}},j.RS_BLOCK_TABLE=[[1,26,19],[1,26,16],[1,26,13],[1,26,9],[1,44,34],[1,44,28],[1,44,22],[1,44,16],[1,70,55],[1,70,44],[2,35,17],[2,35,13],[1,100,80],[2,50,32],[2,50,24],[4,25,9],[1,134,108],[2,67,43],[2,33,15,2,34,16],[2,33,11,2,34,12],[2,86,68],[4,43,27],[4,43,19],[4,43,15],[2,98,78],[4,49,31],[2,32,14,4,33,15],[4,39,13,1,40,14],[2,121,97],[2,60,38,2,61,39],[4,40,18,2,41,19],[4,40,14,2,41,15],[2,146,116],[3,58,36,2,59,37],[4,36,16,4,37,17],[4,36,12,4,37,13],[2,86,68,2,87,69],[4,69,43,1,70,44],[6,43,19,2,44,20],[6,43,15,2,44,16],[4,101,81],[1,80,50,4,81,51],[4,50,22,4,51,23],[3,36,12,8,37,13],[2,116,92,2,117,93],[6,58,36,2,59,37],[4,46,20,6,47,21],[7,42,14,4,43,15],[4,133,107],[8,59,37,1,60,38],[8,44,20,4,45,21],[12,33,11,4,34,12],[3,145,115,1,146,116],[4,64,40,5,65,41],[11,36,16,5,37,17],[11,36,12,5,37,13],[5,109,87,1,110,88],[5,65,41,5,66,42],[5,54,24,7,55,25],[11,36,12],[5,122,98,1,123,99],[7,73,45,3,74,46],[15,43,19,2,44,20],[3,45,15,13,46,16],[1,135,107,5,136,108],[10,74,46,1,75,47],[1,50,22,15,51,23],[2,42,14,17,43,15],[5,150,120,1,151,121],[9,69,43,4,70,44],[17,50,22,1,51,23],[2,42,14,19,43,15],[3,141,113,4,142,114],[3,70,44,11,71,45],[17,47,21,4,48,22],[9,39,13,16,40,14],[3,135,107,5,136,108],[3,67,41,13,68,42],[15,54,24,5,55,25],[15,43,15,10,44,16],[4,144,116,4,145,117],[17,68,42],[17,50,22,6,51,23],[19,46,16,6,47,17],[2,139,111,7,140,112],[17,74,46],[7,54,24,16,55,25],[34,37,13],[4,151,121,5,152,122],[4,75,47,14,76,48],[11,54,24,14,55,25],[16,45,15,14,46,16],[6,147,117,4,148,118],[6,73,45,14,74,46],[11,54,24,16,55,25],[30,46,16,2,47,17],[8,132,106,4,133,107],[8,75,47,13,76,48],[7,54,24,22,55,25],[22,45,15,13,46,16],[10,142,114,2,143,115],[19,74,46,4,75,47],[28,50,22,6,51,23],[33,46,16,4,47,17],[8,152,122,4,153,123],[22,73,45,3,74,46],[8,53,23,26,54,24],[12,45,15,28,46,16],[3,147,117,10,148,118],[3,73,45,23,74,46],[4,54,24,31,55,25],[11,45,15,31,46,16],[7,146,116,7,147,117],[21,73,45,7,74,46],[1,53,23,37,54,24],[19,45,15,26,46,16],[5,145,115,10,146,116],[19,75,47,10,76,48],[15,54,24,25,55,25],[23,45,15,25,46,16],[13,145,115,3,146,116],[2,74,46,29,75,47],[42,54,24,1,55,25],[23,45,15,28,46,16],[17,145,115],[10,74,46,23,75,47],[10,54,24,35,55,25],[19,45,15,35,46,16],[17,145,115,1,146,116],[14,74,46,21,75,47],[29,54,24,19,55,25],[11,45,15,46,46,16],[13,145,115,6,146,116],[14,74,46,23,75,47],[44,54,24,7,55,25],[59,46,16,1,47,17],[12,151,121,7,152,122],[12,75,47,26,76,48],[39,54,24,14,55,25],[22,45,15,41,46,16],[6,151,121,14,152,122],[6,75,47,34,76,48],[46,54,24,10,55,25],[2,45,15,64,46,16],[17,152,122,4,153,123],[29,74,46,14,75,47],[49,54,24,10,55,25],[24,45,15,46,46,16],[4,152,122,18,153,123],[13,74,46,32,75,47],[48,54,24,14,55,25],[42,45,15,32,46,16],[20,147,117,4,148,118],[40,75,47,7,76,48],[43,54,24,22,55,25],[10,45,15,67,46,16],[19,148,118,6,149,119],[18,75,47,31,76,48],[34,54,24,34,55,25],[20,45,15,61,46,16]],j.getRSBlocks=function(a,b){var c=j.getRsBlockTable(a,b);if(void 0==c)throw new Error("bad rs block @ typeNumber:"+a+"/errorCorrectLevel:"+b);for(var d=c.length/3,e=[],f=0;d>f;f++)for(var g=c[3*f+0],h=c[3*f+1],i=c[3*f+2],k=0;g>k;k++)e.push(new j(h,i));return e},j.getRsBlockTable=function(a,b){switch(b){case d.L:return j.RS_BLOCK_TABLE[4*(a-1)+0];case d.M:return j.RS_BLOCK_TABLE[4*(a-1)+1];case d.Q:return j.RS_BLOCK_TABLE[4*(a-1)+2];case d.H:return j.RS_BLOCK_TABLE[4*(a-1)+3];default:return void 0}},k.prototype={get:function(a){var b=Math.floor(a/8);return 1==(1&this.buffer[b]>>>7-a%8)},put:function(a,b){for(var c=0;b>c;c++)this.putBit(1==(1&a>>>b-c-1))},getLengthInBits:function(){return this.length},putBit:function(a){var b=Math.floor(this.length/8);this.buffer.length<=b&&this.buffer.push(0),a&&(this.buffer[b]|=128>>>this.length%8),this.length++}};var l=[[17,14,11,7],[32,26,20,14],[53,42,32,24],[78,62,46,34],[106,84,60,44],[134,106,74,58],[154,122,86,64],[192,152,108,84],[230,180,130,98],[271,213,151,119],[321,251,177,137],[367,287,203,155],[425,331,241,177],[458,362,258,194],[520,412,292,220],[586,450,322,250],[644,504,364,280],[718,560,394,310],[792,624,442,338],[858,666,482,382],[929,711,509,403],[1003,779,565,439],[1091,857,611,461],[1171,911,661,511],[1273,997,715,535],[1367,1059,751,593],[1465,1125,805,625],[1528,1190,868,658],[1628,1264,908,698],[1732,1370,982,742],[1840,1452,1030,790],[1952,1538,1112,842],[2068,1628,1168,898],[2188,1722,1228,958],[2303,1809,1283,983],[2431,1911,1351,1051],[2563,1989,1423,1093],[2699,2099,1499,1139],[2809,2213,1579,1219],[2953,2331,1663,1273]],o=function(){var a=function(a,b){this._el=a,this._htOption=b};return a.prototype.draw=function(a){function g(a,b){var c=document.createElementNS("http://www.w3.org/2000/svg",a);for(var d in b)b.hasOwnProperty(d)&&c.setAttribute(d,b[d]);return c}var b=this._htOption,c=this._el,d=a.getModuleCount();Math.floor(b.width/d),Math.floor(b.height/d),this.clear();var h=g("svg",{viewBox:"0 0 "+String(d)+" "+String(d),width:"100%",height:"100%",fill:b.colorLight});h.setAttributeNS("http://www.w3.org/2000/xmlns/","xmlns:xlink","http://www.w3.org/1999/xlink"),c.appendChild(h),h.appendChild(g("rect",{fill:b.colorDark,width:"1",height:"1",id:"template"}));for(var i=0;d>i;i++)for(var j=0;d>j;j++)if(a.isDark(i,j)){var k=g("use",{x:String(i),y:String(j)});k.setAttributeNS("http://www.w3.org/1999/xlink","href","#template"),h.appendChild(k)}},a.prototype.clear=function(){for(;this._el.hasChildNodes();)this._el.removeChild(this._el.lastChild)},a}(),p="svg"===document.documentElement.tagName.toLowerCase(),q=p?o:m()?function(){function a(){this._elImage.src=this._elCanvas.toDataURL("image/png"),this._elImage.style.display="block",this._elCanvas.style.display="none"}function d(a,b){var c=this;if(c._fFail=b,c._fSuccess=a,null===c._bSupportDataURI){var d=document.createElement("img"),e=function(){c._bSupportDataURI=!1,c._fFail&&_fFail.call(c)},f=function(){c._bSupportDataURI=!0,c._fSuccess&&c._fSuccess.call(c)};return d.onabort=e,d.onerror=e,d.onload=f,d.src="data:image/gif;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==",void 0}c._bSupportDataURI===!0&&c._fSuccess?c._fSuccess.call(c):c._bSupportDataURI===!1&&c._fFail&&c._fFail.call(c)}if(this._android&&this._android<=2.1){var b=1/window.devicePixelRatio,c=CanvasRenderingContext2D.prototype.drawImage;CanvasRenderingContext2D.prototype.drawImage=function(a,d,e,f,g,h,i,j){if("nodeName"in a&&/img/i.test(a.nodeName))for(var l=arguments.length-1;l>=1;l--)arguments[l]=arguments[l]*b;else"undefined"==typeof j&&(arguments[1]*=b,arguments[2]*=b,arguments[3]*=b,arguments[4]*=b);c.apply(this,arguments)}}var e=function(a,b){this._bIsPainted=!1,this._android=n(),this._htOption=b,this._elCanvas=document.createElement("canvas"),this._elCanvas.width=b.width,this._elCanvas.height=b.height,a.appendChild(this._elCanvas),this._el=a,this._oContext=this._elCanvas.getContext("2d"),this._bIsPainted=!1,this._elImage=document.createElement("img"),this._elImage.style.display="none",this._el.appendChild(this._elImage),this._bSupportDataURI=null};return e.prototype.draw=function(a){var b=this._elImage,c=this._oContext,d=this._htOption,e=a.getModuleCount(),f=d.width/e,g=d.height/e,h=Math.round(f),i=Math.round(g);b.style.display="none",this.clear();for(var j=0;e>j;j++)for(var k=0;e>k;k++){var l=a.isDark(j,k),m=k*f,n=j*g;c.strokeStyle=l?d.colorDark:d.colorLight,c.lineWidth=1,c.fillStyle=l?d.colorDark:d.colorLight,c.fillRect(m,n,f,g),c.strokeRect(Math.floor(m)+.5,Math.floor(n)+.5,h,i),c.strokeRect(Math.ceil(m)-.5,Math.ceil(n)-.5,h,i)}this._bIsPainted=!0},e.prototype.makeImage=function(){this._bIsPainted&&d.call(this,a)},e.prototype.isPainted=function(){return this._bIsPainted},e.prototype.clear=function(){this._oContext.clearRect(0,0,this._elCanvas.width,this._elCanvas.height),this._bIsPainted=!1},e.prototype.round=function(a){return a?Math.floor(1e3*a)/1e3:a},e}():function(){var a=function(a,b){this._el=a,this._htOption=b};return a.prototype.draw=function(a){for(var b=this._htOption,c=this._el,d=a.getModuleCount(),e=Math.floor(b.width/d),f=Math.floor(b.height/d),g=['<table style="border:0;border-collapse:collapse;">'],h=0;d>h;h++){g.push("<tr>");for(var i=0;d>i;i++)g.push('<td style="border:0;border-collapse:collapse;padding:0;margin:0;width:'+e+"px;height:"+f+"px;background-color:"+(a.isDark(h,i)?b.colorDark:b.colorLight)+';"></td>');g.push("</tr>")}g.push("</table>"),c.innerHTML=g.join("");var j=c.childNodes[0],k=(b.width-j.offsetWidth)/2,l=(b.height-j.offsetHeight)/2;k>0&&l>0&&(j.style.margin=l+"px "+k+"px")},a.prototype.clear=function(){this._el.innerHTML=""},a}();QRCode=function(a,b){if(this._htOption={width:256,height:256,typeNumber:4,colorDark:"#000000",colorLight:"#ffffff",correctLevel:d.H},"string"==typeof b&&(b={text:b}),b)for(var c in b)this._htOption[c]=b[c];"string"==typeof a&&(a=document.getElementById(a)),this._android=n(),this._el=a,this._oQRCode=null,this._oDrawing=new q(this._el,this._htOption),this._htOption.text&&this.makeCode(this._htOption.text)},QRCode.prototype.makeCode=function(a){this._oQRCode=new b(r(a,this._htOption.correctLevel),this._htOption.correctLevel),this._oQRCode.addData(a),this._oQRCode.make(),this._el.title=a,this._oDrawing.draw(this._oQRCode),this.makeImage()},QRCode.prototype.makeImage=function(){"function"==typeof this._oDrawing.makeImage&&(!this._android||this._android>=3)&&this._oDrawing.makeImage()},QRCode.prototype.clear=function(){this._oDrawing.clear()},QRCode.CorrectLevel=d}();
+</script>
 <script>
 'use strict';
 // Adresse du script Google : rangée ici par construire-unique.mjs à la publication (l'adresse seulement, JAMAIS de code).
@@ -1248,7 +1344,10 @@ const ICO={
   image:'<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/>',
   logo:'<path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/><circle cx="12" cy="12" r="2.5"/>',
   // Section R&D (2026-10-20) : fiole de laboratoire (maquette validée).
-  rd:'<path d="M9 3h6"/><path d="M10 3v6L4.5 18.5A1.7 1.7 0 0 0 6 21h12a1.7 1.7 0 0 0 1.5-2.5L14 9V3"/><path d="M7.5 15h9"/>'
+  rd:'<path d="M9 3h6"/><path d="M10 3v6L4.5 18.5A1.7 1.7 0 0 0 6 21h12a1.7 1.7 0 0 0 1.5-2.5L14 9V3"/><path d="M7.5 15h9"/>',
+  // Étiquettes QR du parc (2026-10-21, maquette validée).
+  qr:'<path d="M3 7V4a1 1 0 0 1 1-1h3M17 3h3a1 1 0 0 1 1 1v3M21 17v3a1 1 0 0 1-1 1h-3M7 21H4a1 1 0 0 1-1-1v-3"/><rect x="7" y="7" width="4" height="4" rx=".5"/><rect x="13" y="7" width="4" height="4" rx=".5"/><rect x="7" y="13" width="4" height="4" rx=".5"/><path d="M13 13h1.5M17 13v1.5M13 16.5V17h4"/>',
+  imprim:'<path d="M7 9V3h10v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M7 14h10v7H7z"/>'
 };
 const TEINTE={accueil:['#16a3ad','#0b6f78'],tableau:['#7c6cf0','#4b3bbd'],ecran:['#4f8fae','#24566e'],tablette:['#5d7f8c','#2c4752'],
   lancements:['#e08a17','#a35f00'],calendrier:['#f2a93b','#c27206'],parc:['#4f8fae','#24566e'],personnes:['#16a3ad','#0b6f78'],
@@ -1932,18 +2031,99 @@ const unSecteur=()=>S.secteur!=='tous'?S.secteur:(secteursVisibles()[0]||'');
 
 // ---------------------------------------------------------------------------------------------------------------
 // Coquille
+// <menu-v2> Menu de gauche (2026-10-21, maquette validée par l'utilisateur : variante B) -----------------------------------
+// Groupes qui se déroulent : le groupe de la partie affichée est ouvert, les autres gardent le choix fait sur ce
+// navigateur (repliés au départ). « Réduire le menu » (écran large) : une icône par groupe, nom en bulle au survol / au
+// clavier, liste du groupe ouverte à côté (clic, Entrée, Espace ; Échap la referme). Choix gardés dans localStorage
+// « console-menu » (préférence d'affichage, sans donnée). Le menu ne montre que les parties permises (droit) : un groupe
+// sans partie permise n'apparaît pas. Les clics du menu sont traités ici (data-menu) ; data-go reste au gestionnaire général.
+Object.assign(ICO,{
+  chev:'<path d="m9 6 6 6-6 6"/>',
+  reduire:'<path d="m11 17-5-5 5-5"/><path d="m18 17-5-5 5-5"/>',
+  agrandir:'<path d="m13 17 5-5-5-5"/><path d="m6 17 5-5-5-5"/>',
+  'g-direct':'<path d="M3 12h4l3-8 4 16 3-8h4"/>',
+  'g-cont':'<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+  'g-regl':'<path d="M4 6h9"/><path d="M19 6h1"/><circle cx="16" cy="6" r="2.2"/><path d="M4 12h3"/><path d="M13 12h7"/><circle cx="10" cy="12" r="2.2"/><path d="M4 18h11"/><circle cx="18" cy="18" r="2.2"/>'
+});
+Object.assign(TEINTE,{'g-direct':['#16a3ad','#0b6f78'],'g-cont':['#3b8fe0','#1d5aa6'],'g-regl':['#5d6f78','#2c3e46']});
+const ICO_GROUPE={direct:'g-direct',plan:'calendrier',mach:'parc',cont:'g-cont',rd:'rd',regl:'g-regl'};
+const MENU=(function(){
+  const CLE='console-menu';
+  let m={g:{},reduit:false};
+  try{const x=JSON.parse(localStorage.getItem(CLE)||'{}');if(x&&typeof x==='object'){if(x.g&&typeof x.g==='object')m.g=x.g;m.reduit=!!x.reduit}}catch(e){}
+  return {m,vol:'',ecrire(){try{localStorage.setItem(CLE,JSON.stringify({g:m.g,reduit:m.reduit}))}catch(e){}}};
+})();
+const menuLarge=()=>!(window.matchMedia&&matchMedia('(max-width:860px)').matches);
+const menuReduit=()=>MENU.m.reduit&&menuLarge();
+const menuGroupeIci=()=>{const p=P(S.page);return p?p.g:''};
+const menuOuvert=g=>g===menuGroupeIci()?MENU.m.g[g]!==0:MENU.m.g[g]===1;
 function vNav(){
-  let h='<nav class="nav" aria-label="Parties de la console"><div class="brand">'+pastille('logo')+'<div><b>Console de l’atelier</b><span>'+esc(S.site&&S.site.nom||'Dent All Group')+'</span></div></div>';
+  const red=menuReduit(),moi=S.moi||{};
+  let h='<nav class="nav nv'+(red?' reduit':'')+'" aria-label="Parties de la console"><div class="brand">'+pastille('logo')+'<div><b>Console de l’atelier</b><span>'+esc(S.site&&S.site.nom||'Dent All Group')+'</span></div></div>';
+  h+='<button class="nv-reduire" id="nv-reduire" data-menu="reduire" aria-pressed="'+red+'"'+(red?' aria-label="Agrandir le menu" data-bulle="Agrandir le menu"':'')+'>'+svg(red?'agrandir':'reduire')+'<span class="t">Réduire le menu</span></button>';
   GROUPES.forEach(([g,titre])=>{
     const l=PARTIES.filter(p=>p.g===g&&droit(p.id));if(!l.length)return;
-    h+='<h3>'+titre+'</h3>';
+    const ici=l.some(p=>p.id===S.page),ouv=red?MENU.vol===g:menuOuvert(g);
+    h+='<div class="nv-g"><button class="nv-gt'+(ici?' ici':'')+'" id="nvt-'+g+'" data-menu="groupe" data-g="'+g+'" aria-expanded="'+ouv+'" aria-controls="nvl-'+g+'"'+
+      (red?' data-bulle="'+titre+'" aria-label="'+titre+(ici?' (partie affichée)':'')+'"':'')+'>'+pastille(ICO_GROUPE[g]||'aide','s gi')+'<span class="t">'+titre+'</span>'+
+      (ici?'<span class="sr"> (partie affichée)</span>':'')+'<span class="n" aria-label="'+l.length+' partie'+(l.length>1?'s':'')+'">'+l.length+'</span>'+svg('chev','chev')+'</button>'+
+      '<div class="nv-l'+(red&&ouv?' vol':'')+'" id="nvl-'+g+'" role="group" aria-labelledby="nvt-'+g+'"'+(ouv?'':' hidden')+'><div class="nv-vol-titre" aria-hidden="true">'+titre+'</div>';
     l.forEach(p=>{
-      const b=!S.moi.admin&&droit(p.id)==='lecture'&&!p.lect?'<span class="bdg" title="lecture seule">Lecture</span>':'';
-      h+='<button data-go="'+p.id+'"'+(S.page===p.id?' aria-current="page"':'')+'>'+pastille(p.ico,'s')+'<span class="t">'+p.nom+'</span>'+b+'</button>';
+      // Lecture seule : un œil + texte pour lecteur d'écran (le badge « Lecture » ne tient plus dans 208 px).
+      const b=!moi.admin&&droit(p.id)==='lecture'&&!p.lect?'<span title="Lecture seule">'+svg('oeil','lect')+'<span class="sr"> (lecture seule)</span></span>':'';
+      h+='<button class="pt" data-go="'+p.id+'"'+(S.page===p.id?' aria-current="page"':'')+'>'+pastille(p.ico,'s')+'<span class="t">'+p.nom+'</span>'+b+'</button>';
     });
+    h+='</div></div>';
   });
   return h+'<div class="foot">'+(CONSOLE_PC?'Console du PC'+(S.moi&&S.moi.admin?'<br><a href="/ancienne" style="color:#cfe3e8">Ancienne console (secours)</a>':''):'Console en ligne<br>Certains réglages se font encore sur le PC de l’atelier.'+boutonInstaller())+'</div></nav>';
 }
+// Redessine le menu seul (sans toucher à la partie affichée) et remet le focus sur le bouton voulu.
+function menuRedessiner(focusId){
+  const n=document.querySelector('.nav');if(!n||!S.moi)return;
+  const sc=n.scrollTop;n.outerHTML=vNav();
+  const nv=document.querySelector('.nav');if(nv)nv.scrollTop=sc;
+  menuPlacerVol();
+  if(focusId){const f=document.getElementById(focusId);if(f)f.focus()}
+}
+// Liste ouverte à côté d'une icône : à hauteur de l'icône, sans sortir de l'écran.
+function menuPlacerVol(){
+  const l=document.querySelector('.nv-l.vol');if(!l)return;
+  const b=document.getElementById(l.id.replace('nvl-','nvt-'));if(!b)return;
+  l.style.top=Math.max(8,Math.min(b.getBoundingClientRect().top,innerHeight-l.offsetHeight-8))+'px';
+}
+function menuFermerVol(focus){const g=MENU.vol;if(!g)return;MENU.vol='';menuRedessiner(focus?'nvt-'+g:'')}
+const menuBulle=(function(){let el=null;
+  return {montrer(b){const t=b.dataset.bulle;if(!t||(MENU.vol&&b.dataset.g===MENU.vol))return this.cacher();
+      if(!el){el=document.createElement('div');el.className='nv-bulle';el.setAttribute('aria-hidden','true');document.body.appendChild(el)}
+      const r=b.getBoundingClientRect();el.textContent=t;el.hidden=false;el.style.left=(r.right+10)+'px';el.style.top=(r.top+r.height/2-el.offsetHeight/2)+'px'},
+    cacher(){if(el)el.hidden=true}}})();
+// Clics du menu (avant le gestionnaire général, qui ignore data-menu).
+document.addEventListener('click',e=>{
+  const b=e.target.closest('button');
+  if(!b||!b.closest('.nav')){if(MENU.vol&&!(b&&b.closest('.nv-l')))menuFermerVol(false);return}
+  if(b.dataset.go){const p=P(b.dataset.go);if(p){MENU.m.g[p.g]=1;MENU.ecrire()}MENU.vol='';menuBulle.cacher();return}
+  if(b.dataset.menu==='reduire'){MENU.m.reduit=!MENU.m.reduit;MENU.vol='';MENU.ecrire();menuBulle.cacher();menuRedessiner('nv-reduire');return}
+  if(b.dataset.menu==='groupe'){
+    const g=b.dataset.g;
+    if(menuReduit()){MENU.vol=MENU.vol===g?'':g;menuBulle.cacher();menuRedessiner('nvt-'+g);
+      // Au clavier (Entrée / Espace : detail 0), on entre directement dans la liste ouverte.
+      if(MENU.vol&&e.detail===0){const f=document.querySelector('#nvl-'+g+' .pt');if(f)f.focus()}return}
+    MENU.m.g[g]=menuOuvert(g)?0:1;MENU.ecrire();menuRedessiner('nvt-'+g);return}
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&MENU.vol){e.preventDefault();menuFermerVol(true)}});
+// Quitter la liste ouverte au clavier (Tab) la referme.
+document.addEventListener('focusout',()=>{
+  if(!MENU.vol)return;
+  setTimeout(()=>{const g=MENU.vol,a=document.activeElement;if(!g||!a||a===document.body)return;
+    const z=[document.getElementById('nvl-'+g),document.getElementById('nvt-'+g)];
+    if(!z.some(x=>x&&x.contains(a))){const id=a.id;MENU.vol='';menuRedessiner(id)}},0);
+});
+document.addEventListener('mouseover',e=>{const b=e.target.closest&&e.target.closest('.nav.reduit [data-bulle]');if(b)menuBulle.montrer(b);else menuBulle.cacher()});
+document.addEventListener('focusin',e=>{const b=e.target.closest&&e.target.closest('.nav.reduit [data-bulle]');if(b&&b.matches(':focus-visible'))menuBulle.montrer(b);else menuBulle.cacher()});
+addEventListener('scroll',()=>menuBulle.cacher(),{passive:true,capture:true});
+// Passage téléphone ↔ écran large : le menu change de forme (réduit seulement en large).
+if(window.matchMedia){const mq=matchMedia('(max-width:860px)'),f=()=>{MENU.vol='';menuBulle.cacher();menuRedessiner('')};if(mq.addEventListener)mq.addEventListener('change',f);else if(mq.addListener)mq.addListener(f)}
+// </menu-v2>
 function vTop(){
   const vis=secteursVisibles(),adm=S.moi.admin;
   // Campagne 2026-10-17 : « Tous » (barre du haut sur une ligne) ; pendant le chargement des secteurs, « Secteurs… » (et non « aucun »).
@@ -1989,6 +2169,7 @@ async function chargerPage(){
     if(n!==numChargement||!el())return;
     el().innerHTML=h;S.etat='';
     armerConfirmations(el());
+    if(S.page==='parc'&&S.qr)qrAjuster();
   }catch(e){
     if(e.message==='session')return;
     S.etat='err';
@@ -2114,6 +2295,8 @@ PAGES.parc=async()=>{
   if(!r.ok)return h+refus(r);
   if(S.msgParc)h+='<div class="msg '+S.msgParc[0]+'" role="status">'+svg(S.msgParc[0]==='ok'?'ok':'alerte')+'<div>'+S.msgParc[1]+'</div></div>';
   if(!r.data.parc)return h+'<div class="card vide">Le parc machines n’est pas encore rempli.</div>';
+  // Étiquettes QR (2026-10-21) : planche à imprimer, à la place de la liste.
+  if(S.qr)return h+vueEtiquettes(r);
   const zones={};(r.data.zones||[]).forEach(z=>zones[z.id]=z.nom);
   const q=S.parcQ.trim().toLowerCase(),E=S.edit&&S.edit.cle==='parc'?S.edit:null;
   const ms=r.data.parc.machines.filter(m=>secteursAffiches().includes(m.secteur)&&(!q||[m.nom,m.type,m.marque,m.modele,m.serie].join(' ').toLowerCase().includes(q)))
@@ -2121,7 +2304,8 @@ PAGES.parc=async()=>{
   const sel=E?null:ms.find(m=>m.id===S.sel.parc);
   h+=noteFiltre(ms.length,'machine(s)');
   h+='<div class="tb"><input class="in" id="parcQ" type="search" placeholder="Chercher une machine, un type, un n° de série…" value="'+esc(S.parcQ)+'"><span class="hint">'+ms.length+' machine(s)</span>'+
-    (mod&&!E?'<span class="grow"></span><button class="btn pri" data-pe="nouveau">'+svg('plus')+'Nouvelle machine</button>':'')+'</div>';
+    '<span class="grow"></span>'+(E?'':'<button class="btn" data-qr="ouvrir">'+svg('qr')+'Étiquettes QR</button>')+
+    (mod&&!E?'<button class="btn pri" data-pe="nouveau">'+svg('plus')+'Nouvelle machine</button>':'')+'</div>';
   h+='<div class="parc'+(sel||E?' ouvert':'')+'"><div class="ds-parc-g"><div class="mgrid">'+(ms.length?ms.map(m=>{
     const manque=!m.serie||!m.type;
     return '<button class="mac'+(m.actif===false?' off':'')+'" data-parc="'+esc(m.id)+'"'+((sel&&sel.id===m.id)||(E&&E.item.id===m.id)?' aria-current="true"':'')+'><span class="sec-t">'+esc(secNom(m.secteur))+'</span><div class="vis">'+svg('parc')+'</div><div class="bd"><b>'+esc(m.nom)+'</b>'+repere(m)+
@@ -2145,6 +2329,99 @@ PAGES.parc=async()=>{
   h+='</div>';
   return h;
 };
+// --- Étiquettes QR du parc (2026-10-21, maquette validée par l'utilisateur ; secteur pilote : Fraisage) ----------------
+// Une étiquette par machine : QR « DAG-M:<identifiant du parc> » (jamais le nom, qui peut changer ; lu par l'appli
+// Maintenance › Scanner une machine), nom en grand, secteur et zone, « Scannez pour la maintenance ». Planche A4 de 3 × 8
+// étiquettes de 70 × 37 mm, QR de 30 mm ; « Commencer à la case n » pour finir une planche entamée. Machines hors service :
+// pas imprimées sauf si on le demande. La lecture de la partie Parc machines suffit (rien n'est enregistré).
+// QR fabriqués dans la page par QRCode.js (commun\vendeur\, intégré à la construction, empreinte contrôlée), dessinés en
+// SVG (net à l'impression). Impression : @page « etiquettes » (A4, marges 0, la planche fait 210 × 297 mm), échelle 100 %.
+const QR_CASES=24;
+function qrSecteurs(r){const l=(r.data.secteurs||secteursVisibles()||[]).filter(Boolean);return l.length?l:[...new Set(((r.data.parc||{}).machines||[]).map(m=>m.secteur).filter(Boolean))]}
+function qrDepart(r){const l=qrSecteurs(r);return {sec:S.secteur!=='tous'&&l.includes(S.secteur)?S.secteur:l.includes('fraisage')?'fraisage':l[0]||'',zone:'*',depart:1,hs:false}}
+const qrPourEtiquette=m=>m&&m.id&&!/^tmp-/.test(m.id)&&String(m.nom||'').trim();
+function qrChoix(r){
+  const q=S.qr,toutes=((r.data.parc||{}).machines||[]).filter(m=>qrPourEtiquette(m)&&m.secteur===q.sec&&(q.zone==='*'||(q.zone===''?!m.zone:m.zone===q.zone)));
+  const tri=l=>l.sort((a,b)=>String(a.nom).localeCompare(String(b.nom),'fr',{numeric:true}));
+  return {l:tri(toutes.filter(m=>q.hs||m.actif!==false)),hs:toutes.filter(m=>m.actif===false).length};
+}
+// QR en SVG à partir du modèle de QRCode.js (niveau de correction M, marge blanche de 2 modules).
+function qrSvg(texte){
+  if(typeof QRCode!=='function')return '';
+  try{const el=document.createElement('div'),q=new QRCode(el,{text:texte,width:96,height:96,colorDark:'#000000',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M}),m=q._oQRCode;
+    if(!m||!m.getModuleCount)return '';const n=m.getModuleCount(),b=2,t=n+2*b;let d='';
+    for(let y=0;y<n;y++)for(let x=0;x<n;x++)if(m.isDark(y,x))d+='M'+(x+b)+' '+(y+b)+'h1v1h-1z';
+    return '<svg viewBox="0 0 '+t+' '+t+'" shape-rendering="crispEdges" aria-hidden="true"><rect width="'+t+'" height="'+t+'" fill="#fff"/><path fill="#000" d="'+d+'"/></svg>';
+  }catch(e){return ''}
+}
+// Taille du nom (mm) : le plus grand possible (7 mm), sur deux lignes au plus dans la colonne de texte (32 mm).
+function qrTailleNom(nom){const s=String(nom).trim(),mot=Math.max(...s.split(/\s+/).map(w=>w.length),1);return Math.max(4,Math.min(7,32/(0.62*mot),62/(0.62*s.length))).toFixed(1)}
+function qrEtiquette(m,zones){
+  const z=m.zone?zones[m.zone]||m.zone:'Tout le secteur',s=secNom(m.secteur),lieu=z===s?s:s+' · '+z;
+  return '<div class="qr-lab" data-qrid="'+esc(m.id)+'"><div class="qr-lab-qr">'+qrSvg('DAG-M:'+m.id)+'</div><div class="qr-lab-tx"><b style="font-size:'+qrTailleNom(m.nom)+'mm">'+esc(m.nom)+'</b>'+
+    '<span class="lz">'+esc(lieu)+'</span><span class="sc">Scannez pour la maintenance</span></div></div>';
+}
+function qrPlanches(l,depart,zones){
+  const cases=[];for(let i=1;i<depart;i++)cases.push('<div class="qr-lab vide"><span>Déjà utilisée</span></div>');
+  l.forEach(m=>cases.push(qrEtiquette(m,zones)));
+  while(cases.length%QR_CASES)cases.push('<div class="qr-lab vide"><span>Vide</span></div>');
+  const p=[];for(let i=0;i<cases.length;i+=QR_CASES)p.push('<div class="qr-planche" aria-label="Planche A4 n° '+(p.length+1)+'">'+cases.slice(i,i+QR_CASES).join('')+'</div>');
+  return p;
+}
+function vueEtiquettes(r){
+  const q=S.qr,secs=qrSecteurs(r),zones={};(r.data.zones||[]).forEach(z=>zones[z.id]=z.nom);
+  if(!secs.includes(q.sec))q.sec=secs[0]||'';
+  const tout=((r.data.parc||{}).machines||[]).filter(m=>qrPourEtiquette(m)&&m.secteur===q.sec);
+  const zs=(r.data.zones||[]).filter(z=>z.secteur===q.sec&&tout.some(m=>m.zone===z.id)),sansZone=tout.some(m=>!m.zone);
+  if(q.zone!=='*'&&!(q.zone===''?sansZone:zs.some(z=>z.id===q.zone)))q.zone='*';
+  const {l,hs}=qrChoix(r),planches=l.length?qrPlanches(l,q.depart,zones):[],lib=typeof QRCode==='function';
+  let h='<div class="tb"><button class="btn" data-qr="fermer">← Retour à la liste des machines</button><span class="grow"></span></div>';
+  if(!lib)h+='<div class="msg err">'+svg('alerte')+'<div><b>Étiquettes indisponibles</b> : la bibliothèque des QR codes manque dans cette console. Prévenez le responsable d’atelier (console à reconstruire).</div></div>';
+  h+='<div class="qr-g"><section class="card"><h2>'+svg('qr')+' Étiquettes QR</h2>'+
+    '<div class="qr-etape"><h3><span class="n">1</span>Secteur</h3><div class="row">'+secs.map(s=>'<button class="chip" data-qr="sec" data-v="'+esc(s)+'" aria-pressed="'+(s===q.sec)+'">'+esc(secNom(s))+'</button>').join('')+'</div></div>'+
+    '<div class="qr-etape"><h3><span class="n">2</span>Zone</h3><div class="row"><button class="chip" data-qr="zone" data-v="*" aria-pressed="'+(q.zone==='*')+'">Toutes les zones</button>'+
+      zs.map(z=>'<button class="chip" data-qr="zone" data-v="'+esc(z.id)+'" aria-pressed="'+(q.zone===z.id)+'">'+esc(z.nom)+'</button>').join('')+
+      (sansZone?'<button class="chip" data-qr="zone" data-v="" aria-pressed="'+(q.zone==='')+'">Tout le secteur (sans zone)</button>':'')+'</div></div>'+
+    '<div class="qr-etape"><h3><span class="n">3</span>Commencer à la case</h3><select class="in" id="qrDepart" aria-label="Première case libre de la planche">'+
+      Array.from({length:QR_CASES},(_,i)=>'<option value="'+(i+1)+'"'+(q.depart===i+1?' selected':'')+'>Case '+(i+1)+(i?'':' (planche neuve)')+'</option>').join('')+'</select>'+
+      '<p class="hint" style="margin:6px 0 0">Pour réutiliser une planche déjà entamée : les cases d’avant restent vides.</p></div>'+
+    '<label class="qr-case"><input type="checkbox" id="qrHs"'+(q.hs?' checked':'')+'> Inclure les machines hors service'+(hs?' ('+hs+')':'')+'</label>'+
+    '<p class="qr-recap" role="status"><b>'+l.length+' étiquette'+(l.length>1?'s':'')+'</b> · '+planches.length+' planche'+(planches.length>1?'s':'')+' A4'+(hs&&!q.hs?' · '+hs+' hors service non imprimée'+(hs>1?'s':''):'')+'</p>'+
+    '<button class="btn pri qr-imprimer" data-qr="imprimer"'+(l.length&&lib?'':' disabled')+'>'+svg('imprim')+'Imprimer '+(planches.length>1?'les planches':'la planche')+'</button>'+
+    '<p class="hint" style="margin:10px 0 0">Imprimez à <b>100 %</b> (taille réelle, sans « Ajuster à la page »), sur planche autocollante A4 de 24 étiquettes (70 × 37 mm).</p>'+
+    (l[0]?'<h3 style="margin:18px 0 8px;font-size:16px">Une étiquette, en vrai</h3><div class="qr-grande">'+qrEtiquette(l[0],zones)+'</div>':'')+
+    '<dl class="qr-kv"><dt>Étiquette</dt><dd>70 × 37 mm</dd><dt>QR</dt><dd>30 mm de côté</dd><dt>Contenu du QR</dt><dd>DAG-M:&lt;n° du parc&gt;</dd></dl></section>'+
+    '<section class="qr-apercu" aria-label="Aperçu des planches A4">'+(planches.length?'<div class="qr-planches" id="qrPlanches">'+planches.join('')+'</div>':'<div class="card vide">Aucune machine à imprimer pour ce choix.</div>')+'</section></div>';
+  return h;
+}
+// Aperçu : planches réduites pour tenir dans la largeur (jamais de défilement de côté) ; noms trop longs réduits pour
+// tenir dans leur case (la même mise en page sert à l'impression).
+function qrAjuster(){
+  const z=document.querySelector('.qr-apercu'),p=document.getElementById('qrPlanches');if(!z||!p)return;
+  p.querySelectorAll('.qr-lab-tx').forEach(t=>{const b=t.querySelector('b');let f=parseFloat(b.style.fontSize)||7;while(t.scrollHeight>t.clientHeight+1&&f>4.2){f-=0.3;b.style.fontSize=f.toFixed(1)+'mm'}});
+  p.style.transform='';p.style.width='';const l=p.offsetWidth,k=Math.min(1,(z.clientWidth-8)/l);
+  p.style.transformOrigin='0 0';p.style.transform='scale('+k+')';z.style.height=Math.ceil(p.offsetHeight*k+8)+'px';
+}
+function qrImprimer(){
+  const p=document.getElementById('qrPlanches');if(!p)return;
+  let d=document.getElementById('qrImpression');if(d)d.remove();
+  d=document.createElement('div');d.id='qrImpression';d.innerHTML=p.innerHTML;document.body.appendChild(d);
+  document.body.classList.add('qr-imprime');
+  const fin=()=>{document.body.classList.remove('qr-imprime');const x=document.getElementById('qrImpression');if(x)x.remove();removeEventListener('afterprint',fin)};
+  addEventListener('afterprint',fin);
+  try{window.print()}catch(e){fin()}
+}
+addEventListener('resize',()=>{if(S.page==='parc'&&S.qr)qrAjuster()});
+function actionQr(b){
+  const a=b.dataset.qr;
+  if(a==='ouvrir'){S.qr=null;return lire('parc-lire').then(r=>{if(r.ok&&r.data.parc)S.qr=qrDepart(r);return chargerPage()})}
+  if(a==='fermer'){S.qr=null;return chargerPage()}
+  if(!S.qr)return chargerPage();
+  if(a==='sec'){S.qr.sec=b.dataset.v;S.qr.zone='*';return chargerPage()}
+  if(a==='zone'){S.qr.zone=b.dataset.v;return chargerPage()}
+  if(a==='imprimer'){qrImprimer();return Promise.resolve()}
+  return chargerPage();
+}
 // Envoi au script : TOUTES les machines visibles (la page les a toutes), avec la version lue (depuis).
 // Temps masqué (2026-10-16) : changer(machines) / types appliqués à l'écran tout de suite, puis à la version confirmée.
 function envoyerParc(libelle,changer,types){
@@ -3464,20 +3741,119 @@ PAGES.liaisons=async()=>{
 // Écrans télé : ouverts sur ce PC (plein écran depuis l'écran lui-même).
 PAGES.ecrans=async()=>{
   let h=enTete('ecrans','Les écrans télé de l’atelier, ouverts sur ce PC.');
+  if(CONSOLE_PC)await tournantCharger(); // écran tournant (2026-10-21)
   if(!CONSOLE_PC)return h+'<div class="msg info">'+svg('aide')+'<div>Les écrans télé s’ouvrent depuis le PC de l’atelier (console du PC).</div></div>';
   return h+'<div class="secs"><section class="card"><h2>'+pastille('lancements','s')+'Écran de l’atelier (lancements)</h2><p class="hint">Plateaux à lancer, en temps réel.</p><a class="btn pri" href="/ecran" target="_blank" rel="noopener">Ouvrir l’écran</a></section>'+
     secteursVisibles().map(s=>'<section class="card"><h2>'+pastille('maintenance','s')+'Maintenance — '+esc(secNom(s))+'</h2><p class="hint">Échéances des maintenances du secteur.</p><a class="btn pri" href="/ecran-maintenance?secteur='+encodeURIComponent(s)+'" target="_blank" rel="noopener">Ouvrir l’écran</a></section>').join('')+'</div>'+
-    '<p class="hint">Sur l’écran, le bouton « Plein écran » l’affiche en entier.</p>'+vueEcranAuto();
+    '<p class="hint">Sur l’écran, le bouton « Plein écran » l’affiche en entier.</p>'+vueTournant()+vueEcranAuto();
 };
 // Écran ouvert au démarrage de ce PC (lot 7b) : mêmes réglages que l'ancienne console (navigateur de ce PC) ; le bouton
 // « Quitter » de l'écran l'annule et revient à la console.
-function ecranAuto(){try{return localStorage.getItem('lancements-ecran-auto')==='1'?'atelier':localStorage.getItem('console-ecran-auto')==='maintenance:fraisage'?'fraisage':''}catch(e){return ''}}
+// Écran tournant (2026-10-21) : console-ecran-auto = 'tournant'.
+function ecranAuto(){try{const m=localStorage.getItem('console-ecran-auto');return localStorage.getItem('lancements-ecran-auto')==='1'?'atelier':m==='maintenance:fraisage'?'fraisage':m==='tournant'?'tournant':''}catch(e){return ''}}
 function vueEcranAuto(){
-  const v=ecranAuto(),o=[['','La console (normal)'],['atelier','L’écran de l’atelier (lancements)']].concat(secteursVisibles().includes('fraisage')||S.moi.admin?[['fraisage','L’écran maintenance du fraisage']]:[]);
+  const v=ecranAuto(),o=[['','La console (normal)'],['atelier','L’écran de l’atelier (lancements)']].concat(secteursVisibles().includes('fraisage')||S.moi.admin?[['fraisage','L’écran maintenance du fraisage']]:[]).concat([['tournant','L’écran tournant']]);
   return '<section class="card" style="margin-top:16px"><h2>Au démarrage de ce PC, ouvrir…</h2><div class="row" role="radiogroup" aria-label="Écran au démarrage">'+
     o.map(([k,t])=>'<label class="chip"><input type="radio" name="ecranAuto" data-ecran-auto="'+k+'"'+(v===k?' checked':'')+'>'+t+'</label>').join('')+'</div>'+
     '<p class="hint" style="margin:10px 0 0">Pour la télé de l’atelier : le logiciel ouvre directement cet écran. Le bouton « Quitter » de l’écran revient à la console.</p></section>';
 }
+// --- Écran tournant (2026-10-21, maquette validée) : UNE télé montre à tour de rôle les écrans cochés ci-dessous. -------
+// Le réglage est gardé sur CE PC (serveur du PC, /api/ecran-tournant), pas dans Google : chaque télé a le sien. Seul
+// l'administrateur le modifie (le serveur refuse les autres) ; un manager le voit en lecture. Chaque changement est
+// enregistré tout de suite, avec contrôle de version (maj/depuis : refus si le réglage a changé ailleurs).
+// Les écrans qui apparaîtront plus tard (nouveau secteur, nouvelle appli) arrivent ici d'eux-mêmes, décochés.
+async function tournantCharger(){
+  // Relu à chaque entrée sur la page (5 s de marge pour les redessins), sauf pendant un envoi : un changement fait dans
+  // une autre fenêtre est vu tout de suite, pas seulement au refus 409.
+  if(S.tr&&S.tr.d&&(S.tr.occupe||Date.now()-(S.tr.lu||0)<5000))return;
+  S.tr=Object.assign({msg:null},S.tr||{});
+  try{S.tr.d=await apiPC('/api/ecran-tournant');S.tr.lu=Date.now()}catch(x){if(x.message==='session')throw x;S.tr.d=null;S.tr.err=x.message}
+}
+const trDuree=s=>s<60?s+' s':s%60?Math.floor(s/60)+' min '+(s%60)+(s<120?'':' s'):(s/60)+' min';
+const trTotal=s=>s<60?s+' s':Math.floor(s/60)+' min'+(s%60?' '+(s%60)+' s':'');
+function trCss(){
+  if(document.getElementById('trCss'))return;
+  const st=document.createElement('style');st.id='trCss';
+  st.textContent='.tr{border:2px solid var(--accent);margin-top:16px}.tr .tr-l{display:flex;align-items:center;gap:12px;flex-wrap:wrap;border:1px solid var(--line);border-radius:12px;padding:8px 12px;margin-bottom:8px;background:var(--card)}'+
+    '.tr .tr-l.off{background:var(--line2)}.tr .tr-n{width:24px;text-align:center;font-weight:800}.tr .tr-c{display:flex;align-items:center;gap:10px;min-height:44px;font-weight:600;cursor:pointer;flex:1 1 260px;min-width:0}'+
+    '.tr .tr-c input,.tr .tr-o input[type=checkbox]{width:22px;height:22px;flex:none}.tr .tr-d{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:15px}.tr .tr-d select{width:auto;min-width:96px}.tr .tr-r{display:flex;align-items:center;gap:8px;margin-left:auto;flex-wrap:nowrap}@media (max-width:520px){.tr .tr-dt{display:none}}'+
+    '.tr .tr-f{min-width:44px;min-height:44px;padding:0;justify-content:center}.tr .tr-o{display:flex;gap:12px;align-items:flex-start;border-top:1px solid var(--line2);padding:12px 0}.tr .tr-o label{font-weight:700;cursor:pointer}'+
+    '.tr .tr-o .in{width:auto;min-height:44px}.tr .frise{display:flex;border-radius:10px;overflow:hidden;margin:6px 0;min-height:56px}.tr .frise>div{padding:6px 10px;color:#fff;font-size:15px;font-weight:700;min-width:0;overflow:hidden;border-right:2px solid var(--card)}'+
+    '.tr .frise small{display:block;font-weight:600;opacity:.9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.tr .frise .c0{background:#065E66}.tr .frise .c1{background:#4E6870}.tr .frise .c2{background:#0B8A96}'+
+    '.tr .frise .ret{background:repeating-linear-gradient(135deg,#B3242B 0 14px,#C0262D 14px 28px)}.tr .place{border:1px dashed var(--line);border-radius:10px;padding:8px 12px;color:var(--muted);font-size:15px;margin-bottom:6px}';
+  document.head.appendChild(st);
+}
+// Aperçu du tour : une maintenance compte ici 2 pages (le vrai nombre dépend des tâches du moment).
+function trFrise(l,retard){
+  const pg=e=>e.pages?2:1,dur=e=>e.duree*pg(e)*(retard&&e===retard?2:1),tot=l.reduce((s,e)=>s+dur(e),0);
+  return '<div class="frise" role="img" aria-label="'+esc(l.map(e=>e.court+' '+trTotal(dur(e))).join(', '))+'">'+l.map((e,i)=>'<div class="'+(retard&&e===retard?'ret':'c'+(i%3))+'" style="flex:'+dur(e)+' 1 0">'+(retard&&e===retard?'✕ ':'')+esc(e.court)+
+    '<small>'+(e.pages?'2 pages × '+trDuree(e.duree*(retard&&e===retard?2:1)):trDuree(e.duree))+'</small></div>').join('')+'</div><p class="hint" style="margin:4px 0 12px">Un tour complet : <b>'+trTotal(tot)+'</b>'+(l.length===1?' — un seul écran : il reste affiché comme aujourd’hui, sans barre de suite.':'.')+'</p>';
+}
+function vueTournant(){
+  trCss();
+  const T=S.tr||{},d=T.d,adm=!!(S.moi&&S.moi.admin),dis=adm?'':' disabled';
+  let h='<section class="card tr" aria-labelledby="trTitre"><h2 id="trTitre">'+pastille('ecran','s')+'Écran tournant <span class="tag acc">nouveau</span></h2>'+
+    '<p class="hint" style="margin-top:-6px">Une seule télé montre les écrans cochés, l’un après l’autre, dans cet ordre.'+(adm?'':' Réglage modifiable par l’administrateur seulement.')+'</p>';
+  if(!d)return h+'<div class="msg warn">'+svg('alerte')+'<div><b>'+esc(T.err||'Réglage illisible.')+'</b></div></div></section>';
+  let rang=0;
+  // Manager (lecture) : seulement les écrans de ses secteurs.
+  const vis=e=>adm||!e.secteur||secteursVisibles().includes(e.secteur);
+  h+=d.ecrans.map((e,i)=>!vis(e)?'':'<div class="tr-l'+(e.on?'':' off')+'"><span class="tr-n">'+(e.on?++rang:'—')+'</span>'+pastille(e.pages?'maintenance':'lancements','s')+
+    '<label class="tr-c"><input type="checkbox" data-tr-on="'+i+'"'+(e.on?' checked':'')+dis+'><span>'+esc(e.nom)+(e.nouveau?' <span class="tag">nouveau</span>':'')+'</span></label>'+
+    '<span class="tr-r"><label class="tr-d"><span class="tr-dt">'+(e.pages?'Durée par page':'Durée')+'</span><select class="in" data-tr-duree="'+i+'" aria-label="'+(e.pages?'Durée par page':'Durée')+' — '+esc(e.court)+'"'+dis+'>'+d.durees.map(s=>'<option value="'+s+'"'+(s===e.duree?' selected':'')+'>'+trDuree(s)+'</option>').join('')+'</select></label>'+
+    '<button class="btn tr-f" type="button" data-tr-monte="'+i+'" aria-label="Monter « '+esc(e.court)+' »"'+(i===0||!adm?' disabled':'')+'>↑</button>'+
+    '<button class="btn tr-f" type="button" data-tr-descend="'+i+'" aria-label="Descendre « '+esc(e.court)+' »"'+(i===d.ecrans.length-1||!adm?' disabled':'')+'>↓</button></span></div>').join('')+
+    '<div class="place">Place prévue : les futurs écrans télé s’ajouteront ici d’eux-mêmes, décochés.</div>'+
+    '<div class="tr-o"><input type="checkbox" id="trPrio" data-tr-prio'+(d.priorite?' checked':'')+dis+'><div><label for="trPrio">Priorité aux retards</label><div class="hint">Un secteur avec une maintenance « ✕ En retard » : son écran reste 2 fois plus longtemps et un bandeau le signale sur les autres écrans.</div></div></div>'+
+    '<div class="tr-o"><input type="checkbox" id="trNuit" data-tr-nuit'+(d.nuit.on?' checked':'')+dis+'><div><label for="trNuit">En dehors des horaires de travail : écran sombre avec l’heure</label>'+
+    '<div class="row" style="margin-top:6px">de <input class="in" type="time" data-tr-debut value="'+esc(d.nuit.debut)+'" aria-label="Début des horaires de travail"'+dis+'> à <input class="in" type="time" data-tr-fin value="'+esc(d.nuit.fin)+'" aria-label="Fin des horaires de travail"'+dis+'></div>'+
+    '<div class="hint">Décoché : la télé tourne jour et nuit (Windows peut aussi éteindre l’écran).</div></div></div>';
+  const on=d.ecrans.filter(e=>e.on),ret=d.priorite&&on.length>1?on.find(e=>e.pages):null;
+  h+='<h3 style="margin:12px 0 4px;font-size:16px">Aperçu du tour</h3>'+(on.length?trFrise(on,null)+(ret?'<p class="hint" style="margin:0">Avec une maintenance en retard en '+esc(ret.secteurNom||ret.court)+' (exemple) :</p>'+trFrise(on,ret):''):'<p class="hint">Aucun écran coché : l’écran tournant affichera « Aucun écran coché ».</p>');
+  h+='<div class="row" style="margin-top:8px"><a class="btn pri" href="/ecran-tournant" target="_blank" rel="noopener">Ouvrir l’écran tournant</a><span class="hint">Sur la télé, touchez l’écran : « Plein écran », « Pause », « Écran suivant », « Quitter ».</span></div>'+
+    '<p id="trEtat" role="status" class="hint" style="margin:10px 0 0">'+(T.msg?'<b style="color:var('+(T.msg[0]==='ok'?'--ok':'--err')+')">'+T.msg[1]+'</b>':'')+'</p></section>';
+  return h;
+}
+// Enregistrement tout de suite (une seule requête à la fois ; les changements faits pendant l'envoi partent ensuite).
+async function trEnregistrer(){
+  const T=S.tr;if(!T||!T.d)return;
+  if(T.occupe){T.encore=true;return}
+  T.occupe=true;
+  try{
+    do{T.encore=false;const d=T.d;
+      const r=await apiPC('/api/ecran-tournant',{depuis:d.maj,ecrans:d.ecrans.map(e=>({id:e.id,on:e.on,duree:e.duree})),priorite:d.priorite,nuit:d.nuit});
+      if(T.encore)T.d.maj=r.maj;else T.d=r;
+    }while(T.encore);
+    T.msg=['ok','✓ Enregistré sur ce PC : l’écran tournant le prend au prochain écran (30 s au plus).'];
+  }catch(x){if(x.message==='session'){T.occupe=false;return}T.msg=['err','✕ '+esc(x.message)];T.d=null}
+  T.occupe=false;
+  await trRedessiner();
+}
+// Page redessinée en gardant le champ touché (clavier).
+async function trRedessiner(){
+  const a=document.activeElement,cle=a&&a.attributes?[...a.attributes].map(x=>x.name).find(n=>/^data-tr-/.test(n)):'',val=cle?a.getAttribute(cle):'';
+  await chargerPage();
+  if(cle){const b=document.querySelector('['+cle+(val?'="'+val+'"':'')+']');if(b&&!b.disabled)b.focus()}
+}
+document.addEventListener('change',e=>{
+  const el=e.target,T=S.tr;if(!T||!T.d||S.page!=='ecrans'||!el.attributes)return;
+  const d=T.d,ds=el.dataset;
+  if(ds.trOn!=null){const x=d.ecrans[+ds.trOn];if(!x)return;x.on=el.checked;x.nouveau=false}
+  else if(ds.trDuree!=null){const x=d.ecrans[+ds.trDuree];if(!x)return;x.duree=Number(el.value)}
+  else if(ds.trPrio!=null)d.priorite=el.checked;
+  else if(ds.trNuit!=null)d.nuit.on=el.checked;
+  else if(ds.trDebut!=null||ds.trFin!=null){if(!/^\d\d:\d\d$/.test(el.value))return;d.nuit[ds.trDebut!=null?'debut':'fin']=el.value}
+  else return;
+  T.msg=null;trEnregistrer();trRedessiner();
+});
+document.addEventListener('click',e=>{
+  const b=e.target.closest&&e.target.closest('[data-tr-monte],[data-tr-descend]'),T=S.tr;if(!b||!T||!T.d||b.disabled)return;
+  const l=T.d.ecrans,i=+(b.dataset.trMonte!=null?b.dataset.trMonte:b.dataset.trDescend),j=b.dataset.trMonte!=null?i-1:i+1;
+  if(j<0||j>=l.length)return;[l[i],l[j]]=[l[j],l[i]];
+  T.msg=null;trEnregistrer();
+  // Le focus suit l'écran déplacé.
+  chargerPage().then(()=>{let n=document.querySelector('[data-tr-'+(b.dataset.trMonte!=null?'monte':'descend')+'="'+j+'"]')||document.querySelector('[data-tr-on="'+j+'"]');if(n&&n.disabled)n=document.querySelector('[data-tr-on="'+j+'"]');if(n)n.focus()});
+});
 // Apparence & administration : le pack intégré (code administrateur des tablettes) reste dans l'ancienne console.
 // Administration et apparence (lot 7c, 2026-10-15) : mêmes réglages que l'Administration des tablettes (Apparence,
 // Site et secteurs, Secteurs et zones), administrateur seulement, enregistrés par le script (administration-ecrire).
@@ -4013,12 +4389,13 @@ document.addEventListener('click',async e=>{
   if(b.dataset.ed){S.dernierGeste=Date.now();actionEdition(b).catch(x=>{if(x.message!=='session'){S.msgCont=['err','<b>'+esc(x.message)+'</b>'];chargerPage()}});return}
   if(b.dataset.lan){actionLancements(b).catch(x=>{if(x.message!=='session'){S.msgLanc=['err','<b>'+esc(x.message)+'</b>'];chargerPage()}});return}
   if(b.dataset.cg){actionConges(b).catch(x=>{if(x.message!=='session'){S.msgCal=['err','<b>'+esc(x.message)+'</b>'];chargerPage()}});return}
+  if(b.dataset.qr){actionQr(b).catch(x=>{if(x.message!=='session'){S.msgParc=['err','<b>'+esc(x.message)+'</b>'];chargerPage()}});return}
   if(b.dataset.pe){actionParc(b).catch(x=>{if(x.message!=='session'){S.msgParc=['err','<b>'+esc(x.message)+'</b>'];chargerPage()}});return}
   if(b.dataset.pp){actionPersonnes(b).catch(x=>{if(x.message!=='session'){S.msgPers=['err','<b>'+esc(x.message)+'</b>'];chargerPage()}});return}
   if(b.dataset.msg){actionMessages(b).catch(x=>{if(x.message!=='session'){S.msgMsg=['err','<b>'+esc(x.message)+'</b>'];chargerPage()}});return}
   if(b.dataset.dr){actionDroits(b).catch(x=>{if(x.message!=='session'){if(S.dr)S.dr.msg=['err','<b>'+esc(x.message)+'</b>'];else S.msgDr=['err','<b>'+esc(x.message)+'</b>'];chargerPage()}});return}
   if(b.dataset.tab){actionTablettes(b).catch(x=>{if(x.message!=='session'){S.msgTab=['err','<b>'+esc(x.message)+'</b>'];chargerPage()}});return}
-  if(b.dataset.go||b.dataset.sec!==undefined){if(S.rd)Object.assign(S.rd,{vue:'liste',b:null,orig:null,sale:false,c:null,t:null,imp:null,msg:null});S.edit=null;S.types=null;S.suppr=null;S.dr=null;if(b.dataset.go)S.adm=null;S.msgAdm=null;S.msgCont=S.msgLanc=S.msgCal=S.msgParc=S.msgPers=S.msgMsg=S.msgDr=S.msgTab=null;S.viderHisto=false}
+  if(b.dataset.go||b.dataset.sec!==undefined){if(S.rd)Object.assign(S.rd,{vue:'liste',b:null,orig:null,sale:false,c:null,t:null,imp:null,msg:null});S.edit=null;S.types=null;S.suppr=null;S.dr=null;S.qr=null;if(b.dataset.go)S.adm=null;S.msgAdm=null;S.msgCont=S.msgLanc=S.msgCal=S.msgParc=S.msgPers=S.msgMsg=S.msgDr=S.msgTab=null;S.viderHisto=false}
   if(b.dataset.go){S.page=b.dataset.go;S.menu=false;try{history.replaceState(null,'','#'+S.page)}catch(x){}render();scrollTo(0,0);return}
   if(b.dataset.act==='menu'){S.menu=!S.menu;const ap=document.querySelector('.app');if(ap)ap.classList.toggle('menu',S.menu);b.setAttribute('aria-expanded',S.menu);if(S.menu)scrollTo(0,0);return}
   if(b.dataset.sec!==undefined){S.secteur=b.dataset.sec;S.semaine='';render();return}
@@ -4047,6 +4424,8 @@ document.addEventListener('click',async e=>{
   }
 });
 document.addEventListener('change',async e=>{const el=e.target;
+  // Étiquettes QR : case de départ, machines hors service (affichage seulement).
+  if((el.id==='qrDepart'||el.id==='qrHs')&&S.qr){if(el.id==='qrDepart')S.qr.depart=Math.max(1,Math.min(QR_CASES,Number(el.value)||1));else S.qr.hs=el.checked;return chargerPage()}
   // Section R&D : champs du brouillon, filtre par type, correspondance des machines, fichiers (photo, import).
   if(el.dataset&&(el.dataset.rdf||el.dataset.rdp||el.dataset.rdr||el.dataset.rdt)){rdChamp(el);if(el.tagName==='SELECT')chargerPage();return}
   if(el.dataset&&el.dataset.rdType&&S.rd){S.rd.f.type=el.value;return chargerPage()}
@@ -4058,7 +4437,7 @@ document.addEventListener('change',async e=>{const el=e.target;
   if(el.dataset&&(el.dataset.adm||el.dataset.admTuile||el.dataset.admZone!=null)){saisieAdmin(el);if(el.tagName==='SELECT'||el.type==='color')chargerPage();return}
   if(el.dataset&&el.dataset.canal&&CONSOLE_PC)return changerCanalTablette(el);
   if(el.dataset&&el.dataset.ecranAuto!=null){const v=el.dataset.ecranAuto;
-    try{if(v==='atelier')localStorage.setItem('lancements-ecran-auto','1');else localStorage.removeItem('lancements-ecran-auto');if(v==='fraisage')localStorage.setItem('console-ecran-auto','maintenance:fraisage');else localStorage.removeItem('console-ecran-auto')}catch(x){}
+    try{if(v==='atelier')localStorage.setItem('lancements-ecran-auto','1');else localStorage.removeItem('lancements-ecran-auto');if(v==='fraisage')localStorage.setItem('console-ecran-auto','maintenance:fraisage');else if(v==='tournant')localStorage.setItem('console-ecran-auto','tournant');else localStorage.removeItem('console-ecran-auto')}catch(x){}
     return}
   if(el.dataset&&el.dataset.fm)return champSaisi(el);
   if(el.dataset&&(el.dataset.f&&(el.type==='checkbox'||el.tagName==='SELECT'||el.type==='date'))){champSaisi(el);if(el.dataset.rerender)chargerPage();return}
@@ -4119,7 +4498,7 @@ addEventListener('hashchange',()=>{const h=decodeURIComponent(location.hash.slic
 // Démarrage : session de cet onglet encore valable ? (le script le dit)
 (async()=>{
   // Console du PC : écran télé ouvert au démarrage (réglé dans « Écrans télé »), comme l'ancienne console.
-  if(CONSOLE_PC&&!location.hash){const v=ecranAuto();if(v==='atelier'){location.replace('/ecran');return}if(v==='fraisage'){location.replace('/ecran-maintenance?secteur=fraisage');return}}
+  if(CONSOLE_PC&&!location.hash){const v=ecranAuto();if(v==='atelier'){location.replace('/ecran');return}if(v==='fraisage'){location.replace('/ecran-maintenance?secteur=fraisage');return}if(v==='tournant'){location.replace('/ecran-tournant');return}}
   S.jeton=lireJeton();
   // #parc, #calendrier… : la partie à ouvrir (le menu reste limité aux parties visibles).
   const h=decodeURIComponent(location.hash.slice(1));if(P(h))S.page=h;
