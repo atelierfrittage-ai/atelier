@@ -219,6 +219,8 @@ th{font-size:15px;color:var(--muted);text-transform:uppercase;letter-spacing:.05
 .fiche dl{display:grid;grid-template-columns:max-content 1fr;gap:6px 14px;margin:0;font-size:15px}
 .fiche dt{color:var(--muted);font-weight:600}.fiche dd{margin:0}
 .photo{max-width:100%;border-radius:10px;border:1px solid var(--line);display:block;margin-top:8px}
+/* « Prendre une photo » (2026-10-22) : seulement sur tablette / téléphone ; caché sur un PC à souris (pas de caméra). */
+@media (hover:hover) and (pointer:fine){.si-tactile{display:none!important}}
 /* Calendrier */
 .cal{display:grid;border:1px solid var(--line);border-radius:14px;overflow:auto;background:#fff}
 .cal>div{padding:8px;border-bottom:1px solid var(--line2);border-right:1px solid var(--line2);min-height:54px;font-size:15px}
@@ -1342,6 +1344,7 @@ const ICO={
   horloge:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   actualiser:'<path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/>',
   image:'<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/>',
+  photo:'<path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.5"/>',
   logo:'<path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/><circle cx="12" cy="12" r="2.5"/>',
   // Section R&D (2026-10-20) : fiole de laboratoire (maquette validée).
   rd:'<path d="M9 3h6"/><path d="M10 3v6L4.5 18.5A1.7 1.7 0 0 0 6 21h12a1.7 1.7 0 0 0 1.5-2.5L14 9V3"/><path d="M7.5 15h9"/>',
@@ -1354,6 +1357,13 @@ const TEINTE={accueil:['#16a3ad','#0b6f78'],tableau:['#7c6cf0','#4b3bbd'],ecran:
   maintenance:['#f2a93b','#c27206'],fiches:['#ef6b5b','#c0262d'],procedures:['#3b8fe0','#1d5aa6'],taches:['#3aa85b','#1f7a3a'],releve:['#16a3ad','#0b6f78'],
   message:['#e0679b','#a8336a'],acces:['#0B8A96','#065E66'],droits:['#7c6cf0','#4b3bbd'],apparence:['#e0679b','#a8336a'],version:['#3b8fe0','#1d5aa6'],
   liaisons:['#5d6f78','#2c3e46'],aide:['#5d6f78','#2c3e46'],logo:['#16a3ad','#065E66'],rd:['#7349C2','#4C5BD4']};
+// Photos (2026-10-22) : sur tablette ou téléphone, « Prendre une photo » ouvre tout de suite la caméra arrière (capture) ;
+// « Choisir une photo » ouvre la galerie (sur PC : le choix de fichier). Le bouton caméra est caché sur un PC à souris
+// (.si-tactile). Les deux champs portent les mêmes data-… : même traitement ensuite (envoi, enregistrement).
+function boutonsPhoto(prendre,choisir,attrs){
+  return '<label class="btn si-tactile">'+svg('photo')+prendre+'<input type="file" accept="image/*" capture="environment" hidden '+attrs+'></label>'+
+    '<label class="btn">'+svg('image')+choisir+'<input type="file" accept="image/*" hidden '+attrs+'></label>';
+}
 const svg=(id,cls)=>'<svg class="'+(cls||'i')+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(ICO[id]||ICO.aide)+'</svg>';
 const pastille=(id,taille)=>{const t=TEINTE[id]||['#5d6f78','#2c3e46'];return '<span class="pa'+(taille?' '+taille:'')+'" style="--c1:'+t[0]+';--c2:'+t[1]+'">'+svg(id)+'</span>'};
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -2597,7 +2607,7 @@ function vueFicheMessage(r){
       '<p class="hint" style="margin:8px 0 0">'+(S.moi.admin?'Aucune zone cochée : toutes les tablettes du site.':'Cochez au moins une de vos zones.')+'</p></fieldset>'+
     '<div class="row">'+champ({k:'du',t:'date',l:'Affiché à partir du (facultatif)'},b.du,'du',{})+champ({k:'au',t:'date',l:'Jusqu’au (facultatif)'},b.au,'au',{})+'</div>'+
     '<fieldset class="fs"><legend>Images ('+b.images.length+' sur 3)</legend>'+b.images.map((im,i)=>'<div class="etape"><div class="row">'+vignette(im.photo)+'<span class="grow"></span><button class="btn" data-msg="img-moins" data-i="'+i+'">Retirer</button></div>'+champ({k:'texte',t:'texte',l:'Légende'},im.texte,'images.'+i+'.texte',{})+'</div>').join('')+
-      (b.images.length<3?'<label class="btn">'+svg('image')+'Ajouter une image<input type="file" accept="image/*" hidden data-fphoto="images+"></label>':'')+'</fieldset></div>'+
+      (b.images.length<3?'<div class="row">'+boutonsPhoto('Prendre une photo','Choisir une image','data-fphoto="images+"')+'</div>':'')+'</fieldset></div>'+
     '<div class="row" style="margin-top:14px"><button class="btn" data-msg="annuler">Annuler</button><button class="btn pri" data-msg="enregistrer">Enregistrer</button></div></section>';
 }
 // Envoi : les messages MODIFIABLES par ce compte (le script garde les autres), avec la version lue ; retrait explicite.
@@ -3503,7 +3513,7 @@ function champ(f,v,chemin,st){
   if(f.t==='case')return '<label class="row" style="gap:8px;min-height:44px"><input type="checkbox" style="width:22px;height:22px" data-f="'+chemin+'"'+(v?' checked':'')+'>'+f.l+'</label>';
   if(f.t==='machines'){const l=st.machines||[];return '<fieldset class="fs"><legend>'+f.l+'</legend><div class="row">'+(l.length?l.map(m=>'<label class="chip"><input type="checkbox" data-fm="'+chemin+'" value="'+esc(m)+'"'+((v||[]).includes(m)?' checked':'')+'>'+esc(m)+'</label>').join(''):'<span class="hint">Aucune machine dans ce secteur.</span>')+'</div></fieldset>'}
   if(f.t==='photo')return '<div><span class="lbl" style="margin-bottom:4px">'+f.l+'</span><div class="row">'+vignette(v)+
-    '<label class="btn">'+svg('image')+(v?'Remplacer':'Ajouter une photo')+'<input type="file" accept="image/*" hidden data-fphoto="'+chemin+'"></label>'+(v?'<button class="btn" data-ed="photo-retirer" data-c="'+chemin+'">Retirer</button>':'')+'</div></div>';
+    boutonsPhoto(v?'Reprendre la photo':'Prendre une photo',v?'Choisir une autre photo':'Choisir une photo','data-fphoto="'+chemin+'"')+(v?'<button class="btn" data-ed="photo-retirer" data-c="'+chemin+'">Retirer</button>':'')+'</div></div>';
   if(f.t==='etapes'){const l=v||[];return '<fieldset class="fs"><legend>'+f.l+' ('+l.length+')</legend>'+l.map((x,i)=>'<div class="etape"><div class="row"><b>'+(i+1)+'.</b><span class="grow"></span>'+
       '<button class="btn" data-ed="etape-haut" data-k="'+chemin+'" data-i="'+i+'"'+(i?'':' disabled')+' aria-label="Monter">↑</button><button class="btn" data-ed="etape-bas" data-k="'+chemin+'" data-i="'+i+'"'+(i<l.length-1?'':' disabled')+' aria-label="Descendre">↓</button>'+
       '<button class="btn" data-ed="etape-moins" data-k="'+chemin+'" data-i="'+i+'">Retirer</button></div>'+f.sous.filter(s=>!s.fraisage||unSecteur()==='fraisage').map(s=>champ(s,x[s.k],chemin+'.'+i+'.'+s.k,st)).join('')+'</div>').join('')+
@@ -3655,7 +3665,7 @@ function vueLancEdition(n,f,hs){
       '<button class="btn" data-lan="haut" data-m="'+esc(n)+'" data-fid="'+esc(x.id)+'" data-pos="'+i+'"'+(i?'':' disabled')+' aria-label="Monter">↑</button><button class="btn" data-lan="bas" data-m="'+esc(n)+'" data-fid="'+esc(x.id)+'" data-pos="'+i+'"'+(i<f.length-1?'':' disabled')+' aria-label="Descendre">↓</button>'+
       '<button class="btn" data-lan="retirer" data-m="'+esc(n)+'" data-fid="'+esc(x.id)+'" aria-label="Retirer">✕</button></div>'+
       '<div class="row" style="gap:6px;margin-top:4px">'+(x.photo?vignette(x.photo)+'<button class="btn" data-lan="plan-retirer" data-m="'+esc(n)+'" data-fid="'+esc(x.id)+'">Retirer la photo</button>':'')+
-      '<label class="btn">'+svg('image')+(x.photo?'Remplacer la photo':'Joindre la photo du plateau')+'<input type="file" accept="image/*" hidden data-lan-photo="'+esc(n)+'" data-fid="'+esc(x.id)+'"></label>'+(CONSOLE_PC?'<button class="btn" data-lan="capture" data-m="'+esc(n)+'" data-fid="'+esc(x.id)+'">'+svg('image')+'Capture d’écran</button>':'')+'</div></li>').join('')+'</ol>':'<p class="hint" style="margin:6px 0 0">Rien à lancer.</p>');
+      boutonsPhoto(x.photo?'Reprendre la photo':'Prendre la photo du plateau',x.photo?'Choisir une autre photo':'Choisir la photo du plateau','data-lan-photo="'+esc(n)+'" data-fid="'+esc(x.id)+'"')+(CONSOLE_PC?'<button class="btn" data-lan="capture" data-m="'+esc(n)+'" data-fid="'+esc(x.id)+'">'+svg('image')+'Capture d’écran</button>':'')+'</div></li>').join('')+'</ol>':'<p class="hint" style="margin:6px 0 0">Rien à lancer.</p>');
 }
 
 // --- Calendrier : congés (le reste des réglages se fait dans l'appli Maintenance) -----------------------------
@@ -4142,7 +4152,7 @@ function vueRdFiche(sec,d,st,e,mod){
       (s?'<div class="rd-etape-b">'+Object.keys(s.criteres||{}).map(c=>{const v=RD_ECHELLE[s.criteres[c]]||['?',0];return '<div class="cr"><span class="hint">'+esc(c)+'</span><span>'+pts(v[1])+' <b>'+v[0]+'</b></span></div>'}).join('')+(s.remarque?'<div style="grid-column:1/-1" class="hint">Remarque : '+esc(s.remarque)+'</div>':'')+'</div>':'')+'</div>'}).join('')+'</div>'});
   const ph=e.photos||[];
   h+=dsSec({n:6,t:'medias',titre:'Photos des résultats',type:'Facultatif',fixe:plein(ph),corps:'<div class="row">'+ph.map(p=>'<div>'+vignette(p)+(m2?'<button class="btn dan" data-rd="photo-retirer" data-p="'+esc(p)+'">Retirer</button>':'')+'</div>').join('')+
-    (m2&&ph.length<12?'<label class="btn">'+svg('image')+'Ajouter une photo<input type="file" accept="image/*" hidden data-rdphoto="'+esc(e.id)+'"></label>':'')+(ph.length||m2?'':'<p class="hint" style="margin:0">Aucune photo.</p>')+'</div>'});
+    (m2&&ph.length<12?boutonsPhoto('Prendre une photo','Choisir une photo','data-rdphoto="'+esc(e.id)+'"'):'')+(ph.length||m2?'':'<p class="hint" style="margin:0">Aucune photo.</p>')+'</div>'});
   // 7. Résultats et conclusion : saisis ici (Modification) ; « Conclure l'essai » = Terminé, conclusion obligatoire.
   const c=R0.c&&R0.c.id===e.id?R0.c:{id:e.id,methodes:e.methodes||'',resultats:e.resultats||'',conclusion:e.conclusion||''};
   const zone=(k,t)=>'<div class="field"><label class="lbl" for="rdr-'+k+'">'+t+'</label><textarea class="in" id="rdr-'+k+'" rows="3" data-rdr="'+k+'" placeholder="À remplir à la fin de l’essai">'+esc(c[k])+'</textarea></div>';
