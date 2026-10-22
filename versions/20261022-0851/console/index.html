@@ -1987,6 +1987,9 @@ setInterval(()=>{
       seDeconnecter('Déconnecté après 20 minutes sans activité.'+(n?' '+n+' enregistrement(s) n’étai(en)t pas encore parti(s) vers Google : ils sont perdus, refaites-les.':''))}
     return;
   }
+  else if(S.page==='lancements'&&document.visibilityState==='visible'&&!S.absent){S.dernierGeste=Date.now();
+    // Saisie en cours (plus de relecture) : un petit appel toutes les 5 minutes garde la session vivante chez Google.
+    if(Date.now()-(S.vivant||0)>5*60000){S.vivant=Date.now();appel('moi').catch(()=>{})}}
   else if(Date.now()-S.dernierGeste>=INACTIF_MS){
     if(!enAttente()){seDeconnecter('Déconnecté après 10 minutes sans activité.');return}
     // Relecture I1 (en ligne) : envois en attente → plus d'actualisation ni de nouvel essai ; les données sont masquées
@@ -1997,7 +2000,7 @@ setInterval(()=>{
   // Pas pendant une saisie (numéro de fichier en cours de frappe, formulaire…).
   const saisie=[...document.querySelectorAll('#page input,#page textarea')].some(i=>i===document.activeElement||(i.type!=='file'&&i.type!=='checkbox'&&i.value));
   // (réactivité 2026-10-16 : lectures marquées anciennes → affichées telles quelles, relues derrière, page mise à jour)
-  if((S.page==='accueil'||S.page==='lancements')&&!saisie&&!S.edit&&Date.now()-S.maj>60000){Object.values(S.charge).forEach(g=>{g.t=perime()});chargerPage()}
+  if((S.page==='accueil'||S.page==='lancements')&&!saisie&&!S.edit&&Date.now()-S.maj>(S.page==='lancements'?10000:60000)){Object.values(S.charge).forEach(g=>{g.t=perime()});chargerPage()}
   // Témoin « Google » : petite vérification si rien n'a été échangé depuis 2 min 30 (la personne est là).
   const dernier=Math.max(S.google.ok,S.google.erreur?S.google.erreur.at:0);
   if(document.visibilityState==='visible'&&Date.now()-dernier>150000)appel('site-lire').catch(()=>{});
@@ -2202,8 +2205,22 @@ function compterMaint(st){
   try{(CalMaint.etats(st,Date.now())||[]).forEach(e=>{if(n[e.etat]!==undefined)n[e.etat]++;if(e.etat==='retard'||e.etat==='jour')n.liste.push(e)})}catch(e){}
   return n;
 }
-const ETATS_LANC={libre:'○ Libre',preparation:'◐ Préparation',prete:'■ Prête',fonctionnement:'▶ En fonctionnement'};
-function machinesLancement(st){const m=Object.assign({},st&&st.machines||{});Object.keys(st&&st.files||{}).forEach(k=>{if(!m[k])m[k]={etat:'libre'}});return m}
+const ETATS_LANC={libre:'○ Libre',preparation:'◐ En préparation',prete:'■ Prête',fonctionnement:'▶ En fonctionnement'};
+// Lancements (2026-10-21) : la liste des machines vient de la règle unique (FusionLancements.machinesLancements) — calculée
+// par le script Google (lancements-lire : liste), sinon par la console de ce PC (/api/lancements). Ancien script et pas de PC :
+// les machines connues de l'état seulement. Chaque élément : {nom, cle (clé chez Google), hs, autre}.
+function listeLanc(d){
+  if(d&&Array.isArray(d.liste))return d.liste;
+  const st=d&&d.state||{},l=Object.keys(st.machines||{}).concat(Object.keys(st.files||{}));
+  return [...new Set(l)].sort((a,b)=>a.localeCompare(b,'fr',{numeric:true})).map(n=>({nom:n,cle:n,hs:false,autre:false}));
+}
+function machinesLancement(d){const st=d&&d.state||{},m={};listeLanc(d).forEach(x=>{m[x.nom]=Object.assign({etat:'libre'},(st.machines||{})[x.cle]||{},{_cle:x.cle,_hs:x.hs,_n:((st.files||{})[x.cle]||[]).length})});return m}
+// Ancien script Google (pas de liste) sur le PC de l'atelier : la liste de la console de ce PC (même règle).
+async function completerLanc(r){
+  if(!r||!r.ok||Array.isArray(r.data.liste)||!CONSOLE_PC)return r;
+  try{const p=await apiPC('/api/lancements');if(p&&Array.isArray(p.liste))r.data.liste=p.liste}catch(e){if(e.message==='session')throw e}
+  return r;
+}
 function vueAujourdhui(t){if(!t)return false;const m=/^(\d\d)\/(\d\d)\/(\d{4})/.exec(t);if(!m)return false;const d=new Date();return +m[1]===d.getDate()&&+m[2]===d.getMonth()+1&&+m[3]===d.getFullYear()}
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -2220,8 +2237,11 @@ PAGES.accueil=async()=>{
   const maint={};secs.forEach((s,i)=>maint[s]=compterMaint(cals[i]));
   const som=k=>secs.reduce((n,s)=>n+maint[s][k],0);
   const machinesParc=parc&&parc.ok&&parc.data.parc?parc.data.parc.machines.filter(m=>secs.includes(m.secteur)):[];
-  const lm=lanc&&lanc.ok?machinesLancement(lanc.data.state):null;
+  if(lanc)await completerLanc(lanc);
+  const lm=lanc&&lanc.ok?machinesLancement(lanc.data):null;
   const nb=e=>lm?Object.values(lm).filter(m=>m.etat===e).length:0;
+  // Fichier à lancer MAINTENANT : machine pas en fonctionnement, avec au moins un fichier (même règle que l'écran télé).
+  const lancables=lm?Object.keys(lm).filter(n=>!lm[n]._hs&&lm[n]._n&&lm[n].etat!=='fonctionnement'&&!lm[n].fichier):[];
   const tl=tabs&&tabs.ok?tabs.data.tablettes:null,tVues=tl?tl.filter(t=>vueAujourdhui(t.vu)).length:0;
   const aujR=new Date().toDateString(),relJour=rel&&rel.ok?(rel.data.records||[]).filter(r=>new Date(r.createdAt).toDateString()===aujR).length:null;
   const titre=S.secteur==='tous'?(adm?'Tout l’atelier, d’un coup d’œil':'Vos secteurs'):'Secteur '+secNom(S.secteur);
@@ -2232,7 +2252,7 @@ PAGES.accueil=async()=>{
   h+='<div class="kpis">';
   if(droit('calendrier'))h+=k(som('retard')?'k-err':'k-ok',som('retard')?'✕':'✓',som('retard'),'Maintenances en retard',som('retard')?'à rattraper':'aucune','calendrier')+
     k(som('jour')?'k-warn':'k-ok','•',som('jour'),'À faire aujourd’hui',som('bientot')+' pour demain','calendrier');
-  if(lm)h+=k('k-ok','▶',nb('fonctionnement')+' / '+Object.keys(lm).length,'Machines en fonctionnement',nb('prete')+' prête(s) à lancer · '+Object.values(lanc.data.state.files||{}).reduce((a,l)=>a+l.length,0)+' fichier(s) en attente','lancements');
+  if(lm)h+=k('k-ok','▶',nb('fonctionnement')+' / '+Object.keys(lm).length,'Machines en fonctionnement',lancables.length+' machine(s) avec un fichier à lancer maintenant · '+Object.values(lanc.data.state.files||{}).reduce((a,l)=>a+l.length,0)+' fichier(s) à lancer','lancements');
   if(relJour!==null)h+=k(relJour?'k-ok':'k-warn',relJour?'✓':'!',relJour,'Relèves du jour',relJour?'enregistrée(s) aujourd’hui':'pas encore de relève aujourd’hui','tableau');
   if(tl)h+=k(tVues<tl.length?'k-warn':'k-ok',tVues<tl.length?'!':'✓',tVues+' / '+tl.length,'Tablettes vues aujourd’hui',tVues<tl.length?(tl.length-tVues)+' sans nouvelles aujourd’hui':'toutes vues','tablettes');
   if(parc&&parc.ok&&parc.data.parc)h+=k('k-acc','⚙',machinesParc.filter(m=>m.actif!==false).length,'Machines en service',machinesParc.filter(m=>m.actif===false).length+' hors service','parc');
@@ -2247,12 +2267,12 @@ PAGES.accueil=async()=>{
   }
   const al=[];
   secs.forEach(s=>maint[s].liste.forEach(e=>al.push({niv:e.etat==='retard'?'err':'warn',titre:(e.etat==='retard'?'Maintenance en retard : ':'À faire aujourd’hui : ')+e.m,texte:(e.f&&e.f.title||'')+(e.qui?' · '+e.qui:''),sec:s,aller:'calendrier'})));
-  if(lm)Object.keys(lm).filter(n=>lm[n].etat==='prete').forEach(n=>al.push({niv:'warn',titre:n+' prête à lancer',texte:lm[n].depuis?'depuis '+heureFr(lm[n].depuis):'',sec:'frittage',aller:'lancements'}));
+  if(lm)lancables.filter(n=>lm[n].etat==='prete').forEach(n=>al.push({niv:'warn',titre:n+' prête : '+lm[n]._n+' fichier(s) à lancer',texte:lm[n].depuis?'prête depuis '+heureFr(lm[n].depuis):'',sec:'frittage',aller:'lancements'}));
   h+='<div class="g3"><div class="stack"><section class="card"><h2>'+svg('alerte')+'À traiter <span class="tag '+(al.some(a=>a.niv==='err')?'err':al.length?'warn':'ok')+'">'+al.length+'</span></h2>'+
     (al.length?'<div class="als">'+al.slice(0,30).map(a=>'<div class="al '+a.niv+'"><span class="sy" aria-hidden="true">'+(a.niv==='err'?'✕':'!')+'</span><div class="tx"><b>'+esc(a.titre)+' <span class="tag">'+esc(secNom(a.sec))+'</span></b>'+esc(a.texte)+'</div><button class="btn" data-go="'+a.aller+'">Voir</button></div>').join('')+'</div>'
       :'<div class="msg ok" style="margin:0">'+svg('ok')+'<b>Rien à traiter dans ce que vous voyez.</b></div>')+'</section>';
   if(lm)h+='<section class="card"><h2>'+pastille('lancements','s')+'Lancements en direct<span class="grow"></span><button class="btn" data-go="lancements">Ouvrir les lancements</button></h2>'+
-    (Object.keys(lm).length?Object.keys(lm).sort().map(n=>{const m=lm[n];return '<div class="lan"><div><b>'+esc(n)+'</b> <span class="hint">'+(m.fichier?'· fichier '+esc(m.fichier.num):'')+(m.depuis?' · depuis '+heureFr(m.depuis):'')+'</span></div><span class="st st-'+esc(m.etat)+'">'+ETATS_LANC[m.etat]+'</span></div>'}).join(''):'<div class="vide">Aucune machine en lancement.</div>')+'</section>';
+    (Object.keys(lm).length?Object.keys(lm).map(n=>{const m=lm[n];return '<div class="lan"><div><b>'+esc(n)+'</b> <span class="hint">'+(m.fichier?'· fichier en cours '+esc(m.fichier.num):'')+(m._n?' · '+m._n+' à lancer':'')+(m.depuis?' · depuis '+heureFr(m.depuis):'')+'</span></div><span class="st st-'+esc(m.etat)+'">'+ETATS_LANC[m.etat]+'</span></div>'}).join(''):'<div class="vide">Aucune machine en lancement.</div>')+'</section>';
   h+='</div><div class="stack"><section class="card"><h2>Accès rapide</h2><div class="quick">'+PARTIES.filter(p=>p.id!=='accueil'&&droit(p.id)&&!p.pc).map(p=>'<button data-go="'+p.id+'">'+pastille(p.ico,'s')+p.nom+'</button>').join('')+'</div></section></div></div>';
   return h;
 };
@@ -2803,26 +2823,30 @@ PAGES['c-releve']=async()=>{
 };
 
 PAGES.lancements=async()=>{
-  const r=await lire('lancements-lire');
-  let h=enTete('lancements','Les machines du frittage, leur état et leur file d’attente. Actualisé toutes les minutes.');
+  const r=await completerLanc(await lire('lancements-lire'));
+  let h=enTete('lancements','Les machines du frittage (ordre du parc), leur état et les fichiers à lancer. Actualisé toutes les 15 secondes.');
   if(horsFrittage())return h+horsFrittage();
   if(!r.ok)return h+refus(r);
-  const st=r.data.state||{},lm=machinesLancement(st),mod=peutModif('lancements');
-  // Modification : aussi les machines du frittage du parc (pour mettre un premier fichier sur une machine libre).
-  if(mod&&droit('parc')){const pc=await lire('parc-lire');if(pc.ok&&pc.data.parc){const zs={};(pc.data.zones||[]).forEach(z=>zs[z.id]=z);
-    pc.data.parc.machines.filter(x=>x.secteur==='frittage'&&x.actif!==false&&(!x.zone||((zs[x.zone]||{}).applis||[]).some(a=>a==='releve'||a==='lancements'))).forEach(x=>{if(!lm[x.nom])lm[x.nom]={etat:'libre'}})}}
-  const noms=Object.keys(lm).sort((a,b)=>a.localeCompare(b,'fr',{numeric:true}));
+  // Machines : la règle unique (liste du script ou de ce PC), sans dépendre du droit « Parc machines » (2026-10-21).
+  const st=r.data.state||{},liste=listeLanc(r.data),mod=peutModif('lancements');
   if(S.msgLanc)h+='<div class="msg '+S.msgLanc[0]+'" role="status">'+svg(S.msgLanc[0]==='ok'?'ok':'alerte')+'<div>'+S.msgLanc[1]+'</div></div>';
-  if(!noms.length)return h+'<div class="card vide">Aucune machine en lancement pour l’instant.</div>';
-  h+='<div class="mgrid'+(mod?' lanc':'')+'">'+noms.map(n=>{const m=lm[n],f=(st.files||{})[n]||[];
-    return '<section class="card"><h2>'+esc(n)+'<span class="grow"></span><span class="st st-'+esc(m.etat)+'">'+ETATS_LANC[m.etat]+'</span></h2>'+
-      (m.fichier?'<p style="margin:0 0 6px"><b>En cours : '+esc(m.fichier.num)+'</b>'+(m.fichier.note?' <span class="hint">· '+esc(m.fichier.note)+'</span>':'')+'</p>'+boutonPhoto(m.fichier.photo):'')+
-      (m.depuis?'<p class="hint" style="margin:0 0 6px">Depuis '+heureFr(m.depuis)+(m.par?' · '+esc(m.par):'')+'</p>':'')+
-      '<h3 style="font-size:15px;margin:10px 0 4px">File d’attente ('+f.length+')</h3>'+(mod?vueLancEdition(n,f):f.length?'<ol style="margin:0;padding-left:22px">'+f.map(x=>'<li><b>'+esc(x.num)+'</b>'+(x.note?' · '+esc(x.note):'')+(x.photo?' '+boutonPhoto(x.photo):'')+'</li>').join('')+'</ol>':'<p class="hint" style="margin:0">Vide</p>')+'</section>'}).join('')+'</div>';
+  if(!liste.length)return h+'<div class="card vide">Aucune machine : elles viennent du parc (machines rangées dans la zone de la Relève).</div>';
+  h+='<div class="mgrid'+(mod?' lanc':'')+'">'+liste.map(x=>{const c=x.cle,m=(st.machines||{})[c]||{etat:'libre'},f=(st.files||{})[c]||[];
+    // « Remettre libre » (bureau, droit Modification) : la machine est notée libre dans l'historique ; Google refuse si elle
+    // a changé entre-temps (état et fichier vus).
+    const libre=mod&&m.etat!=='libre'?(S.remettre===c?'<div class="row" style="margin:6px 0"><button class="btn dan plein" data-lan="libre-ok" data-m="'+esc(c)+'" data-etat="'+esc(m.etat)+'" data-fid="'+esc(m.fichier?m.fichier.id:'')+'">Oui, remettre '+esc(x.nom)+' libre</button><button class="btn" data-lan="libre-non">Annuler</button></div><p class="hint" style="margin:0 0 6px">À faire seulement si l’atelier a oublié « Fin de production » : la machine redevient libre et c’est noté dans l’historique.</p>':
+      '<button class="btn" data-lan="libre" data-m="'+esc(c)+'" style="margin:6px 0">Remettre libre</button>'):'';
+    return '<section class="card"><h2 style="display:block;overflow-wrap:anywhere">'+esc(x.nom)+'</h2><p style="margin:-4px 0 8px"><span class="st st-'+esc(m.etat)+'">'+ETATS_LANC[m.etat]+'</span>'+(m._attente?repereLanc(m):'')+'</p>'+
+      (x.hs?'<div class="msg err" style="margin:0 0 8px">'+svg('alerte')+'<div><b>Hors service : '+f.length+' fichier(s) à reprendre.</b> Retirez-les ou remettez-les sur une autre machine.</div></div>':'')+
+      (x.autre?'<p class="hint" style="margin:0 0 6px">Machine qui n’est plus dans la liste du parc (encore occupée).</p>':'')+
+      (m.fichier?'<p style="margin:0 0 6px"><b>Fichier en cours : '+esc(m.fichier.num)+'</b>'+(m.fichier.note?' <span class="hint">· '+esc(m.fichier.note)+'</span>':'')+'</p>'+boutonPhoto(m.fichier.photo):m.etat==='fonctionnement'?'<p class="hint" style="margin:0 0 6px">Fichier en cours : aucun (lancé sans fichier)</p>':'')+
+      (m.depuis&&m.etat!=='libre'?'<p class="hint" style="margin:0 0 6px">Depuis '+heureFr(m.depuis)+(m.par?' · '+esc(m.par):'')+'</p>':'')+libre+
+      '<h3 style="font-size:15px;margin:10px 0 4px">À lancer ('+f.length+')</h3>'+(mod&&!x.hs?vueLancEdition(c,f):mod&&x.hs&&f.length?vueLancEdition(c,f,true):f.length?'<ol style="margin:0;padding-left:22px">'+f.map(y=>'<li><b>'+esc(y.num)+'</b>'+(y.note?' · '+esc(y.note):'')+(y.photo?' '+boutonPhoto(y.photo):'')+'</li>').join('')+'</ol>':'<p class="hint" style="margin:0">Rien à lancer.</p>')+'</section>'}).join('')+'</div>';
   const hi=(st.histo||[]).slice(-15).reverse();
-  if(hi.length)h+='<section class="card" style="margin-top:16px"><h2>Derniers fichiers fabriqués'+(mod?'<span class="grow"></span>'+(S.viderHisto?'<button class="btn dan plein" data-lan="vider-ok">Oui, effacer l’historique</button><button class="btn" data-lan="vider-non">Annuler</button>':'<button class="btn dan" data-lan="vider">Effacer l’historique</button>'):'')+'</h2><table><thead><tr><th>Machine</th><th>Fichier</th><th>Fin</th></tr></thead><tbody>'+hi.map(x=>'<tr><td>'+esc(x.machine)+'</td><td>'+esc(x.num)+'</td><td>'+(x.fin?dateFr(x.fin)+' '+heureFr(x.fin):'')+'</td></tr>').join('')+'</tbody></table></section>';
+  if(hi.length)h+='<section class="card" style="margin-top:16px"><h2>Derniers fichiers fabriqués'+(mod?'<span class="grow"></span>'+(S.viderHisto?'<button class="btn dan plein" data-lan="vider-ok">Oui, effacer l’historique</button><button class="btn" data-lan="vider-non">Annuler</button>':'<button class="btn dan" data-lan="vider">Effacer l’historique</button>'):'')+'</h2><table><thead><tr><th>Machine</th><th>Fichier</th><th>Fin de production</th><th>Par</th></tr></thead><tbody>'+hi.map(x=>'<tr><td>'+esc(x.machine)+'</td><td>'+esc(x.num||'—')+'</td><td>'+(x.fin?dateFr(x.fin)+' '+heureFr(x.fin):'')+(x.motif==='bureau'?' <span class="hint">· remise libre par le bureau</span>':'')+'</td><td>'+esc(x.par||'')+'</td></tr>').join('')+'</tbody></table></section>';
   return h;
 };
+
 
 // Tablettes & alertes (lot 7b, 2026-10-15). Suppression d'un appareil : par le script (session, zones du manager).
 // Mises à jour normale / test / bloquée : réglage du site (GitHub), donc sur le PC seulement et pour l'administrateur.
@@ -3592,10 +3616,11 @@ async function envoyerLancements(actions,msgOk){
         else if(a.type==='retirer'&&i>=0)q.splice(i,1);
         else if(a.type==='deplacer'&&i>=0){const [x]=q.splice(i,1);q.splice(Math.min(a.pos,q.length),0,x)}
         else if(a.type==='modifier'&&i>=0)q[i]=Object.assign({},q[i],a.photo!=null?{photo:a.photo}:{},a.note!=null?{note:a.note}:{},{_attente:true});
-        else if(a.type==='vider-histo')st.histo=[]});
+        else if(a.type==='vider-histo')st.histo=[];
+        else if(a.type==='etat'&&a.etat==='libre'){st.machines=Object.assign({},st.machines);st.machines[a.machine]={etat:'libre',fichier:null,_attente:true}}});
       return d},
     apres:(j,base)=>Object.assign(base,{rev:j.data.rev,state:j.data.state}),
-    refus:j=>{const r=Object.values(j.data.refus||{});if(r.length)ENVOI.erreur={t:{libelle:'Lancements',page:'lancements'},message:'en partie refusé : '+r.join(', '),refus:true}}});
+    refus:j=>{const r=Object.values(j.data.refus||{});if(r.length){ENVOI.erreur={t:{libelle:'Lancements',page:'lancements'},message:'refusé par Google : '+r.join(' ; '),refus:true};S.msgLanc=['err','<b>Pas fait :</b> '+esc(r.join(' ; '))]}}});
   S.msgLanc=null;
   return chargerPage();
 }
@@ -3606,24 +3631,31 @@ async function actionLancements(b){
     const nums=String(num.value).split(/[,;]/).map(x=>x.trim()).filter(Boolean);
     if(!nums.length){S.msgLanc=['err','<b>Tapez un numéro de fichier.</b>'];return chargerPage()}
     // Campagne 2026-10-17 : champ vidé et bouton bloqué tout de suite (une double touche n'ajoute plus deux fois).
+    const texteNote=note.value.trim();
     num.value='';note.value='';b.disabled=true;
-    return envoyerLancements(nums.map(n=>({type:'ajouter',machine:m,fid:'f'+alea(12),num:n,note:note.value.trim()})),nums.length+' fichier(s) ajouté(s) pour '+esc(m)+'.');
+    return envoyerLancements(nums.map(n=>({type:'ajouter',machine:m,fid:'f'+alea(12),num:n,note:texteNote})),nums.length+' fichier(s) ajouté(s) pour '+esc(m)+'.');
   }
   if(act==='haut'||act==='bas')return envoyerLancements([{type:'deplacer',machine:m,fid:b.dataset.fid,pos:Math.max(0,+b.dataset.pos+(act==='haut'?-1:1))}]);
   if(act==='retirer')return envoyerLancements([{type:'retirer',machine:m,fid:b.dataset.fid}],'Fichier retiré de la file.');
-  if(act==='plan-retirer')return envoyerLancements([{type:'modifier',machine:m,fid:b.dataset.fid,photo:''}],'Plan retiré.');
+  if(act==='plan-retirer')return envoyerLancements([{type:'modifier',machine:m,fid:b.dataset.fid,photo:''}],'Photo retirée.');
+  if(act==='libre'){S.remettre=m;return chargerPage()}
+  if(act==='libre-non'){S.remettre=null;return chargerPage()}
+  if(act==='libre-ok'){S.remettre=null;return envoyerLancements([{type:'etat',machine:m,etat:'libre',vu:{etat:b.dataset.etat,fid:b.dataset.fid||''}}],'Machine remise libre.')}
   if(act==='capture')return capturePlan(m,b.dataset.fid);
   if(act==='vider'){S.viderHisto=true;return chargerPage()}
   if(act==='vider-non'){S.viderHisto=false;return chargerPage()}
   if(act==='vider-ok'){S.viderHisto=false;return envoyerLancements([{type:'vider-histo',avant:Date.now()}],'Historique effacé.')}
 }
-function vueLancEdition(n,f){
-  return '<div class="row" style="margin-top:10px"><input class="in" data-lan-num placeholder="N° de fichier (plusieurs : séparés par des virgules)" style="flex:2;min-width:160px"><input class="in" data-lan-note placeholder="Note (facultatif)" style="flex:1;min-width:110px"><button class="btn pri" data-lan="ajouter" data-m="'+esc(n)+'">'+svg('plus')+'Ajouter</button></div>'+
-    (f.length?'<ol class="file">'+f.map((x,i)=>'<li><div class="row" style="gap:6px"><b>'+esc(x.num)+'</b>'+repere(x)+(x.note?'<span class="hint">· '+esc(x.note)+'</span>':'')+'<span class="grow"></span>'+
+// « ↻ Envoi… » (2026-10-21) : ajout pas encore enregistré chez Google (plus le symbole ◐, réservé à « En préparation »).
+const repereLanc=o=>o&&o._attente?' <span class="tag attente" title="Envoi vers Google en cours">↻ Envoi…</span>':'';
+// hs : machine hors service — pas d'ajout, seulement retirer / reprendre ses fichiers.
+function vueLancEdition(n,f,hs){
+  return (hs?'':'<div class="row" style="margin-top:10px"><input class="in" data-lan-num placeholder="N° de fichier (plusieurs : séparés par des virgules)" style="flex:2;min-width:160px"><input class="in" data-lan-note placeholder="Note (facultatif)" style="flex:1;min-width:110px"><button class="btn pri" data-lan="ajouter" data-m="'+esc(n)+'">'+svg('plus')+'Ajouter</button></div>')+
+    (f.length?'<ol class="file">'+f.map((x,i)=>'<li><div class="row" style="gap:6px"><b>'+esc(x.num)+'</b>'+repereLanc(x)+(x.note?'<span class="hint">· '+esc(x.note)+'</span>':'')+'<span class="grow"></span>'+
       '<button class="btn" data-lan="haut" data-m="'+esc(n)+'" data-fid="'+esc(x.id)+'" data-pos="'+i+'"'+(i?'':' disabled')+' aria-label="Monter">↑</button><button class="btn" data-lan="bas" data-m="'+esc(n)+'" data-fid="'+esc(x.id)+'" data-pos="'+i+'"'+(i<f.length-1?'':' disabled')+' aria-label="Descendre">↓</button>'+
       '<button class="btn" data-lan="retirer" data-m="'+esc(n)+'" data-fid="'+esc(x.id)+'" aria-label="Retirer">✕</button></div>'+
-      '<div class="row" style="gap:6px;margin-top:4px">'+(x.photo?vignette(x.photo)+'<button class="btn" data-lan="plan-retirer" data-m="'+esc(n)+'" data-fid="'+esc(x.id)+'">Retirer le plan</button>':'')+
-      '<label class="btn">'+svg('image')+(x.photo?'Remplacer le plan':'Joindre le plan du plateau')+'<input type="file" accept="image/*" hidden data-lan-photo="'+esc(n)+'" data-fid="'+esc(x.id)+'"></label>'+(CONSOLE_PC?'<button class="btn" data-lan="capture" data-m="'+esc(n)+'" data-fid="'+esc(x.id)+'">'+svg('image')+'Capture d’écran</button>':'')+'</div></li>').join('')+'</ol>':'<p class="hint" style="margin:6px 0 0">File d’attente vide.</p>');
+      '<div class="row" style="gap:6px;margin-top:4px">'+(x.photo?vignette(x.photo)+'<button class="btn" data-lan="plan-retirer" data-m="'+esc(n)+'" data-fid="'+esc(x.id)+'">Retirer la photo</button>':'')+
+      '<label class="btn">'+svg('image')+(x.photo?'Remplacer la photo':'Joindre la photo du plateau')+'<input type="file" accept="image/*" hidden data-lan-photo="'+esc(n)+'" data-fid="'+esc(x.id)+'"></label>'+(CONSOLE_PC?'<button class="btn" data-lan="capture" data-m="'+esc(n)+'" data-fid="'+esc(x.id)+'">'+svg('image')+'Capture d’écran</button>':'')+'</div></li>').join('')+'</ol>':'<p class="hint" style="margin:6px 0 0">Rien à lancer.</p>');
 }
 
 // --- Calendrier : congés (le reste des réglages se fait dans l'appli Maintenance) -----------------------------
@@ -3743,7 +3775,7 @@ PAGES.ecrans=async()=>{
   let h=enTete('ecrans','Les écrans télé de l’atelier, ouverts sur ce PC.');
   if(CONSOLE_PC)await tournantCharger(); // écran tournant (2026-10-21)
   if(!CONSOLE_PC)return h+'<div class="msg info">'+svg('aide')+'<div>Les écrans télé s’ouvrent depuis le PC de l’atelier (console du PC).</div></div>';
-  return h+'<div class="secs"><section class="card"><h2>'+pastille('lancements','s')+'Écran de l’atelier (lancements)</h2><p class="hint">Plateaux à lancer, en temps réel.</p><a class="btn pri" href="/ecran" target="_blank" rel="noopener">Ouvrir l’écran</a></section>'+
+  return h+'<div class="secs"><section class="card"><h2>'+pastille('lancements','s')+'Écran de l’atelier (lancements)</h2><p class="hint">Fichiers à lancer, en temps réel. Le même affichage que l’onglet « Écran atelier » des tablettes.</p><a class="btn pri" href="/ecran" target="_blank" rel="noopener">Ouvrir l’écran</a></section>'+
     secteursVisibles().map(s=>'<section class="card"><h2>'+pastille('maintenance','s')+'Maintenance — '+esc(secNom(s))+'</h2><p class="hint">Échéances des maintenances du secteur.</p><a class="btn pri" href="/ecran-maintenance?secteur='+encodeURIComponent(s)+'" target="_blank" rel="noopener">Ouvrir l’écran</a></section>').join('')+'</div>'+
     '<p class="hint">Sur l’écran, le bouton « Plein écran » l’affiche en entier.</p>'+vueTournant()+vueEcranAuto();
 };
@@ -3798,17 +3830,21 @@ function vueTournant(){
   let rang=0;
   // Manager (lecture) : seulement les écrans de ses secteurs.
   const vis=e=>adm||!e.secteur||secteursVisibles().includes(e.secteur);
-  h+=d.ecrans.map((e,i)=>!vis(e)?'':'<div class="tr-l'+(e.on?'':' off')+'"><span class="tr-n">'+(e.on?++rang:'—')+'</span>'+pastille(e.pages?'maintenance':'lancements','s')+
+  h+=d.ecrans.map((e,i)=>!vis(e)?'':'<div class="tr-l'+(e.on?'':' off')+'"><span class="tr-n">'+(e.on?++rang:'—')+'</span>'+pastille(e.id==='lancements'?'lancements':'maintenance','s')+
     '<label class="tr-c"><input type="checkbox" data-tr-on="'+i+'"'+(e.on?' checked':'')+dis+'><span>'+esc(e.nom)+(e.nouveau?' <span class="tag">nouveau</span>':'')+'</span></label>'+
     '<span class="tr-r"><label class="tr-d"><span class="tr-dt">'+(e.pages?'Durée par page':'Durée')+'</span><select class="in" data-tr-duree="'+i+'" aria-label="'+(e.pages?'Durée par page':'Durée')+' — '+esc(e.court)+'"'+dis+'>'+d.durees.map(s=>'<option value="'+s+'"'+(s===e.duree?' selected':'')+'>'+trDuree(s)+'</option>').join('')+'</select></label>'+
     '<button class="btn tr-f" type="button" data-tr-monte="'+i+'" aria-label="Monter « '+esc(e.court)+' »"'+(i===0||!adm?' disabled':'')+'>↑</button>'+
     '<button class="btn tr-f" type="button" data-tr-descend="'+i+'" aria-label="Descendre « '+esc(e.court)+' »"'+(i===d.ecrans.length-1||!adm?' disabled':'')+'>↓</button></span></div>').join('')+
     '<div class="place">Place prévue : les futurs écrans télé s’ajouteront ici d’eux-mêmes, décochés.</div>'+
+    // Couleurs (2026-10-21) : un seul choix pour tous les écrans du tour ; Sombre par défaut (comme la maintenance jusqu'ici).
+    '<div class="tr-o"><span aria-hidden="true" style="width:22px;flex:none"></span><div role="radiogroup" aria-labelledby="trCoulT"><b id="trCoulT">Couleurs des écrans</b>'+
+    '<div class="row" style="margin-top:6px">'+[['clair','Clair'],['sombre','Sombre']].map(([k,t])=>'<label class="chip"><input type="radio" name="trTheme" data-tr-theme="'+k+'"'+((d.theme||'sombre')===k?' checked':'')+dis+'>'+t+'</label>').join('')+'</div>'+
+    '<div class="hint">Un seul choix pour tous les écrans du tour (Lancements et Maintenance). La barre du bas de la télé reste sombre.</div></div></div>'+
     '<div class="tr-o"><input type="checkbox" id="trPrio" data-tr-prio'+(d.priorite?' checked':'')+dis+'><div><label for="trPrio">Priorité aux retards</label><div class="hint">Un secteur avec une maintenance « ✕ En retard » : son écran reste 2 fois plus longtemps et un bandeau le signale sur les autres écrans.</div></div></div>'+
     '<div class="tr-o"><input type="checkbox" id="trNuit" data-tr-nuit'+(d.nuit.on?' checked':'')+dis+'><div><label for="trNuit">En dehors des horaires de travail : écran sombre avec l’heure</label>'+
     '<div class="row" style="margin-top:6px">de <input class="in" type="time" data-tr-debut value="'+esc(d.nuit.debut)+'" aria-label="Début des horaires de travail"'+dis+'> à <input class="in" type="time" data-tr-fin value="'+esc(d.nuit.fin)+'" aria-label="Fin des horaires de travail"'+dis+'></div>'+
     '<div class="hint">Décoché : la télé tourne jour et nuit (Windows peut aussi éteindre l’écran).</div></div></div>';
-  const on=d.ecrans.filter(e=>e.on),ret=d.priorite&&on.length>1?on.find(e=>e.pages):null;
+  const on=d.ecrans.filter(e=>e.on),ret=d.priorite&&on.length>1?on.find(e=>e.pages&&e.id!=='lancements'):null; // priorité aux retards : écrans Maintenance seulement
   h+='<h3 style="margin:12px 0 4px;font-size:16px">Aperçu du tour</h3>'+(on.length?trFrise(on,null)+(ret?'<p class="hint" style="margin:0">Avec une maintenance en retard en '+esc(ret.secteurNom||ret.court)+' (exemple) :</p>'+trFrise(on,ret):''):'<p class="hint">Aucun écran coché : l’écran tournant affichera « Aucun écran coché ».</p>');
   h+='<div class="row" style="margin-top:8px"><a class="btn pri" href="/ecran-tournant" target="_blank" rel="noopener">Ouvrir l’écran tournant</a><span class="hint">Sur la télé, touchez l’écran : « Plein écran », « Pause », « Écran suivant », « Quitter ».</span></div>'+
     '<p id="trEtat" role="status" class="hint" style="margin:10px 0 0">'+(T.msg?'<b style="color:var('+(T.msg[0]==='ok'?'--ok':'--err')+')">'+T.msg[1]+'</b>':'')+'</p></section>';
@@ -3821,7 +3857,7 @@ async function trEnregistrer(){
   T.occupe=true;
   try{
     do{T.encore=false;const d=T.d;
-      const r=await apiPC('/api/ecran-tournant',{depuis:d.maj,ecrans:d.ecrans.map(e=>({id:e.id,on:e.on,duree:e.duree})),priorite:d.priorite,nuit:d.nuit});
+      const r=await apiPC('/api/ecran-tournant',{depuis:d.maj,ecrans:d.ecrans.map(e=>({id:e.id,on:e.on,duree:e.duree})),priorite:d.priorite,theme:d.theme||'sombre',nuit:d.nuit});
       if(T.encore)T.d.maj=r.maj;else T.d=r;
     }while(T.encore);
     T.msg=['ok','✓ Enregistré sur ce PC : l’écran tournant le prend au prochain écran (30 s au plus).'];
@@ -3840,6 +3876,7 @@ document.addEventListener('change',e=>{
   const d=T.d,ds=el.dataset;
   if(ds.trOn!=null){const x=d.ecrans[+ds.trOn];if(!x)return;x.on=el.checked;x.nouveau=false}
   else if(ds.trDuree!=null){const x=d.ecrans[+ds.trDuree];if(!x)return;x.duree=Number(el.value)}
+  else if(ds.trTheme!=null){if(!el.checked)return;d.theme=ds.trTheme}
   else if(ds.trPrio!=null)d.priorite=el.checked;
   else if(ds.trNuit!=null)d.nuit.on=el.checked;
   else if(ds.trDebut!=null||ds.trFin!=null){if(!/^\d\d:\d\d$/.test(el.value))return;d.nuit[ds.trDebut!=null?'debut':'fin']=el.value}
@@ -3981,7 +4018,7 @@ function imageVersPhoto(data){
   return new Promise((ok,ko)=>{const im=new Image();im.onload=()=>{const k=Math.min(1,1600/Math.max(im.width,im.height)),cv=document.createElement('canvas');cv.width=Math.round(im.width*k);cv.height=Math.round(im.height*k);cv.getContext('2d').drawImage(im,0,0,cv.width,cv.height);let d=cv.toDataURL('image/jpeg',.85);if(d.length>2900000)d=cv.toDataURL('image/jpeg',.6);ok(d)};im.onerror=()=>ko(new Error('Capture illisible.'));im.src=data});
 }
 async function capturePlan(machine,fid){
-  S.msgLanc=['info','Entourez le plan du plateau à l’écran (outil de capture de Windows)…'];chargerPage();
+  S.msgLanc=['info','Entourez la photo du plateau à l’écran (outil de capture de Windows)…'];chargerPage();
   const r=await apiPC('/api/capture',{outil:true});
   if(!r||!/^data:image\/(png|jpeg);base64,[A-Za-z0-9+\/=]+$/.test(String(r.data||'')))throw new Error('Pas de capture reçue.');
   const data=await imageVersPhoto(r.data),id='p'+alea(24),j=await appel('photo-ecrire',{id,data});
@@ -4449,7 +4486,7 @@ document.addEventListener('change',async e=>{const el=e.target;
     try{const id=await envoyerPhoto(el.files[0]);
       if(el.dataset.fphoto==='images+'&&S.edit){S.edit.item.images=(S.edit.item.images||[]).concat({photo:id,texte:''}).slice(0,3);S.edit.sale=true;chargerPage()}
       else if(el.dataset.fphoto&&S.edit){ecrireChemin(S.edit.item,el.dataset.fphoto,id);S.edit.sale=true;chargerPage()}
-      else if(el.dataset.lanPhoto)envoyerLancements([{type:'modifier',machine:el.dataset.lanPhoto,fid:el.dataset.fid,photo:id}],'Plan joint.');
+      else if(el.dataset.lanPhoto)envoyerLancements([{type:'modifier',machine:el.dataset.lanPhoto,fid:el.dataset.fid,photo:id}],'Photo jointe.');
     }catch(x){if(x.message==='session')return;if(el.dataset.fphoto&&S.edit){S.edit.msg=['err','<b>'+esc(x.message)+'</b>']}else S.msgLanc=['err','<b>'+esc(x.message)+'</b>'];chargerPage()}
     return;
   }
