@@ -2221,6 +2221,8 @@ async function chargerPage(){
     if(S.sitePret)await S.sitePret;
     const h=await (PAGES[S.page]||vPC)();
     if(n!==numChargement||!el())return;
+    // Redessin demandé par garderPlace : la place (défilement, champ actif) est photographiée au dernier moment.
+    if(placeDessin)placePhoto=photoPlace(el());
     el().innerHTML=h;S.etat='';
     armerConfirmations(el());
     if(S.page==='parc'&&S.qr)qrAjuster();
@@ -4329,10 +4331,80 @@ async function foAction(b){
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-fo]');if(!b||b.disabled||!FoursCommun)return;
   foAction(b).catch(x=>{if(x&&x.message!=='session'){FO.msg=['err','<b>'+esc(x.message)+'</b>'];chargerPage()}})});
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target&&e.target.id==='foNum'){e.preventDefault();const b=document.querySelector('[data-fo="etq-ajouter"]');if(b)b.click()}});
+// --- Garder sa place pendant un nouveau dessin (défaut du 22/10 : « la page remonte » quand on remplit une case) ---------
+// Un nouveau dessin de la page garde : le défilement de la page, celui des zones qui défilent seules (panneau de droite du
+// flux, dessin, tableaux larges) et le focus du champ où la personne est ALLÉE (Tab, toucher un autre champ) : au moment
+// où le champ quitté prévient de son changement, le suivant n'a pas encore le focus, d'où le suivi par « focusin ».
+let placeFocus=null,placeDessin=false;
+function clePlace(a){
+  if(!a||a===document.body||!a.closest||!a.closest('#page'))return null;
+  if(a.id)return '#'+CSS.escape(a.id);
+  const d=a.dataset||{},ks=Object.keys(d).filter(k=>k!=='bulle');if(!ks.length)return null;
+  return a.tagName.toLowerCase()+ks.map(k=>'[data-'+k.replace(/[A-Z]/g,m=>'-'+m.toLowerCase())+'="'+CSS.escape(d[k])+'"]').join('');
+}
+document.addEventListener('focusin',e=>{const k=clePlace(e.target);if(k)placeFocus=k});
+// Sortie vers « rien » (toucher un blanc) : plus de focus à rendre. Un champ retiré par le dessin ne compte pas (le
+// navigateur prévient aussi quand il retire le champ qui a le focus).
+document.addEventListener('focusout',e=>{if(!e.relatedTarget&&!placeDessin&&e.target.isConnected)placeFocus=null});
+// Changement d'écran : la hauteur gardée par le dessin précédent ne sert plus.
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-go]');const pg=document.getElementById('page');if(b&&pg)pg.style.minHeight=''},true);
+addEventListener('hashchange',()=>{const pg=document.getElementById('page');if(pg)pg.style.minHeight=''});
+// Le dessin attend un tour : sinon il se fait avant que le navigateur ait donné le focus au champ suivant (Tab, toucher
+// un autre champ), et ce champ, déjà remplacé, ne le reçoit jamais.
+// cleAvant : le champ qui avait le focus quand le dessin a été demandé (null après Tab ou un toucher ailleurs : le
+// navigateur a déjà quitté le champ) ; s'il change ensuite, la personne est « arrivée » dans un autre champ.
+function garderPlace(rendre,cleDepart){const cleAvant=clePlace(document.activeElement);return new Promise(r=>setTimeout(r,0)).then(()=>garderPlaceMaintenant(rendre,cleDepart,cleAvant))}
+const selectionDe=el=>{try{return el.selectionStart==null?null:[el.selectionStart,el.selectionEnd,el.selectionDirection]}catch(e){return null}};
+// Photo de la place : défilement de la page et des zones qui défilent seules, champ actif (valeur, sélection).
+// Relecture du 22/10 : le champ actif garde sa valeur et sa sélection (sinon, après Tab, la frappe s'AJOUTAIT à la valeur
+// au lieu de la remplacer, ou le curseur revenait au début d'un texte). chargerPage la reprend JUSTE AVANT de remplacer
+// la page (placePhoto) : pendant une lecture, la personne a pu toucher un autre champ, taper ou faire défiler.
+let placePhoto=null;
+function photoPlace(pg){
+  const zones=[],act=document.activeElement,ka=clePlace(act);
+  pg.querySelectorAll('*').forEach(el=>{if(el.scrollTop||el.scrollLeft){
+    const s=el.id?'#'+CSS.escape(el.id):el.tagName.toLowerCase()+(el.classList[0]?'.'+CSS.escape(el.classList[0]):'');
+    zones.push([s,[...pg.querySelectorAll(s)].indexOf(el),el.scrollLeft,el.scrollTop])}});
+  return {x:scrollX,y:scrollY,zones,champ:ka&&/^(INPUT|TEXTAREA)$/.test(act.tagName)?{k:ka,v:act.value,s:selectionDe(act),nombre:act.type==='number'}:null};
+}
+function garderPlaceMaintenant(rendre,cleDepart,cleAvant){
+  const pg=document.getElementById('page');if(!pg)return Promise.resolve(rendre());
+  const P0=photoPlace(pg);
+  // Pendant le dessin, la page ne raccourcit pas (sinon le navigateur la fait remonter).
+  pg.style.minHeight=Math.max(pg.offsetHeight,parseFloat(pg.style.minHeight)||0)+'px';
+  placeDessin=true;placePhoto=null;
+  return Promise.resolve(rendre()).finally(()=>{placeDessin=false}).then(r=>{
+    const {x,y,zones,champ}=placePhoto||P0;placePhoto=null;
+    zones.forEach(([s,i,l,t])=>{const el=i>=0&&pg.querySelectorAll(s)[i];if(el){el.scrollLeft=l;el.scrollTop=t}});
+    // Hauteur gardée : juste ce qu'il faut pour rester à la même place (rendue au changement d'écran).
+    pg.style.minHeight='';
+    const manque=y+innerHeight-document.documentElement.scrollHeight;
+    if(manque>0)pg.style.minHeight=(pg.offsetHeight+manque)+'px';
+    if(Math.abs(scrollY-y)>2||Math.abs(scrollX-x)>2)scrollTo(x,y);
+    const k=placeFocus||cleDepart,a=document.activeElement;
+    if(k&&!(a&&a!==document.body&&a.isConnected&&clePlace(a)===k)){const n=pg.querySelector(k);if(n&&n.focus&&!n.disabled)n.focus({preventScroll:true})}
+    const n=document.activeElement;
+    if(champ&&n&&n.isConnected&&clePlace(n)===champ.k&&'value' in n){
+      const arrive=champ.k!==cleAvant;
+      // Champ où l'on vient d'arriver : une frappe faite pendant le dessin n'est pas perdue.
+      const remis=arrive&&n.value!==champ.v;if(remis)n.value=champ.v;
+      // Nombre : pas de curseur lisible ; on y arrive (Tab, clic) → tout sélectionné, comme le navigateur après Tab.
+      if(champ.nombre){if(arrive&&!remis&&n.select)n.select()}
+      else if(champ.s){try{n.setSelectionRange(champ.s[0],champ.s[1],champ.s[2]||'none')}catch(e){}}
+    }
+    return r;
+  });
+}
+// Relecture du 22/10 : la hauteur gardée (minHeight) n'est là que pour ne pas faire remonter la page pendant un dessin ;
+// dès que le blanc qu'elle ajoute en bas n'est plus à l'écran, elle est rendue (aucun blanc qui reste).
+addEventListener('scroll',()=>{const pg=document.getElementById('page');if(!pg||!pg.style.minHeight||placeDessin)return;
+  const d=pg.lastElementChild;if(!d)return;
+  const fin=d.getBoundingClientRect().bottom+parseFloat(getComputedStyle(pg).paddingBottom||0);
+  if(fin>=innerHeight)pg.style.minHeight=''},{passive:true});
 document.addEventListener('change',e=>{
   const el=e.target;if(!el||!el.dataset||S.page!=='fours')return;
-  if(el.dataset.foEtq!=null){if(el.checked)FO.etq.choix[el.dataset.foEtq]=1;else delete FO.etq.choix[el.dataset.foEtq];chargerPage();return}
-  if(el.id==='foDepart'){FO.etq.depart=Number(el.value)||1;chargerPage();return}
+  if(el.dataset.foEtq!=null){if(el.checked)FO.etq.choix[el.dataset.foEtq]=1;else delete FO.etq.choix[el.dataset.foEtq];garderPlace(chargerPage);return}
+  if(el.id==='foDepart'){FO.etq.depart=Number(el.value)||1;garderPlace(chargerPage);return}
   const k=el.dataset.foR;if(!k||!FO.reg)return;
   const R=FO.reg,f=el.dataset.four;
   if(k==='duree')R.fours[f].duree=Number(el.value);
@@ -4342,7 +4414,7 @@ document.addEventListener('change',e=>{
   else if(k==='rappel')R.rappel=Number(el.value);
   else if(k==='groupes')R.groupes=el.value.split(',').map(x=>x.trim()).filter(Boolean).slice(0,6);
   FO.sale=true;FO.msg=null;
-  if(k!=='consignes')chargerPage();
+  if(k!=='consignes')garderPlace(chargerPage);
 });
 document.addEventListener('input',e=>{const el=e.target;if(el&&el.dataset&&el.dataset.foR==='consignes'&&FO.reg){FO.reg.fours[el.dataset.four].consignes=el.value;if(!FO.sale){FO.sale=true;const b=document.querySelectorAll('[data-fo="reg-enr"],[data-fo="reg-annuler"]');b.forEach(x=>x.disabled=false)}}});
 addEventListener('pointerdown',()=>{if(FoursCommun)FoursCommun.Sirene.debloquer()},{passive:true});
@@ -5306,10 +5378,15 @@ function normaliserEtape(e) {
   var anc = [];
   (Array.isArray(e.anciens) ? e.anciens : []).forEach(function (a) { a = fluxTexte(a, 80); if (a && anc.indexOf(a) < 0 && anc.length < 10) anc.push(a); });
   var pos = function (v) { var n = Number(v); return isFinite(n) ? Math.max(-100000, Math.min(100000, Math.round(n))) : 0; };
+  // Machine (22/10/2026) : temps.defaut / parFamille = TEMPS MACHINE (le cycle où la machine est occupée, ancien « temps »,
+  // repris sans perte) ; temps.prep / temps.fin = temps OPÉRATEUR facultatifs avant le lancement et après (déchargement) ;
+  // capacite.suite = productions à la suite sans opérateur (vide = 1 : préparation et déchargement à chaque production).
+  var suite = fluxNombre(c.suite, 1, 1000);
   return {id: e.id, nom: fluxTexte(e.nom, 80) || 'Nouvelle étape', type: FLUX_TYPES[e.type] ? e.type : 'manuel',
     secteur: fluxSecteurOk(e.secteur) ? e.secteur : '', x: pos(e.x), y: pos(e.y), unite: FLUX_UNITES.indexOf(e.unite) >= 0 ? e.unite : 'plateau',
-    temps: {defaut: fluxNombre(t.defaut, 0, 100000), parFamille: pf},
-    capacite: {personnes: fluxNombre(c.personnes, 0, 1000), machines: fluxNombre(c.machines, 0, 1000), parCycle: fluxNombre(c.parCycle, 1, 1000), parTranche: pt},
+    temps: {defaut: fluxNombre(t.defaut, 0, 100000), parFamille: pf, prep: fluxNombre(t.prep, 0, 100000), fin: fluxNombre(t.fin, 0, 100000)},
+    capacite: {personnes: fluxNombre(c.personnes, 0, 1000), machines: fluxNombre(c.machines, 0, 1000), parCycle: fluxNombre(c.parCycle, 1, 1000), parTranche: pt,
+      suite: suite === null ? null : Math.round(suite)},
     machines: machines, machineTexte: fluxTexte(texte, 120),
     source: {type: FLUX_SOURCES[s.type] ? s.type : 'manuel', detail: fluxTexte(s.detail, 200)},
     notes: fluxNotes(e.notes, 500), points: pts, groupe: fluxId(e.groupe), anciens: anc};
@@ -5419,6 +5496,80 @@ function aSaisirEtape(e) {
   var r = [];
   if (e.temps.defaut === null) r.push('temps');
   if (e.type === 'machine' ? e.capacite.machines === null : e.capacite.personnes === null && e.capacite.machines === null) r.push(e.type === 'machine' ? 'machines' : 'personnes');
+  return r;
+}
+// ---------- Temps machine et temps opérateur (22/10/2026) ----------
+// Lignée d'une famille (elle, sa mère, la mère de sa mère…) : une finition reprend les temps de sa famille mère
+// (mêmes règles que l'ancien éditeur et flux-modele.js).
+function fluxLignee(flux, fam) {
+  var F = {}, l = [], vus = {};
+  (flux.familles || []).forEach(function (f) { F[f.id] = f; });
+  var x = fam ? F[fam] : null;
+  while (x && !vus[x.id]) { l.push(x.id); vus[x.id] = 1; x = x.parent ? F[x.parent] : null; }
+  return l;
+}
+// Temps principal d'une case pour une famille (sa lignée, sinon le temps par défaut) ; null = à saisir.
+function tempsDeFamille(flux, e, fam) {
+  var l = fluxLignee(flux, fam);
+  for (var i = 0; i < l.length; i++) if (typeof e.temps.parFamille[l[i]] === 'number') return e.temps.parFamille[l[i]];
+  return e.temps.defaut;
+}
+// Temps opérateur d'une MACHINE pour UNE production : (préparation + déchargement) ÷ productions à la suite (vide = 1).
+// null si ni l'un ni l'autre n'est saisi (facultatifs : rien n'est inventé) ; un seul saisi = ce seul temps.
+function tempsOperateur(e) {
+  if (e.type !== 'machine' || (e.temps.prep == null && e.temps.fin == null)) return null;
+  return Math.round(((e.temps.prep || 0) + (e.temps.fin || 0)) / (e.capacite.suite || 1) * 100) / 100;
+}
+// Temps d'une case : {machine, operateur}. Machine : le temps de la case est le temps MACHINE (capacité des machines),
+// l'opérateur ne compte que la préparation et le déchargement. Autres cases (poste manuel, contrôle…) : temps humain.
+function tempsCase(flux, e, fam) {
+  if (FLUX_SANS_TEMPS.indexOf(e.type) >= 0) return {machine: null, operateur: null};
+  var t = tempsDeFamille(flux, e, fam);
+  return e.type === 'machine' ? {machine: t, operateur: tempsOperateur(e)} : {machine: null, operateur: t};
+}
+// Parcours d'une famille (fam vide = toutes les pièces), comme le « Résumé du flux » de l'ancien éditeur : cases dans
+// l'ordre, embranchements, et temps de travail cumulé SÉPARÉ : temps machine et temps opérateur (plus court / plus long
+// chemin). manque = cases dont le temps principal est à saisir ; sansOperateur = machines sans préparation ni déchargement.
+function parcoursFamille(flux, fam) {
+  var lig = fluxLignee(flux, fam), E = {};
+  flux.etapes.forEach(function (e) { E[e.id] = e; });
+  var passe = function (l) { return !fam || !l.familles.length || lig.some(function (x) { return l.familles.indexOf(x) >= 0; }); };
+  var ls = flux.liens.filter(function (l) { return passe(l) && !l.reprise && E[l.de] && E[l.vers]; }), sort = {}, entr = {};
+  flux.etapes.forEach(function (e) { sort[e.id] = []; entr[e.id] = []; });
+  ls.forEach(function (l) { sort[l.de].push(l.vers); entr[l.vers].push(l.de); });
+  var departs = flux.etapes.filter(function (e) { return e.type === 'debut' && sort[e.id].length; }).map(function (e) { return e.id; });
+  if (!departs.length) departs = flux.etapes.filter(function (e) { return !entr[e.id].length && sort[e.id].length; }).map(function (e) { return e.id; });
+  var vus = {}, file = departs.slice();
+  departs.forEach(function (id) { vus[id] = 1; });
+  while (file.length) { var id = file.shift(); sort[id].forEach(function (v) { if (!vus[v]) { vus[v] = 1; file.push(v); } }); }
+  var niveau = {}, etat = {}, boucle = false;
+  var visite = function (id) {
+    if (etat[id] === 2) return niveau[id];
+    if (etat[id] === 1) { boucle = true; return 0; }
+    etat[id] = 1; var n = 0;
+    entr[id].forEach(function (p) { if (vus[p]) n = Math.max(n, visite(p) + 1); });
+    etat[id] = 2; niveau[id] = n; return n;
+  };
+  Object.keys(vus).forEach(visite);
+  var ordre = Object.keys(vus).sort(function (a, b) { return niveau[a] - niveau[b] || E[a].y - E[b].y; });
+  var r = {ordre: ordre, boucle: boucle, choix: ordre.filter(function (id) { return sort[id].filter(function (v) { return vus[v]; }).length > 1; }),
+    manque: [], sansOperateur: [], machine: null, operateur: null};
+  if (boucle || !ordre.length) return r;
+  var cum = {m: {}, o: {}};
+  ordre.forEach(function (id) {
+    var e = E[id], t = tempsCase(flux, e, fam), preds = entr[id].filter(function (p) { return vus[p]; });
+    if (FLUX_SANS_TEMPS.indexOf(e.type) < 0 && (e.type === 'machine' ? t.machine : t.operateur) === null) r.manque.push(id);
+    if (e.type === 'machine' && t.operateur === null) r.sansOperateur.push(id);
+    ['m', 'o'].forEach(function (k) {
+      var v = (k === 'm' ? t.machine : t.operateur) || 0, a = preds.map(function (p) { return cum[k][p]; });
+      cum[k][id] = {min: (a.length ? Math.min.apply(null, a.map(function (x) { return x.min; })) : 0) + v, max: (a.length ? Math.max.apply(null, a.map(function (x) { return x.max; })) : 0) + v};
+    });
+  });
+  var fins = ordre.filter(function (id) { return !sort[id].some(function (v) { return vus[v]; }); });
+  ['m', 'o'].forEach(function (k) {
+    var l = fins.map(function (id) { return cum[k][id]; }), arr = function (x) { return Math.round(x * 100) / 100; };
+    r[k === 'm' ? 'machine' : 'operateur'] = {min: arr(Math.min.apply(null, l.map(function (x) { return x.min; }))), max: arr(Math.max.apply(null, l.map(function (x) { return x.max; })))};
+  });
   return r;
 }
 // {ok, erreurs, alertes} : erreurs = publication refusée ; alertes = à compléter (rien d'inventé).
@@ -5555,7 +5706,7 @@ function normaliserTravail(o) {
 // </flux-fusion>
 return {FLUX_TYPES,FLUX_SANS_TEMPS,FLUX_UNITES,FLUX_SOURCES,FLUX_LIMITES,FLUX_REGLAGES_DEFAUT,FLUX_FORMAT,fluxCopie,fluxNombre,fluxTexte,normaliserAgirSur,
   normaliserEtape,normaliserLien,normaliserFamille,normaliserFlux,fluxVide,partSecteur,remplacerSecteur,normaliserPart,ordreEtapes,aSaisirEtape,
-  validerFlux,differencesFlux,renumeroterFlux,versFichierV1,normaliserTravail};
+  validerFlux,differencesFlux,renumeroterFlux,versFichierV1,normaliserTravail,tempsDeFamille,tempsOperateur,tempsCase,parcoursFamille};
 })();
 
 // Note pour « Accès des managers » : les droits du flux se règlent à part (écran par écran, secteur par secteur).
@@ -5657,6 +5808,15 @@ async function charger(ecran,force){
   recevoir(j.data);
 }
 function recevoir(d){F.d=d;F.mode='google';F.perim=d.perimetre;F.err=null;rebatir()}
+// Préparation, déchargement, productions à la suite (22/10) : un script Google plus ancien les EFFACERAIT à
+// l'enregistrement (règle du bloc fusion). Le nouveau script le dit par le drapeau tempsOp de chaque réponse (relecture du
+// 22/10 : on ne le devine plus d'après les cases, faux avec un flux vide) ; sans lui, ces champs restent grisés, avec le
+// message ci-dessous. Mode essai sur ce PC : rien ne part chez Google, rien n'est perdu.
+function tempsOpGardes(){
+  if(F.mode!=='google'||!F.d)return true;
+  return F.d.tempsOp===true;
+}
+const MSG_SCRIPT_TEMPS_OP='<div class="msg warn" style="margin:0 0 12px">'+svg('alerte')+'<div><b>Script Google à mettre à jour</b> : la préparation, le déchargement et les productions à la suite ne seraient pas gardés par le script en ligne. Ces champs s’ouvriront quand le nouveau script sera en ligne.</div></div>';
 // Copie de travail : chaque secteur = son brouillon (s'il existe) sinon sa part publiée ; un secteur modifié et pas encore
 // enregistré est gardé tel quel (jamais écrasé par une relecture).
 function rebatir(){
@@ -5748,12 +5908,18 @@ function ajouterCase(type){
 }
 function supprimerEtapes(ids){
   const parSec={};ids.forEach(id=>{const e=trouver(id);if(e&&peutDessin(e.secteur))(parSec[e.secteur]=parSec[e.secteur]||[]).push(id)});
-  let entrants=0;const f=futur();
+  let entrants=0,faits=0;const f=futur(),avant=instantane();
   Object.keys(parSec).forEach(s=>{const l=parSec[s];
     entrants+=f.liens.filter(x=>l.includes(x.vers)&&!l.includes(x.de)&&(trouver(x.de,f)||{}).secteur!==s).length;
-    modifier(s,p=>{p.etapes=p.etapes.filter(e=>!l.includes(e.id));p.liens=p.liens.filter(x=>!l.includes(x.de)&&!l.includes(x.vers));
-      const reste=new Set(p.etapes.map(e=>e.groupe).filter(Boolean));p.groupes=p.groupes.filter(g=>reste.has(g.id))})});
+    if(modifier(s,p=>{p.etapes=p.etapes.filter(e=>!l.includes(e.id));p.liens=p.liens.filter(x=>!l.includes(x.de)&&!l.includes(x.vers));
+      const reste=new Set(p.etapes.map(e=>e.groupe).filter(Boolean));p.groupes=p.groupes.filter(g=>reste.has(g.id))}))faits++});
+  // Relecture du 22/10 : un retrait sur plusieurs secteurs = UNE seule entrée « Annuler » (l'état d'avant tout le retrait).
+  if(faits>1)F.pile.splice(Math.max(0,F.pile.length-faits),faits,avant);
   F.sel=null;F.selection=[];
+  // Défaut du 22/10 (« retirer une case, ça ne marche pas ») : on dit ce qui s'est passé et ce qui reste à faire.
+  const n=Object.keys(parSec).reduce((a,s)=>a+parSec[s].length,0);
+  if(n)F.msg=['ok',n+' case(s) retirée(s) avec leurs flèches. '+(F.mode==='local'?'Gardé sur ce PC.':'« Enregistrer » pour garder ce changement')+' ; « Annuler » la remet.'];
+  else if(ids.length)F.msg=['warn','<b>Rien n’est retiré :</b> ces cases sont d’un secteur que vous ne pouvez pas modifier.'];
   if(entrants)F.msg=['warn','<b>'+entrants+' flèche(s) d’un autre secteur arrivent sur la case retirée.</b> Ce secteur devra les retirer : sinon la publication sera refusée.'];
 }
 function copierSelection(){
@@ -5920,7 +6086,9 @@ function sousTitre(e){
   if(FF.FLUX_SANS_TEMPS.includes(e.type))return '<small>'+esc(nomType(e.type))+'</small>';
   const t=e.temps.defaut,r=e.type==='machine'?e.capacite.machines:e.capacite.personnes,u=e.type==='machine'?' mach.':' pers.';
   const manque=t===null||(r===null&&e.capacite.machines===null);
-  return '<small class="'+(manque?'warn':'')+'">'+(t===null?'temps à saisir':nbFr(t)+' min')+(r===null?(t===null?'':' · '+u.trim()+' à saisir'):' · '+nbFr(r)+u)+'</small>';
+  // Machine : temps machine, puis le temps opérateur par production s'il est saisi (« op. »).
+  const op=FF.tempsOperateur(e);
+  return '<small class="'+(manque?'warn':'')+'">'+(t===null?'temps à saisir':nbFr(t)+' min')+(op===null?'':' · op. '+nbFr(op))+(r===null?(t===null?'':' · '+u.trim()+' à saisir'):' · '+nbFr(r)+u)+'</small>';
 }
 function geometrie(f){
   const xs=f.etapes.map(e=>e.x),ys=f.etapes.map(e=>e.y);
@@ -6029,8 +6197,20 @@ function panneau(){
   if(e.machineTexte)h+='<div class="msg warn" style="margin:0 0 12px">'+svg('alerte')+'<div><b>À rattacher au parc :</b> « '+esc(e.machineTexte)+' » (nom repris d’un ancien fichier).'+(m&&parc.length?'<label class="lbl" style="margin:8px 0 0">Machine du parc<select class="in" data-fxc="rattacher" data-id="'+id+'"><option value="">— choisir —</option>'+parc.filter(x=>x.actif).map(x=>'<option value="'+esc(x.id)+'">'+esc(x.nom)+'</option>').join('')+'</select></label>':'')+'</div></div>';
   h+='<div class="lbl">Unité du temps<div class="fx-chips">'+Object.keys(UNITES).map(u=>'<button class="chip" data-fx="unite" data-id="'+id+'" data-v="'+u+'" aria-pressed="'+(e.unite===u)+'"'+dis+'>'+(e.unite===u?'✓ ':'')+UNITES[u]+'</button>').join('')+'</div></div>';
   if(!FF.FLUX_SANS_TEMPS.includes(e.type)){
-    h+=num('temps','Temps de production (minutes '+UNITES[e.unite]+')',e.temps.defaut);
+    h+=num('temps',(e.type==='machine'?'Temps machine (minutes ':'Temps de production (minutes ')+UNITES[e.unite]+')',e.temps.defaut);
     h+='<div class="row" style="gap:10px">'+num('personnes','Personnes',e.capacite.personnes,'—')+num('machinesN','Machines',e.capacite.machines,'—')+(e.type==='machine'?num('parCycle','Plateaux par cycle',e.capacite.parCycle,'—'):'')+'</div>';
+    // Machine (22/10) : temps opérateur facultatifs (jamais orange : rien n'est exigé ni inventé).
+    if(e.type==='machine'){
+      const dop=dis||(tempsOpGardes()?'':' disabled');
+      const opt=(k,lib,v,ph,mn)=>'<label class="lbl">'+lib+'<input class="in" type="number" inputmode="decimal" min="'+(mn||0)+'" step="'+(k==='suite'?1:'any')+'" data-fxc="'+k+'" data-id="'+id+'" value="'+(v==null?'':v)+'" placeholder="'+ph+'"'+dop+'></label>';
+      const op=FF.tempsOperateur(e);
+      if(!tempsOpGardes())h+=MSG_SCRIPT_TEMPS_OP;
+      h+='<div class="row" style="gap:10px">'+opt('prep','Préparation (min)',e.temps.prep,'facultatif')+opt('fin','Déchargement / fin (min)',e.temps.fin,'facultatif')+'</div>';
+      h+=opt('suite','Productions à la suite sans opérateur',e.capacite.suite,'1 (vide)',1);
+      h+='<p class="hint" style="margin:-4px 0 12px">Temps machine : le cycle où la machine est occupée. Préparation (avant le lancement) et déchargement (après) : temps de l’opérateur, facultatifs. '+
+        'Productions à la suite : 3 veut dire que la préparation et le déchargement ne comptent qu’une fois toutes les 3 productions ; vide = à chaque production.'+
+        (op===null?'':' <b>Temps opérateur : '+nbFr(op)+' min par production.</b>')+'</p>';
+    }
     h+='<p class="hint" style="margin:-4px 0 12px">Une case orange est à saisir par le responsable : aucun chiffre n’est inventé. Temps par famille et effectif par équipe : écran « Temps et capacités ».</p>';
   }
   const grs=(partDe(e.secteur).groupes||[]);
@@ -6099,17 +6279,29 @@ function outilsDessin(){
 }
 
 // --- Vues Tableau et Liste -------------------------------------------------------------------------------------------
+// Défaut du 22/10 : retirer une case aussi depuis les vues Tableau et Liste (même confirmation que le panneau).
+const boutonsRetirer=e=>F.confirmer==='suppr-'+e.id?'<button class="btn dan plein" data-fx="suppr-ok" data-id="'+esc(e.id)+'">Oui, retirer « '+esc(e.nom)+' »</button><button class="btn" data-fx="suppr-non">Non</button>':
+  '<button class="btn dan" data-fx="suppr" data-id="'+esc(e.id)+'" aria-label="Retirer la case « '+esc(e.nom)+' »">'+svg('fx-suppr')+'Retirer</button>';
+// La confirmation (« Oui, retirer… ») est toujours amenée à l'écran, même si le panneau ou le tableau défile.
+function voirConfirmation(){const b=document.querySelector('#page [data-fx="suppr-ok"],#page [data-fx="lsuppr-ok"],#page [data-fx="suppr-multi-ok"]');if(!b)return;
+  const r=b.getBoundingClientRect(),z=b.closest('.fx-panneau,.fx-tcadre'),p=z?z.getBoundingClientRect():{top:0,bottom:innerHeight,left:0,right:innerWidth};
+  // Au centre (et non « au plus près ») : collé au bord, le bouton restait rogné quand le panneau dépasse de l'écran.
+  if(r.top<Math.max(0,p.top)||r.bottom>Math.min(innerHeight,p.bottom)||r.left<p.left||r.right>p.right)b.scrollIntoView({block:'center',inline:'nearest'})}
 function vueTableau(){
   const f=fluxAffiche(),{et}=casesAffichees(f),l=et.filter(e=>!e.masque);
   if(!l.length)return '<div class="card vide">Aucune case à afficher.</div>';
   const ordre=FF.ordreEtapes(f).ordre;l.sort((a,b)=>secteursPerim().indexOf(a.secteur)-secteursPerim().indexOf(b.secteur)||ordre.indexOf(a.id)-ordre.indexOf(b.id));
   const num=(e,k,v,m)=>'<input class="in fx-num'+(v===null&&!FF.FLUX_SANS_TEMPS.includes(e.type)?' fx-a-saisir':'')+'" type="number" inputmode="decimal" min="0" step="any" data-fxc="'+k+'" data-id="'+esc(e.id)+'" value="'+(v==null?'':v)+'" aria-label="'+esc(e.nom)+'"'+(m?'':' disabled')+'>';
-  let h='<div class="fx-tcadre"><table><thead><tr><th>Secteur</th><th>Case</th><th>Type</th><th>Unité</th><th>Temps (min)</th><th>Pers.</th><th>Mach.</th><th>Machines du parc</th><th>Vers</th></tr></thead><tbody>';
+  const ret=F.version==='futur'&&l.some(e=>peutDessin(e.secteur));
+  // Relecture du 22/10 : « Retirer » en PREMIÈRE colonne (à 1280 px, en dernière colonne il était hors de vue).
+  let h='<div class="fx-tcadre"><table><thead><tr>'+(ret?'<th>Retirer</th>':'')+'<th>Secteur</th><th>Case</th><th>Type</th><th>Unité</th><th>Temps (min)</th><th>Pers.</th><th>Mach.</th><th>Prép. (min)</th><th>Déch. (min)</th><th>À la suite</th><th>Machines du parc</th><th>Vers</th></tr></thead><tbody>';
   l.forEach(e=>{const m=peutDessin(e.secteur);
-    h+='<tr><td><span class="tag" style="border-left:5px solid '+couleurSec(e.secteur)+'">'+esc(nomSec(e.secteur))+'</span></td>'+
+    h+='<tr>'+(ret?'<td style="white-space:nowrap">'+(m?boutonsRetirer(e):'')+'</td>':'')+'<td><span class="tag" style="border-left:5px solid '+couleurSec(e.secteur)+'">'+esc(nomSec(e.secteur))+'</span></td>'+
       '<td><input class="in" data-fxc="nom" data-id="'+esc(e.id)+'" value="'+esc(e.nom)+'" maxlength="80" style="min-width:180px" aria-label="Nom"'+(m?'':' disabled')+'></td>'+
       '<td><select class="in" data-fxc="type-sel" data-id="'+esc(e.id)+'" aria-label="Type"'+(m?'':' disabled')+'>'+Object.keys(FF.FLUX_TYPES).map(t=>'<option value="'+t+'"'+(e.type===t?' selected':'')+'>'+esc(FF.FLUX_TYPES[t])+'</option>').join('')+'</select></td>'+
       '<td>'+esc(UNITES[e.unite])+'</td><td>'+(FF.FLUX_SANS_TEMPS.includes(e.type)?'—':num(e,'temps',e.temps.defaut,m))+'</td><td>'+(FF.FLUX_SANS_TEMPS.includes(e.type)?'—':num(e,'personnes',e.capacite.personnes,m))+'</td><td>'+(FF.FLUX_SANS_TEMPS.includes(e.type)?'—':num(e,'machinesN',e.capacite.machines,m))+'</td>'+
+      // Machine : temps opérateur facultatifs (pas orange).
+      (e.type==='machine'?['prep','fin','suite'].map(k=>'<td><input class="in fx-num" type="number" inputmode="decimal" min="'+(k==='suite'?1:0)+'" step="'+(k==='suite'?1:'any')+'" data-fxc="'+k+'" data-id="'+esc(e.id)+'" value="'+((k==='suite'?e.capacite.suite:e.temps[k])==null?'':(k==='suite'?e.capacite.suite:e.temps[k]))+'" placeholder="'+(k==='suite'?'1':'—')+'" aria-label="'+esc(e.nom)+' — '+{prep:'préparation',fin:'déchargement',suite:'productions à la suite'}[k]+'"'+(m&&tempsOpGardes()?'':' disabled')+'></td>').join(''):'<td>—</td><td>—</td><td>—</td>')+
       '<td>'+esc(e.machines.map(x=>nomMachine(x,e.secteur)).join(', ')||'—')+(e.machineTexte?' <span class="tag warn">• à rattacher : '+esc(e.machineTexte)+'</span>':'')+'</td>'+
       '<td>'+esc(f.liens.filter(x=>x.de===e.id).map(x=>(trouver(x.vers,f)||{nom:'?'}).nom+(x.reprise?' (reprise)':'')).join(', ')||'—')+'</td></tr>'});
   return h+'</tbody></table></div><p class="hint">Une case orange est à saisir par le responsable.</p>';
@@ -6120,9 +6312,9 @@ function vueListe(){
   secs.forEach(s=>{const l=ordre.map(id=>f.etapes.find(e=>e.id===id)).filter(e=>e&&e.secteur===s&&!e.masque);
     h+='<section class="card" style="border-left:6px solid '+couleurSec(s)+'"><h2>'+esc(nomSec(s))+' <span class="hint">· '+l.length+' case(s)</span></h2>'+(l.length?'<ol>'+l.map(e=>{
       const sort=f.liens.filter(x=>x.de===e.id);
-      return '<li><b>'+esc(e.nom)+'</b> <span class="hint">· '+esc(nomType(e.type))+'</span>'+(FF.FLUX_SANS_TEMPS.includes(e.type)?'':' · '+(e.temps.defaut===null?'<span class="fx-at">temps à saisir</span>':nbFr(e.temps.defaut)+' min '+UNITES[e.unite]))+
+      return '<li><b>'+esc(e.nom)+'</b> <span class="hint">· '+esc(nomType(e.type))+'</span>'+(FF.FLUX_SANS_TEMPS.includes(e.type)?'':' · '+(e.type==='machine'?'machine ':'')+(e.temps.defaut===null?'<span class="fx-at">temps à saisir</span>':nbFr(e.temps.defaut)+' min '+UNITES[e.unite])+(FF.tempsOperateur(e)===null?'':' · opérateur '+nbFr(FF.tempsOperateur(e))+' min par production'))+
         (e.machines.length?'<div class="hint">Machines : '+esc(e.machines.map(x=>nomMachine(x,s)).join(', '))+'</div>':'')+
-        sort.map(x=>{const v=trouver(x.vers,f)||{nom:'?',secteur:''};return '<div class="vers">→ '+esc(v.nom)+(v.secteur&&v.secteur!==s?' ('+esc(nomSec(v.secteur))+')':'')+(x.familles.length?' · '+esc(x.familles.map(famillesNom).join(', ')):'')+(x.reprise?' · reprise':'')+'</div>'}).join('')+'</li>'}).join('')+'</ol>':'<p class="hint" style="margin:0">Aucune case.</p>')+'</section>'});
+        sort.map(x=>{const v=trouver(x.vers,f)||{nom:'?',secteur:''};return '<div class="vers">→ '+esc(v.nom)+(v.secteur&&v.secteur!==s?' ('+esc(nomSec(v.secteur))+')':'')+(x.familles.length?' · '+esc(x.familles.map(famillesNom).join(', ')):'')+(x.reprise?' · reprise':'')+'</div>'}).join('')+(F.version==='futur'&&peutDessin(s)?'<div class="row" style="margin:6px 0 8px">'+boutonsRetirer(e)+'</div>':'')+'</li>'}).join('')+'</ol>':'<p class="hint" style="margin:0">Aucune case.</p>')+'</section>'});
   return h+'</div>';
 }
 
@@ -6208,8 +6400,12 @@ function xlsxDe(feuilles){
 }
 function tableauxExcel(f){
   const nom=id=>(f.etapes.find(e=>e.id===id)||{nom:id}).nom,v=x=>x==null?'à saisir':x;
-  const cases=[['Secteur','Case','Type','Unité','Temps par défaut (min)','Personnes','Machines','Plateaux par cycle','Machines du parc','Machine à rattacher','Source des temps','Notes','Identifiant']].concat(
+  // Machine (22/10) : « Temps par défaut » = temps machine ; préparation, déchargement, productions à la suite et temps
+  // opérateur par production en plus (vides = non saisis, facultatifs).
+  const mq=(e,x)=>e.type==='machine'&&x!=null?x:'';
+  const cases=[['Secteur','Case','Type','Unité','Temps par défaut (min) — machine : temps machine','Personnes','Machines','Plateaux par cycle','Préparation (min)','Déchargement / fin (min)','Productions à la suite sans opérateur','Temps opérateur par production (min)','Machines du parc','Machine à rattacher','Source des temps','Notes','Identifiant']].concat(
     f.etapes.map(e=>[nomSec(e.secteur),e.nom,nomType(e.type),UNITES[e.unite],FF.FLUX_SANS_TEMPS.includes(e.type)?'':v(e.temps.defaut),FF.FLUX_SANS_TEMPS.includes(e.type)?'':v(e.capacite.personnes),FF.FLUX_SANS_TEMPS.includes(e.type)?'':v(e.capacite.machines),e.capacite.parCycle==null?'':e.capacite.parCycle,
+      mq(e,e.temps.prep),mq(e,e.temps.fin),mq(e,e.capacite.suite),mq(e,FF.tempsOperateur(e)),
       e.machines.map(x=>nomMachine(x,e.secteur)).join(', '),e.machineTexte,FF.FLUX_SOURCES[e.source.type]||'',e.notes,e.id]));
   const fam=(f.familles||[]);
   const tps=[['Secteur','Case'].concat(fam.map(x=>'Temps '+x.nom+' (min)'))].concat(f.etapes.filter(e=>!FF.FLUX_SANS_TEMPS.includes(e.type)).map(e=>[nomSec(e.secteur),e.nom].concat(fam.map(x=>e.temps.parFamille[x.id]==null?'':e.temps.parFamille[x.id]))));
@@ -6307,9 +6503,38 @@ function apresRendu(){
 function cleFocus(){const a=document.activeElement;if(!a||!a.closest||!a.closest('#page'))return null;
   for(const k of ['fx','fxc','ft','fk','fr','fe','fxe','fxl','fxImpSec','fxImpMach'])if(a.dataset&&a.dataset[k]!==undefined){const at='data-'+k.replace(/[A-Z]/g,m=>'-'+m.toLowerCase());return '['+at+'="'+CSS.escape(a.dataset[k])+'"]'+(a.dataset.id?'[data-id="'+CSS.escape(a.dataset.id)+'"]':'')+(a.dataset.v!==undefined&&k==='fx'?'[data-v="'+CSS.escape(a.dataset.v)+'"]':'')+(a.dataset.i!==undefined?'[data-i="'+CSS.escape(a.dataset.i)+'"]':'')+(a.dataset.p!==undefined?'[data-p="'+CSS.escape(a.dataset.p)+'"]':'')}
   return a.id?'#'+CSS.escape(a.id):null}
-function redessiner(){const c=document.getElementById('fxCadre');if(c)defilement=[c.scrollLeft,c.scrollTop];const y=scrollY,cf=cleFocus();
-  return chargerPage().then(()=>{if(Math.abs(scrollY-y)>2)scrollTo(0,y);if(cf){const n=document.querySelector('#page '+cf);if(n&&n.focus)n.focus({preventScroll:true})}})}
+// Défaut du 22/10 : garderPlace (plus haut) garde aussi le défilement du panneau de droite et des tableaux, la hauteur de
+// la page, et rend le focus au champ où la personne est allée (et non à celui qu'elle vient de quitter).
+function redessiner(){const c=document.getElementById('fxCadre');if(c)defilement=[c.scrollLeft,c.scrollTop];
+  return garderPlace(chargerPage,cleFocus())}
 
+// Parcours par famille et temps de travail cumulé (22/10) : temps MACHINE et temps OPÉRATEUR séparés (comme le « Résumé
+// du flux » de l'ancien éditeur, qui n'avait qu'un temps). Les cases des secteurs non lisibles ne comptent pas.
+function resumeParcours(f){
+  const et=f.etapes.filter(e=>!e.masque),ids=new Set(et.map(e=>e.id));
+  const g=Object.assign({},f,{etapes:et,liens:f.liens.filter(l=>ids.has(l.de)&&ids.has(l.vers))});
+  if(!et.length)return '';
+  const duree=r=>r.min===r.max?nbFr(r.min)+' min':nbFr(r.min)+' à '+nbFr(r.max)+' min',parId={};et.forEach(e=>{parId[e.id]=e});
+  let h='<section class="card fx-parcours" style="margin-bottom:14px"><h2>'+svg('f-dessin')+'Parcours et temps de travail cumulé</h2>'+
+    '<p class="hint" style="margin:0 0 10px">Somme des temps des cases, sans les attentes entre cases. <b>Temps machine</b> : le cycle des machines (leur capacité). <b>Temps opérateur</b> : préparation et déchargement des machines (divisés par les productions à la suite) et temps des autres cases (poste manuel, contrôle…).</p>';
+  ((g.familles||[]).length?g.familles:[null]).forEach(x=>{
+    const p=FF.parcoursFamille(g,x?x.id:'');
+    const cle=x?x.id:'tout';
+    h+='<details class="fx-et" data-fxpar="'+esc(cle)+'"'+(F.parOuverts&&F.parOuverts[cle]?' open':'')+' style="--c:'+(x?esc(x.couleur):'#0B8A96')+';display:block"><summary style="min-height:44px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;cursor:pointer"><span class="nom">'+(x?esc(x.nom):'Toutes les pièces')+'</span>';
+    if(p.boucle){h+='<span><span class="fx-ko">✕</span> Des flèches tournent en rond : cochez « Reprise » sur la flèche de retour.</span></summary></details>';return}
+    if(!p.ordre.length){h+='<span class="hint">Pas encore de parcours (aucune flèche).</span></summary></details>';return}
+    h+='<span>Temps machine : <b>'+duree(p.machine)+'</b></span><span>· Temps opérateur : <b>'+duree(p.operateur)+'</b></span>'+
+      (p.manque.length?'<span class="fx-at">• '+p.manque.length+' temps à saisir</span>':'<span class="fx-ok">✓ temps complets</span>')+
+      (p.sansOperateur.length?'<span class="hint">· '+p.sansOperateur.length+' machine(s) sans temps opérateur (facultatif)</span>':'')+'</summary>';
+    h+='<ol style="margin:8px 0 4px;padding-left:26px">'+p.ordre.map(id=>{const e=parId[id],t=FF.tempsCase(g,e,x?x.id:'');
+      if(FF.FLUX_SANS_TEMPS.includes(e.type))return '<li>'+esc(e.nom)+'</li>';
+      const v=(n,lib)=>n===null?'<span class="fx-at">'+lib+' à saisir</span>':lib+' '+nbFr(n)+' min';
+      return '<li>'+esc(e.nom)+' — '+(e.type==='machine'?v(t.machine,'machine')+' · '+(t.operateur===null?'<span class="hint">opérateur non saisi</span>':'opérateur '+nbFr(t.operateur)+' min'):v(t.operateur,'opérateur'))+(p.choix.includes(id)?' <span class="hint">(embranchement)</span>':'')+'</li>'}).join('')+'</ol></details>';
+  });
+  return h+'</section>';
+}
+// Un parcours ouvert le reste après un nouveau dessin (saisie d'un temps).
+document.addEventListener('toggle',e=>{const d=e.target;if(d&&d.dataset&&d.dataset.fxpar!==undefined){F.parOuverts=F.parOuverts||{};F.parOuverts[d.dataset.fxpar]=d.open}},true);
 // --- Écran « Temps et capacités » ------------------------------------------------------------------------------------
 async function pageTemps(){
   await charger('f-temps');
@@ -6324,23 +6549,28 @@ async function pageTemps(){
     '<div class="kpi k-acc" style="cursor:default"><small>Rendement</small><b style="font-size:28px">'+Math.round(R.rendement*100)+' %</b><span>'+(R.rendement===FF.FLUX_REGLAGES_DEFAUT.rendement?'<span class="fx-defaut">• par défaut, à confirmer</span>':'appliqué à toutes les capacités')+'</span></div>'+
     '<div class="kpi" style="cursor:default"><small>Familles de pièces</small><b style="font-size:28px">'+fam.length+'</b><span>temps propres par famille</span></div></div>';
   h+='<div class="fx-barre"><button class="btn" data-fx="export" data-v="xlsx">'+svg('fx-grille')+'Excel (.xlsx)</button></div>';
+  if(et.some(e=>e.type==='machine')&&!tempsOpGardes())h+=MSG_SCRIPT_TEMPS_OP;
   const tr=R.tranches||[];
   secs.forEach(s=>{
     const l=et.filter(e=>e.secteur===s),m=peutTempsEcran(s)&&F.version==='futur';
     h+='<section class="card" style="margin-bottom:14px;border-left:6px solid '+couleurSec(s)+'"><h2>'+esc(nomSec(s))+(m?'':' <span class="ro">'+svg('oeil')+' Lecture</span>')+'</h2>';
     if(!l.length){h+='<p class="hint" style="margin:0">Aucune case avec un temps dans ce secteur.</p></section>';return}
     const inp=(e,k,v,ph,lib)=>'<input class="in fx-num'+(v==null&&(k==='temps'||(k===(e.type==='machine'?'machinesN':'personnes')))?' fx-a-saisir':'')+'" type="number" inputmode="decimal" min="0" step="any" data-ft="'+k+'" data-id="'+esc(e.id)+'" value="'+(v==null?'':v)+'" placeholder="'+(ph||'')+'" aria-label="'+esc(e.nom+' — '+lib)+'"'+(m?'':' disabled')+'>';
-    h+='<div class="fx-tcadre"><table><thead><tr><th>Case</th><th>Défaut (min)</th>'+fam.map(x=>'<th>'+esc(x.nom)+'</th>').join('')+'<th>Pers.</th><th>Mach.</th><th>/cycle</th><th>Par équipe</th></tr></thead><tbody>';
+    // Préparation, déchargement, à la suite : grisés tant que le script en ligne ne les garde pas.
+    const inpOp=(e,k,v,ph,lib)=>m&&!tempsOpGardes()?inp(e,k,v,ph,lib).replace(/>$/,' disabled>'):inp(e,k,v,ph,lib);
+    h+='<div class="fx-tcadre"><table><thead><tr><th>Case</th><th>Défaut (min)</th>'+fam.map(x=>'<th>'+esc(x.nom)+'</th>').join('')+'<th>Pers.</th><th>Mach.</th><th>/cycle</th><th>Prép. (min)</th><th>Déch. (min)</th><th>À la suite</th><th>Par équipe</th></tr></thead><tbody>';
     l.forEach(e=>{
       h+='<tr><td><b>'+esc(e.nom)+'</b><div class="hint">'+esc(nomType(e.type))+' · '+UNITES[e.unite]+'</div></td><td>'+inp(e,'temps',e.temps.defaut,'à saisir','temps par défaut')+'</td>'+
         fam.map(x=>'<td>'+inp(e,'fam:'+x.id,e.temps.parFamille[x.id],'—','temps '+x.nom)+'</td>').join('')+
         '<td>'+inp(e,'personnes',e.capacite.personnes,e.type==='machine'?'—':'à saisir','personnes')+'</td><td>'+inp(e,'machinesN',e.capacite.machines,e.type==='machine'?'à saisir':'—','machines')+'</td>'+
         '<td>'+(e.type==='machine'?inp(e,'parCycle',e.capacite.parCycle,'—','plateaux par cycle'):'—')+'</td>'+
+        (e.type==='machine'?'<td>'+inpOp(e,'prep',e.temps.prep,'facultatif','préparation')+'</td><td>'+inpOp(e,'fin',e.temps.fin,'facultatif','déchargement')+'</td><td>'+inpOp(e,'suite',e.capacite.suite,'1','productions à la suite')+'</td>':'<td>—</td><td>—</td><td>—</td>')+
         '<td>'+(e.type==='machine'?'<span class="hint">les machines</span>':'<button class="btn" data-fx="tranches" data-id="'+esc(e.id)+'" aria-expanded="'+(F.tranches===e.id)+'">'+(Object.keys(e.capacite.parTranche).length?Object.keys(e.capacite.parTranche).length+' équipe(s)':'Détailler')+'</button>')+'</td></tr>';
-      if(F.tranches===e.id)h+='<tr><td colspan="'+(7+fam.length)+'"><div class="row">'+tr.map(t=>'<label class="lbl" style="margin:0">'+esc(t.nom)+' ('+t.de+'–'+t.a+(t.enPlus?', en plus':'')+')'+inp(e,'tr:'+t.id,e.capacite.parTranche[t.id],'—','équipe '+t.nom)+'</label>').join('')+'</div><p class="hint" style="margin:6px 0 0">Vide : l’effectif de base (Personnes) pour une équipe normale, 0 pour une équipe « en plus ».</p></td></tr>';
+      if(F.tranches===e.id)h+='<tr><td colspan="'+(10+fam.length)+'"><div class="row">'+tr.map(t=>'<label class="lbl" style="margin:0">'+esc(t.nom)+' ('+t.de+'–'+t.a+(t.enPlus?', en plus':'')+')'+inp(e,'tr:'+t.id,e.capacite.parTranche[t.id],'—','équipe '+t.nom)+'</label>').join('')+'</div><p class="hint" style="margin:6px 0 0">Vide : l’effectif de base (Personnes) pour une équipe normale, 0 pour une équipe « en plus ».</p></td></tr>';
     });
-    h+='</tbody></table></div></section>';
+    h+='</tbody></table></div>'+(l.some(e=>e.type==='machine')?'<p class="hint" style="margin:8px 0 0">Machine : « Défaut » et les familles = temps machine (le cycle où la machine est occupée). Prép. et Déch. = temps de l’opérateur, facultatifs ; « À la suite » = productions enchaînées sans opérateur (vide = 1).</p>':'')+'</section>';
   });
+  h+=resumeParcours(f);
   // Familles de pièces et réglages du calcul : administrateur et responsables de secteur (décision du 22/10).
   const pc=peutCommun()&&F.version==='futur',dis=pc?'':' disabled',c=F.trav.commun;
   h+='<section class="card" style="margin-bottom:14px"><h2>'+svg('fx-groupe')+'Familles de pièces'+(pc?'':' <span class="ro">'+svg('cadenas')+' Administrateur ou responsable de secteur</span>')+'</h2>';
@@ -6433,6 +6663,20 @@ PAGES['f-dessin']=()=>{verifierPersonne();return pageDessin()};PAGES['f-temps']=
 PAGES['f-valid']=()=>{verifierPersonne();return pageValid()};PAGES['f-droits']=()=>{verifierPersonne();return pageDroits()};
 
 // --- Saisies (champs) ------------------------------------------------------------------------------------------------
+// Temps et ressources d'une case (panneau, tableau, Temps et capacités) : mêmes bornes que le bloc commun ; préparation,
+// déchargement et productions à la suite (machines, 22/10) en plus. Renvoie false si la clé n'est pas un temps.
+const CLES_TEMPS=['temps','personnes','machinesN','parCycle','prep','fin','suite'];
+function poserTemps(x,k,v){
+  if(k==='temps')x.temps.defaut=FF.fluxNombre(v,0,100000);
+  else if(k==='personnes')x.capacite.personnes=FF.fluxNombre(v,0,1000);
+  else if(k==='machinesN')x.capacite.machines=FF.fluxNombre(v,0,1000);
+  else if(k==='parCycle')x.capacite.parCycle=FF.fluxNombre(v,1,1000);
+  else if(k==='prep')x.temps.prep=FF.fluxNombre(v,0,100000);
+  else if(k==='fin')x.temps.fin=FF.fluxNombre(v,0,100000);
+  else if(k==='suite'){const n=FF.fluxNombre(v,1,1000);x.capacite.suite=n===null?null:Math.round(n)}
+  else return false;
+  return true;
+}
 function champCase(el){
   const id=el.dataset.id,k=el.dataset.fxc;
   if(k==='version'){F.version=el.value;F.sel=null;F.selection=[];F.relier='';return true}
@@ -6440,14 +6684,11 @@ function champCase(el){
   if(k.startsWith('l-')){const L=trouverLien(id);if(!L)return false;
     return modifier(L.s,p=>{const l=p.liens.find(x=>x.id===id);if(!l)return;if(k==='l-part')l.part=FF.fluxNombre(el.value,0,100);if(k==='l-transfert')l.transfert=FF.fluxNombre(el.value,0,10000);if(k==='l-notes')l.notes=String(el.value).slice(0,300)})}
   if(!e)return false;
-  const temps=['temps','personnes','machinesN','parCycle'].includes(k);
+  const temps=CLES_TEMPS.includes(k);
   return modifier(e.secteur,p=>{const x=p.etapes.find(y=>y.id===id);if(!x)return;
     if(k==='nom')x.nom=FF.fluxTexte(el.value,80)||x.nom;
     else if(k==='type-sel'&&FF.FLUX_TYPES[el.value])x.type=el.value;
-    else if(k==='temps')x.temps.defaut=FF.fluxNombre(el.value,0,100000);
-    else if(k==='personnes')x.capacite.personnes=FF.fluxNombre(el.value,0,1000);
-    else if(k==='machinesN')x.capacite.machines=FF.fluxNombre(el.value,0,1000);
-    else if(k==='parCycle')x.capacite.parCycle=FF.fluxNombre(el.value,1,1000);
+    else if(poserTemps(x,k,el.value)){}
     else if(k==='groupe')x.groupe=el.value;
     else if(k==='source')x.source.type=FF.FLUX_SOURCES[el.value]?el.value:'manuel';
     else if(k==='notes')x.notes=String(el.value).slice(0,500);
@@ -6459,10 +6700,7 @@ function champTemps(el){
   const id=el.dataset.id,k=el.dataset.ft,e=trouver(id,futur());if(!e)return false;
   if(!peutTempsEcran(e.secteur))return false;
   return modifier(e.secteur,p=>{const x=p.etapes.find(y=>y.id===id);if(!x)return;
-    if(k==='temps')x.temps.defaut=FF.fluxNombre(el.value,0,100000);
-    else if(k==='personnes')x.capacite.personnes=FF.fluxNombre(el.value,0,1000);
-    else if(k==='machinesN')x.capacite.machines=FF.fluxNombre(el.value,0,1000);
-    else if(k==='parCycle')x.capacite.parCycle=FF.fluxNombre(el.value,1,1000);
+    if(poserTemps(x,k,el.value)){}
     else if(k.startsWith('fam:')){const v=FF.fluxNombre(el.value,0,100000),f=k.slice(4);if(v===null)delete x.temps.parFamille[f];else x.temps.parFamille[f]=v}
     else if(k.startsWith('tr:')){const v=FF.fluxNombre(el.value,0,1000),t=k.slice(3);if(v===null)delete x.capacite.parTranche[t];else x.capacite.parTranche[t]=v}
   },true);
@@ -6520,12 +6758,12 @@ document.addEventListener('click',async e=>{
     if(a==='grouper'){F.grouper=true;return redessiner()}
     if(a==='grouper-ok'){const n=document.getElementById('fxNomGroupe');grouper(n?n.value:'');return redessiner()}
     if(a==='degrouper'){degrouper();return redessiner()}
-    if(a==='suppr'){F.confirmer='suppr-'+id;return redessiner()}
+    if(a==='suppr'){F.confirmer='suppr-'+id;return redessiner().then(voirConfirmation)}
     if(a==='suppr-ok'){supprimerEtapes([id]);return redessiner()}
-    if(a==='suppr-multi'){F.confirmer='suppr-multi';return redessiner()}
+    if(a==='suppr-multi'){F.confirmer='suppr-multi';return redessiner().then(voirConfirmation)}
     if(a==='suppr-multi-ok'){supprimerEtapes(F.selection.slice());return redessiner()}
     if(a==='suppr-non'){return redessiner()}
-    if(a==='lsuppr'){F.confirmer='lsuppr-'+id;return redessiner()}
+    if(a==='lsuppr'){F.confirmer='lsuppr-'+id;return redessiner().then(voirConfirmation)}
     if(a==='lsuppr-ok'){const L=trouverLien(id);if(L&&modifier(L.s,p=>{p.liens=p.liens.filter(x=>x.id!==id)}))F.sel=null;return redessiner()}
     if(a==='type'){const x=trouver(id);if(x)modifier(x.secteur,p=>{const y=p.etapes.find(z=>z.id===id);if(y)y.type=v});return redessiner()}
     if(a==='unite'){const x=trouver(id);if(x)modifier(x.secteur,p=>{const y=p.etapes.find(z=>z.id===id);if(y)y.unite=v},!peutDessin(x.secteur));return redessiner()}
@@ -6624,6 +6862,14 @@ document.addEventListener('keydown',e=>{
   const c=e.target.closest&&e.target.closest('.fx-case[data-fxe]');if(!c)return;
   const id=c.dataset.fxe;
   if(e.key==='Enter'||e.key===' '){e.preventDefault();clicCase(id);return}
+  // Touche Suppr (ou Retour arrière) sur une case : même demande « Oui, retirer la case » que le bouton du panneau.
+  // Relecture du 22/10 : en sélection multiple, Suppr sur une case choisie demande à retirer TOUTE la sélection.
+  if((e.key==='Delete'||e.key==='Backspace')&&F.version==='futur'&&!F.relier&&F.multi&&F.selection.includes(id)){
+    e.preventDefault();F.confirmer='suppr-multi';
+    redessiner().then(()=>{voirConfirmation();const b=document.querySelector('#page [data-fx="suppr-multi-ok"]');if(b)b.focus({preventScroll:true})});return}
+  if((e.key==='Delete'||e.key==='Backspace')&&F.version==='futur'&&!F.relier){const x=trouver(id);if(!x||x.masque||!peutDessin(x.secteur))return;
+    e.preventDefault();F.multi=false;F.selection=[];F.sel={type:'etape',id};F.confirmer='suppr-'+id;
+    redessiner().then(()=>{voirConfirmation();const b=document.querySelector('#page [data-fx="suppr-ok"]');if(b)b.focus({preventScroll:true})});return}
   const d={ArrowLeft:[-10,0],ArrowRight:[10,0],ArrowUp:[0,-10],ArrowDown:[0,10]}[e.key];
   if(!d||!F.sel||F.sel.id!==id)return;
   const x=trouver(id);if(!x||!peutDessin(x.secteur))return;
