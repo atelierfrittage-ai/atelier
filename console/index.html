@@ -1388,13 +1388,15 @@ const ICO={
   rd:'<path d="M9 3h6"/><path d="M10 3v6L4.5 18.5A1.7 1.7 0 0 0 6 21h12a1.7 1.7 0 0 0 1.5-2.5L14 9V3"/><path d="M7.5 15h9"/>',
   // Fours (2026-10-22) : four (porte vitrée, boutons), comme la tuile des tablettes.
   fours:'<rect x="3" y="3" width="18" height="18" rx="2"/><rect x="6.5" y="9" width="11" height="8" rx="1"/><path d="M7 6h.01M10 6h.01M14 6h3"/>',
+  // Liaison (2026-10-23) : cahier (feuillets, reliure), comme la tuile des tablettes.
+  liaison:'<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h3M3 7h2M3 12h2M3 17h2"/>',
   // Étiquettes QR du parc (2026-10-21, maquette validée).
   qr:'<path d="M3 7V4a1 1 0 0 1 1-1h3M17 3h3a1 1 0 0 1 1 1v3M21 17v3a1 1 0 0 1-1 1h-3M7 21H4a1 1 0 0 1-1-1v-3"/><rect x="7" y="7" width="4" height="4" rx=".5"/><rect x="13" y="7" width="4" height="4" rx=".5"/><rect x="7" y="13" width="4" height="4" rx=".5"/><path d="M13 13h1.5M17 13v1.5M13 16.5V17h4"/>',
   imprim:'<path d="M7 9V3h10v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M7 14h10v7H7z"/>'
 };
 const TEINTE={accueil:['#16a3ad','#0b6f78'],tableau:['#7c6cf0','#4b3bbd'],ecran:['#4f8fae','#24566e'],tablette:['#5d7f8c','#2c4752'],
   lancements:['#e08a17','#a35f00'],calendrier:['#f2a93b','#c27206'],parc:['#4f8fae','#24566e'],personnes:['#16a3ad','#0b6f78'],
-  maintenance:['#f2a93b','#c27206'],fiches:['#ef6b5b','#c0262d'],procedures:['#3b8fe0','#1d5aa6'],fours:['#e8743b','#b8461c'],taches:['#3aa85b','#1f7a3a'],releve:['#16a3ad','#0b6f78'],
+  maintenance:['#f2a93b','#c27206'],fiches:['#ef6b5b','#c0262d'],procedures:['#3b8fe0','#1d5aa6'],fours:['#e8743b','#b8461c'],liaison:['#2fa5c9','#1b6f92'],taches:['#3aa85b','#1f7a3a'],releve:['#16a3ad','#0b6f78'],
   message:['#e0679b','#a8336a'],acces:['#0B8A96','#065E66'],droits:['#7c6cf0','#4b3bbd'],apparence:['#e0679b','#a8336a'],version:['#3b8fe0','#1d5aa6'],
   liaisons:['#5d6f78','#2c3e46'],aide:['#5d6f78','#2c3e46'],logo:['#16a3ad','#065E66'],rd:['#7349C2','#4C5BD4']};
 // Photos (2026-10-22) : sur tablette ou téléphone, « Prendre une photo » ouvre tout de suite la caméra arrière (capture) ;
@@ -1558,6 +1560,8 @@ const GROUPES=[['direct','Atelier en direct'],['plan','Planification'],['mach','
 const PARTIES=[
   {id:'accueil',g:'direct',nom:'Vue d’ensemble',ico:'accueil',lect:1},
   {id:'tableau',g:'direct',nom:'Tableau de bord',ico:'tableau',lect:1},
+  // Cahier de liaison (2026-10-23) : droits PAR SECTEUR (carte « Cahier de liaison » d'Accès des managers), pas dans le tableau.
+  {id:'liaison',g:'direct',nom:'Cahier de liaison',ico:'liaison',parSecteur:1},
   {id:'ecrans',g:'direct',nom:'Écrans télé',ico:'ecran',pc:1},
   {id:'tablettes',g:'direct',nom:'Tablettes & alertes',ico:'tablette'},
   {id:'lancements',g:'plan',nom:'Lancements machines',ico:'lancements'},
@@ -2695,7 +2699,7 @@ async function actionMessages(b){
 // Listes = ce qui est MASQUÉ ; pour une personne ou un secteur, une partie absente = comme le rôle. Rôles : administrateur
 // seulement ; manager : ses secteurs et les personnes qu'il peut modifier (le script le vérifie).
 const D_ROLES=[['operateur','Opérateur'],['chef','Chef d’équipe'],['responsable','Responsable'],['admin','Administrateur']];
-const D_APPLIS=[['releve','Relève d’équipe'],['taches','Tâches à faire'],['fiches','Fiches réflexes'],['maintenance','Maintenance niveau 1'],['procedures','Procédures'],['lancements','Lancements machines'],['fours','Fours'],['tableau','Tableau de bord']];
+const D_APPLIS=[['releve','Relève d’équipe'],['taches','Tâches à faire'],['fiches','Fiches réflexes'],['maintenance','Maintenance niveau 1'],['procedures','Procédures'],['lancements','Lancements machines'],['fours','Fours'],['liaison','Liaison'],['tableau','Tableau de bord']];
 const D_ONGLETS={
   releve:[['atelier','L’atelier'],['releve','Faire la relève'],['historique','Historique'],['reglages','Réglages']],
   taches:[['saisie','Je coche mes tâches'],['board','Historique'],['reglages','Réglages']],
@@ -2704,6 +2708,7 @@ const D_ONGLETS={
   procedures:[['consulter','Consulter'],['suivi','Suivi'],['reglages','Réglages']],
   lancements:[['atelier','À lancer · Machines'],['ecran','Écran atelier'],['historique','Historique']],
   fours:[['fours','Les fours'],['ecran','Écran télé'],['historique','Historique']],
+  liaison:[['alire','À lire'],['ouverts','Ouverts du secteur'],['resolus','Résolus']],
   tableau:[['now','Maintenant'],['personnes','Personnes'],['personne','Une personne'],['fil','Fil d’activité'],['depannages','Dépannages & maint.'],['procedures','Procédures'],['machines','Machines'],['equipes','Équipes'],['taches','Qui fait quoi'],['releves','Relèves'],['donnees','Données']]
 };
 const D_CONTENUS=[['taches','Tâches à faire'],['fiches','Fiches réflexes'],['maintenance','Opérations de maintenance'],['procedures','Procédures']];
@@ -2818,7 +2823,7 @@ const CONTENUS={
     sect('Machines',liste(o.machines))+lst('Matériel',o.tools)+lst('Sécurité',o.safety)+(o.prep&&o.prep.length?'<h3>Avant de commencer</h3>'+o.prep.map(p=>'<p>'+esc(p.texte||'')+'</p>'+boutonPhoto(p.photo)).join(''):'')+
     etapes((o.steps||[]).map(s=>({t:s.title,d:s.detail,p:s.photo,x:s.axes&&unSecteur()==='fraisage'?'à faire sur chaque broche':''})))+lst('Contrôles',o.checks)+
     ((o.variantes||[]).length?'<h3>Versions par type de machine</h3><ul>'+o.variantes.map(v=>'<li>'+esc((v.types||[]).join(', '))+' : '+(v.steps||[]).length+' étape(s)</li>').join('')+'</ul>':'')},
-  fiches:{liste:'fiches',titre:'title',sous:o=>(o.reflexes||[]).length+' réflexe(s)',detail:o=>
+  fiches:{liste:'fiches',titre:'title',sous:o=>(o.statut==='brouillon'?'Brouillon · ':'')+(o.reflexes||[]).length+' réflexe(s)',detail:o=>
     (o.intro?'<p>'+esc(o.intro)+'</p>':'')+lst('Signes',o.signs)+(o.images||[]).map(i=>'<p class="hint">'+esc(i.texte||'')+'</p>'+boutonPhoto(i.photo)).join('')+(o.before?'<h3>Avant de commencer</h3><p>'+esc(o.before)+'</p>':'')+
     (o.reflexes||[]).map((r,i)=>'<h3>Réflexe '+(i+1)+' : '+esc(r.title)+'</h3><ol>'+(r.items||[]).map(x=>'<li>'+esc(x)+'</li>').join('')+'</ol>'+(r.images||[]).map(im=>boutonPhoto(im.photo)).join('')).join('')+
     lst('Vérifications',o.checks)+(o.rappel?'<h3>Rappel</h3><p>'+esc(o.rappel)+'</p>':'')},
@@ -2827,7 +2832,7 @@ const CONTENUS={
     sect('Objectif',o.objectif)+sect('Quand',o.quand)+sect('Responsable',o.responsable)+sect('Durée',o.duree)+sect('Machines',liste(o.machines))+lst('Matériel',o.materiel)+lst('Sécurité',o.securite)+
     etapes((o.etapes||[]).map(s=>({t:s.titre,d:s.detail,a:s.attention,p:s.photo})))+lst('Contrôles',o.controles)+sect('En cas de problème',o.probleme)+
     (o.images||[]).map(i=>'<p class="hint">'+esc(i.texte||'')+'</p>'+boutonPhoto(i.photo)).join('')},
-  taches:{liste:'tasks',titre:'name',sous:o=>o.cat||'',detail:o=>sect('Catégorie',o.cat)+sect('Comment faire',o.aide)+(o.images||[]).map(i=>'<p class="hint">'+esc(i.texte||'')+'</p>'+boutonPhoto(i.photo)).join('')}
+  taches:{liste:'tasks',titre:'name',sous:o=>(o.statut==='brouillon'?'Brouillon · ':'')+(o.cat||''),detail:o=>sect('Catégorie',o.cat)+sect('Comment faire',o.aide)+(o.images||[]).map(i=>'<p class="hint">'+esc(i.texte||'')+'</p>'+boutonPhoto(i.photo)).join('')}
 };
 const sect=(t,v)=>v?'<h3>'+t+'</h3><p style="margin:0;white-space:pre-wrap">'+esc(v)+'</p>':'';
 const lst=(t,l)=>l&&l.length?'<h3>'+t+'</h3><ul>'+l.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>':'';
@@ -3405,11 +3410,11 @@ PAGES.acces=async()=>{
     '<table class="perm"><thead><tr><th>Partie de la console</th><th>Droit</th></tr></thead><tbody>'+
     GROUPES.filter(([g])=>g!=='flux').map(([g,t])=>'<tr class="grp"><td colspan="2">'+t+'</td></tr>'+PARTIES.filter(p=>p.g===g).map(p=>{
       const sp=parties.find(x=>x.id===p.id)||{},v=b.parties[p.id]||'';
-      const cell=p.admin||sp.admin?'<span class="lock">'+svg('cadenas')+'Administrateur seulement</span>':
+      const cell=p.parSecteur?'<span class="hint">Par secteur : carte « Cahier de liaison » plus bas</span>':p.admin||sp.admin?'<span class="lock">'+svg('cadenas')+'Administrateur seulement</span>':
         '<div class="tri" role="radiogroup" aria-label="'+esc(p.nom)+'">'+[['','v0','masque','Masqué'],['lecture','v1','oeil','Lecture'],['modif','v2','crayon','Modification']].map(([k,cl,ic,l])=>
         '<button class="'+cl+'" role="radio" data-acc="droit" data-p="'+p.id+'" data-v="'+k+'" aria-checked="'+(v===k)+'" aria-pressed="'+(v===k)+'"'+(k==='modif'&&(p.lect||sp.lect)?' disabled title="Cette partie se consulte seulement"':'')+'>'+svg(ic)+l+'</button>').join('')+'</div>';
       return '<tr><td><span class="nm">'+pastille(p.ico,'s')+p.nom+'</span></td><td>'+cell+'</td></tr>'}).join('')).join('')+'</tbody></table>'+
-    '<p class="hint" style="margin:10px 0 0">« Modification » : la partie se modifie depuis la console, en ligne comme sur le PC (parc, personnes, contenus des applis, message d’accueil, Qui voit quoi, tablettes, calendrier, lancements). Les parties qui se consultent seulement n’ont que « Masqué » ou « Lecture ».</p>'+(typeof fluxNoteAcces==='function'?fluxNoteAcces():'')+'</section>';
+    '<p class="hint" style="margin:10px 0 0">« Modification » : la partie se modifie depuis la console, en ligne comme sur le PC (parc, personnes, contenus des applis, message d’accueil, Qui voit quoi, tablettes, calendrier, lancements). Les parties qui se consultent seulement n’ont que « Masqué » ou « Lecture ».</p>'+(typeof fluxNoteAcces==='function'?fluxNoteAcces():'')+'</section>'+(typeof liaisonAccesCarte==='function'?liaisonAccesCarte(c,estAdmin):'');
   // Code de la console.
   if(c)h+='<section class="card"><h2>'+svg('cadenas')+'Code de la console <span class="tag '+(c.codeDefini?'ok">✓ défini':'warn">pas encore défini')+'</span></h2>'+
     '<div class="row"><label class="lbl" style="margin:0;min-width:240px">Nouveau code<input class="in" type="password" id="accCode" autocomplete="new-password" minlength="8"></label>'+
@@ -3451,7 +3456,7 @@ async function actionAcces(b){
   if(act==='admin')return changeBrouillon(x=>{x.admin=!x.admin});
   if(act==='secteur')return changeBrouillon(x=>{const s=b.dataset.s;x.secteurs=x.secteurs.includes(s)?x.secteurs.filter(y=>y!==s):x.secteurs.concat(s)});
   if(act==='droit')return changeBrouillon(x=>{if(b.dataset.v)x.parties[b.dataset.p]=b.dataset.v;else delete x.parties[b.dataset.p]});
-  if(act==='modele')return changeBrouillon(x=>{const M=MODELES[b.dataset.v];x.parties={};PARTIES.forEach(p=>{if(p.admin||p.flux)return;let v=M.f(p);if(v==='modif'&&p.lect)v='lecture';if(v)x.parties[p.id]=v})});
+  if(act==='modele')return changeBrouillon(x=>{const M=MODELES[b.dataset.v];x.parties={};PARTIES.forEach(p=>{if(p.admin||p.flux||p.parSecteur)return;let v=M.f(p);if(v==='modif'&&p.lect)v='lecture';if(v)x.parties[p.id]=v})});
   if(act==='annuler'){a.modifie=false;a.msg=null;a.couper=false;const r=await lire('comptes-lire'),c=r.ok&&r.data.comptes.find(x=>x.id===a.sel);a.b=c?brouillonDe(c):null;if(!c)a.sel='';return chargerPage()}
   if(act==='enregistrer'){
     // Temps masqué (2026-10-16) : affiché tout de suite, envoyé derrière avec la version du compte lue (depuis).
@@ -3499,7 +3504,7 @@ async function actionAcces(b){
 // Lot 4 (2026-10-15) : MODIFICATIONS depuis la console en ligne. Les boutons n'apparaissent qu'avec le niveau
 // « Modification » de la partie ; le script Google vérifie de toute façon chaque écriture (partie, secteur, version).
 // Brouillon en mémoire seulement (jamais dans le navigateur) ; rien de secret dedans.
-const EDITABLES={apparence:1,acces:1,'c-maint':1,'c-fiches':1,'c-proc':1,'c-taches':1,lancements:1,calendrier:1,parc:1,personnes:1,'c-message':1,droits:1,tablettes:1,'c-rd':1,fours:1};
+const EDITABLES={apparence:1,acces:1,'c-maint':1,'c-fiches':1,'c-proc':1,'c-taches':1,lancements:1,calendrier:1,parc:1,personnes:1,'c-message':1,droits:1,tablettes:1,'c-rd':1,fours:1,liaison:1};
 const peutModif=id=>droit(id)==='modif'&&!!EDITABLES[id];
 // Identifiant tiré au hasard (crypto) : photos, fichiers des lancements, nouveaux éléments.
 function alea(n){const a=new Uint8Array(n);crypto.getRandomValues(a);return [...a].map(x=>'abcdefghijklmnopqrstuvwxyz0123456789'[x%36]).join('')}
@@ -3528,7 +3533,7 @@ const FORMS={
     // Broches (fraisage, 2026-10-16) : choisi opération par opération.
     {k:'broches',t:'choix',l:'Broches (étapes « ↻ ») — une broche à tour de rôle : chaque broche est faite une échéance sur N',fraisage:1,choix:[['toutes','Toutes les broches à chaque échéance (recommandé)'],['tour','Une broche à tour de rôle']]}]},
   fiches:{nouveau:id=>({id:'f'+id,title:'',intro:'',signs:[],before:'',reflexes:[],checks:[],rappel:''}),champs:[
-    {k:'title',t:'texte',l:'Titre de la fiche',req:1},{k:'intro',t:'zone',l:'Introduction'},{k:'signs',t:'lignes',l:'Signes du problème (une ligne par signe)'},
+    {k:'title',t:'texte',l:'Titre de la fiche',req:1},{k:'statut',t:'choix',l:'Statut',choix:[['brouillon','Brouillon (pas visible des opérateurs)'],['validee','Validée (visible des opérateurs)']]},{k:'intro',t:'zone',l:'Introduction'},{k:'signs',t:'lignes',l:'Signes du problème (une ligne par signe)'},
     {k:'before',t:'zone',l:'Avant de commencer'},
     {k:'reflexes',t:'etapes',l:'Réflexes',nouveau:()=>({title:'',items:[]}),sous:[{k:'title',t:'texte',l:'Réflexe'},{k:'items',t:'lignes',l:'Gestes (une ligne par geste)'}]},
     {k:'checks',t:'lignes',l:'Vérifications'},{k:'rappel',t:'zone',l:'Rappel'}]},
@@ -3540,7 +3545,7 @@ const FORMS={
     {k:'etapes',t:'etapes',l:'Étapes',nouveau:()=>({titre:'',detail:'',attention:'',photo:null}),sous:[{k:'titre',t:'texte',l:'Étape'},{k:'detail',t:'zone',l:'Détail'},{k:'attention',t:'texte',l:'Point d’attention'},{k:'photo',t:'photo',l:'Photo'}]},
     {k:'controles',t:'lignes',l:'Contrôles'},{k:'probleme',t:'zone',l:'En cas de problème'}]},
   taches:{nouveau:id=>({id:'t'+id,name:'',cat:'Général'}),champs:[
-    {k:'name',t:'texte',l:'Nom de la tâche',req:1},{k:'cat',t:'liste',l:'Catégorie',de:st=>[...new Set((st.tasks||[]).map(x=>x.cat).filter(Boolean))]},
+    {k:'name',t:'texte',l:'Nom de la tâche',req:1},{k:'statut',t:'choix',l:'Statut',choix:[['brouillon','Brouillon (pas visible des opérateurs)'],['validee','Validée (visible des opérateurs)']]},{k:'cat',t:'liste',l:'Catégorie',de:st=>[...new Set((st.tasks||[]).map(x=>x.cat).filter(Boolean))]},
     {k:'aide',t:'zone',l:'Comment faire'}]}
 };
 const lireChemin=(o,c)=>c.split('.').reduce((x,k)=>x==null?x:x[k],o);
@@ -4447,6 +4452,835 @@ setInterval(()=>{
   if(x.dataset.h!==html){x.innerHTML=html;x.dataset.h=html}
 },1000);
 // </fours-console>
+// <liaison-console> Cahier de liaison (2026-10-23, maquette validée scratchpad\maquette-liaison) : partie « Cahier de liaison »
+// de la console (groupe « Atelier en direct »). Tableau par secteur, Messages (filtres, fiche, export tableur avec la signature),
+// Statistiques (JAMAIS par personne), Réglages (récurrence par secteur ; catalogue commun — faits, icônes, précisions, causes,
+// phrases prêtes, équipes, faits propres à un secteur — réservé aux administrateurs). Fait récurrent : un VRAI BROUILLON dans
+// Tâches à faire ou Fiches réflexes (titre seulement), jamais montré aux opérateurs avant validation. Droits PAR SECTEUR (Accès
+// des managers › Cahier de liaison) ; administrateurs : tout. Le script Google contrôle tout (Liaison\Sources\liaison-google.js).
+// Code commun (données, catalogue, équipes, garde-fou de la charte) : celui de Liaison\Liaison.html, mis ici à l'assemblage.
+var LiaisonCommun=(function(){
+// Partie commune avec le script Google (copiée par build.mjs), la console (LiaisonCommun, construire-unique.mjs) et le PC de
+// la télé (serveur.mjs /api/liaison) : la même règle partout.
+// - Un état PAR SECTEUR (onglets « Données liaison », « Données liaison — fraisage »…) : msgs (messages), vus (actions déjà
+//   appliquées : un double envoi n'a pas d'effet), reglages (récurrence du secteur : console seulement), props (propositions
+//   d'action durable faites par une équipe), durables (brouillons d'action durable créés dans Tâches ou Fiches réflexes),
+//   archives (messages passés dans l'onglet d'historique), sec (identifiant du secteur, posé par le script et la tablette).
+// - UN catalogue commun à tous les secteurs (« cat », onglet « Données liaison (commun) », administrateurs seulement) : faits
+//   (icône, précisions, phrases prêtes, faits propres à un secteur ou masqués dans un secteur), causes, phrases « à savoir »,
+//   équipes (nom, horaires). Identifiants STABLES : un libellé changé garde son identifiant ; un élément retiré n'est jamais
+//   effacé, il est « archivé » (plus proposé, mais les anciens messages, les statistiques et l'export le gardent).
+// Aucun champ « qui » : la signature est la personne connectée par son code personnel (le code n'est jamais envoyé).
+// --- Choix par défaut (faciles à changer ici ; la console règle ensuite catalogue, équipes et récurrence) ---
+var LIAISON_MAX=200;            // messages gardés dans l'état d'un secteur (validé par l'utilisateur, 23/10). Au-delà, les plus
+                                // anciens RÉSOLUS passent dans l'onglet « Liaison — historique » (lisible, jamais effacé).
+var LIAISON_PLAFOND=400;        // plafond absolu, même si les messages sont encore ouverts (taille de la Sheet et des tablettes)
+var LIAISON_TXT=600;            // caractères au plus par texte (constaté, déjà fait, à savoir, commentaire, action)
+var LIAISON_HIST=40;            // lignes d'historique par message : au-delà, seuls les plus anciens COMMENTAIRES sont retirés
+                                // (« Lu », « Action » et « Résolu » ne se perdent jamais ; l'onglet lisible garde tout)
+var LIAISON_VUS=800;            // identifiants d'actions gardés (doubles envois)
+var LIAISON_HL_MAX=12*3600000;  // action faite hors ligne : au plus 12 h en arrière
+var LIAISON_REC={fois:3,jours:7};               // fait récurrent : 3 fois le même fait en 7 jours dans le secteur
+// Limites du catalogue (contrôlées par le script) : nombre d'éléments et longueur des libellés.
+var LIAISON_LIM={faits:40,precis:10,causes:15,phrases:10,suite:12,equipes:6,secteurs:12,nomFait:80,nomPrecis:80,nomCause:60,nomEquipe:30,phrase:200};
+// Icônes au choix pour un fait (au trait, viewBox 24). Même liste sur la tablette, la console et la télé.
+var LIAISON_ICONES={
+  chassis:'<rect x="2.5" y="5" width="19" height="14" rx="2"/><rect x="7" y="8.5" width="10" height="7" rx="1" stroke-dasharray="2 2"/>',
+  etiquette:'<path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/>',
+  decoupe:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2"/><path d="M12 4v3M12 17v3M4 12h3M17 12h3"/>',
+  production:'<path d="M12 3 3 8v8l9 5 9-5V8z"/><path d="M12 8v5M12 16h.01"/>',
+  inversion:'<path d="M7 4 3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7"/>',
+  manquant:'<path d="M3 8h18v12H3zM3 8l2-4h14l2 4"/><path d="M9 14h6"/>',
+  rapport:'<path d="M6 2h9l5 5v15H6z"/><path d="M14 2v6h6M10 13h6M10 17h4"/>',
+  retard:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  machine:'<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4M7 8h4"/>',
+  alerte:'<path d="M12 3.5 2.5 20h19z"/><path d="M12 10v4.5M12 17.5v.01"/>',
+  outil:'<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/>',
+  autre:'<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>'
+};
+// Phrases prêtes : elles décrivent SEULEMENT le fait (aucune consigne de sécurité ni geste inventé ; la seule demande reprend
+// l'exemple « à privilégier » de la charte). Repères remplacés sur la tablette : {sur le plateau} {du plateau} {machine}
+// (vides si rien n'est saisi), {plateau} {quantité} (phrase cachée si vide), {nt} {s} {est} {manque} (accord au pluriel).
+// Valeurs par défaut (décisions du 23/10) : les cases de la fiche + « Retard », les 3 précisions, « Méthode / organisation ».
+var LIAISON_CATALOGUE_DEFAUT={
+  equipes:[{id:'matin',nom:'Matin',debut:'07:00',fin:'15:00'},{id:'apres-midi',nom:'Après-midi',debut:'11:00',fin:'19:00'},{id:'nuit',nom:'Nuit',debut:'23:00',fin:'06:00'}],
+  faits:[
+    {id:'chassis',nom:'Châssis absent du plateau',ico:'chassis',phrases:['Bonjour, un châssis est absent{sur le plateau}{machine}.','Pourriez-vous contrôler la présence de chaque châssis avant fabrication ? Merci d’avance.']},
+    {id:'etiquette',nom:'Étiquette manquante sur le plateau',ico:'etiquette',phrases:['Bonjour, l’étiquette est manquante{sur le plateau}{machine}.']},
+    {id:'decoupe',nom:'Défaut de découpe sur le plateau',ico:'decoupe',phrases:['Bonjour, un défaut de découpe est visible{sur le plateau}{machine}.'],
+      precis:[{id:'coup-de-disque',nom:'Coup de disque',phrases:['Bonjour, {quantité} présente{nt} un coup de disque{sur le plateau}.']}]},
+    {id:'production',nom:'Défaut de production sur le plateau',ico:'production',phrases:['Bonjour, un défaut de production est visible{sur le plateau}{machine}.'],
+      precis:[{id:'poudre-intrados',nom:'Poudre dans l’intrados de bridge après le four',phrases:['Bonjour, {quantité} présente{nt} de la poudre dans l’intrados de bridge après le four{sur le plateau}.']}]},
+    {id:'inversion',nom:'Inversion d’élément dans la boîte',ico:'inversion',phrases:['Bonjour, {quantité} {est} inversé{s} dans la boîte{du plateau}.']},
+    {id:'manquant',nom:'Élément manquant dans la boîte',ico:'manquant',phrases:['Bonjour, {quantité} {manque} dans la boîte{du plateau}.','Le comptage a été refait.']},
+    {id:'rapport',nom:'Rapport de production incomplet ou incorrect',ico:'rapport',phrases:['Bonjour, le rapport de production{du plateau} est incomplet ou incorrect.'],
+      precis:[{id:'etiquette-rapport',nom:'Étiquette manquante sur le rapport',phrases:['Bonjour, l’étiquette est manquante sur le rapport de production{du plateau}.']}]},
+    {id:'retard',nom:'Retard de traitement ou de livraison',ico:'retard',phrases:['Bonjour, le traitement{sur le plateau} a pris du retard.']},
+    {id:'autre',nom:'Autre',ico:'autre',phrases:[]}
+  ],
+  causes:[{id:'machine',nom:'Machine / technique'},{id:'methode',nom:'Méthode / organisation'},{id:'inconnue',nom:'Non identifiée'},{id:'autre',nom:'Autre'}],
+  suite:['Information seulement, rien à faire.','Le plateau {plateau} attend votre contrôle.','{quantité} à reprendre.','Merci d’avance.']
+};
+var LIAISON_ETATS={ouvert:{nom:'Ouvert',sym:'○'},lu:{nom:'Lu par l’équipe suivante',sym:'◐'},action:{nom:'Action en cours',sym:'▶'},resolu:{nom:'Résolu',sym:'✓'}};
+var LIAISON_ORDRE=['ouvert','lu','action','resolu'];
+// Identifiants : messages et actions (LID), photos (LPHOTO), équipes / faits / causes / précisions / secteurs (LEQ). Les
+// anciens « jour » / « nuit » des premiers essais restent lisibles (nom affiché : « Jour », « Nuit »).
+var LID=/^[\w-]{1,40}$/,LPHOTO=/^p[a-z0-9]{6,39}$/,LEQ=/^[a-z0-9-]{1,30}$/;
+function ltxt(v,n){return String(v==null?'':v).replace(/\r/g,'').replace(/[\u0000-\u0009\u000b-\u001f]/g,' ').replace(/\n{3,}/g,'\n\n').trim().slice(0,n||LIAISON_TXT)}
+function lligne(v,n){return String(v==null?'':v).replace(/[\u0000-\u001f]/g,' ').trim().slice(0,n)}
+function lms(v){v=Number(v);return isFinite(v)&&v>0?Math.round(v):0}
+function lheure(v,d){v=String(v==null?'':v);return /^([01]\d|2[0-3]):[0-5]\d$/.test(v)?v:d}
+function lentier(v,min,max,d){v=Math.round(Number(v));return isFinite(v)&&v>=min&&v<=max?v:d}
+function slugId(n,d){var t=String(n||'');try{t=t.normalize('NFD').replace(/[̀-ͯ]/g,'')}catch(e){}return t.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,30)||d||'element'}
+// Identifiant unique dans une liste (on garde celui donné s'il est valide, sinon tiré du libellé).
+function idUnique(id,nom,vus,d){id=typeof id==='string'&&LEQ.test(id)?id:slugId(nom,d);var b=id,k=2;while(vus[id])id=(b.slice(0,26)+'-'+(k++));vus[id]=1;return id}
+// N° de plateau « Agir sur » (même règle que les Fours) : espaces et casse ignorés, « .wza » retiré.
+function normPlateau(v){return String(v==null?'':v).replace(/\s+/g,'').toUpperCase().replace(/\.WZA$/,'').replace(/[^\w.\/-]/g,'').slice(0,40)}
+// Forme habituelle (N-006-2151) ; une autre forme est acceptée mais signalée à l'écran.
+function formePlateau(n){return /^[A-Z]-\d{3}-\d{4}$/.test(String(n||''))}
+// Étiquette lue : « DAG-P:<n°> » (plateau), « DAG-M:<id> » (machine du parc).
+function lireEtiquette(t){
+  t=String(t==null?'':t).trim();
+  var m=/^DAG-P:(.{1,60})$/i.exec(t);if(m){var n=normPlateau(m[1]);return n?{plateau:n}:{err:'inconnu'}}
+  m=/^DAG-M:([A-Za-z0-9_.-]{1,64})$/.exec(t);if(m)return {machine:m[1]};
+  return {err:'inconnu'};
+}
+// --- Catalogue -----------------------------------------------------------------------------------------------------------
+function lphrases(l,n){return (Array.isArray(l)?l:[]).map(function(p){return lligne(p,LIAISON_LIM.phrase)}).filter(Boolean).slice(0,n)}
+function lsecteurs(l){return (Array.isArray(l)?l:[]).filter(function(x){return typeof x==='string'&&LEQ.test(x)}).slice(0,LIAISON_LIM.secteurs)}
+// Équipes : 1 à 6, nom, début et fin (HH:MM, fin le lendemain si elle est avant le début). Liste vide : valeurs par défaut.
+function normEquipes(l){
+  var o=[],vus={};
+  if(Array.isArray(l))l.slice(0,LIAISON_LIM.equipes).forEach(function(e){
+    if(!e||typeof e!=='object')return;
+    var nom=lligne(e.nom,LIAISON_LIM.nomEquipe),d=lheure(e.debut,''),f=lheure(e.fin,'');if(!nom||!d||!f||d===f)return;
+    o.push({id:idUnique(e.id,nom,vus,'equipe'),nom:nom,debut:d,fin:f});
+  });
+  return o.length?o:LIAISON_CATALOGUE_DEFAUT.equipes.map(function(e){return {id:e.id,nom:e.nom,debut:e.debut,fin:e.fin}});
+}
+function normCatalogue(c){
+  c=c&&typeof c==='object'?c:LIAISON_CATALOGUE_DEFAUT;
+  var o={v:1,maj:lms(c.maj),par:lligne(c.par,60),equipes:normEquipes(c.equipes),faits:[],causes:[],suite:[]},vf={},vc={};
+  (Array.isArray(c.faits)?c.faits:[]).slice(0,LIAISON_LIM.faits).forEach(function(f){
+    if(!f||typeof f!=='object')return;var nom=lligne(f.nom,LIAISON_LIM.nomFait);if(!nom)return;
+    var vp={},x={id:idUnique(f.id,nom,vf,'fait'),nom:nom,ico:Object.prototype.hasOwnProperty.call(LIAISON_ICONES,f.ico)?f.ico:'autre',archive:f.archive===true,
+      secteurs:lsecteurs(f.secteurs),masques:lsecteurs(f.masques),phrases:lphrases(f.phrases,LIAISON_LIM.phrases),precis:[]};
+    (Array.isArray(f.precis)?f.precis:[]).slice(0,LIAISON_LIM.precis).forEach(function(p){
+      if(typeof p==='string')p={nom:p};if(!p||typeof p!=='object')return;var pn=lligne(p.nom,LIAISON_LIM.nomPrecis);if(!pn)return;
+      x.precis.push({id:idUnique(p.id,pn,vp,'precision'),nom:pn,archive:p.archive===true,phrases:lphrases(p.phrases,5)});
+    });
+    o.faits.push(x);
+  });
+  (Array.isArray(c.causes)?c.causes:[]).slice(0,LIAISON_LIM.causes).forEach(function(k){
+    if(!k||typeof k!=='object')return;var nom=lligne(k.nom,LIAISON_LIM.nomCause);if(!nom)return;
+    o.causes.push({id:idUnique(k.id,nom,vc,'cause'),nom:nom,archive:k.archive===true});
+  });
+  o.suite=lphrases(c.suite,LIAISON_LIM.suite);
+  if(!o.faits.length)return normCatalogue(LIAISON_CATALOGUE_DEFAUT);
+  return o;
+}
+// Jamais d'effacement : un fait, une précision ou une cause de l'ancien catalogue absent du nouveau y est remis, ARCHIVÉ.
+function garderArchives(ancien,nouveau){
+  ancien=normCatalogue(ancien);
+  ancien.faits.forEach(function(f){
+    var n=null;nouveau.faits.forEach(function(x){if(x.id===f.id)n=x});
+    if(!n){var a=JSON.parse(JSON.stringify(f));a.archive=true;a.precis.forEach(function(p){p.archive=true});nouveau.faits.push(a);return}
+    f.precis.forEach(function(p){if(!n.precis.some(function(q){return q.id===p.id})){var b=JSON.parse(JSON.stringify(p));b.archive=true;n.precis.push(b)}});
+  });
+  ancien.causes.forEach(function(k){if(!nouveau.causes.some(function(x){return x.id===k.id}))nouveau.causes.push({id:k.id,nom:k.nom,archive:true})});
+  return nouveau;
+}
+function faitDe(cat,id){var l=cat&&cat.faits||[];for(var i=0;i<l.length;i++)if(l[i].id===id)return l[i];return null}
+function causeDe(cat,id){var l=cat&&cat.causes||[];for(var i=0;i<l.length;i++)if(l[i].id===id)return l[i];return null}
+function precisDe(f,id){var l=f&&f.precis||[];for(var i=0;i<l.length;i++)if(l[i].id===id)return l[i];return null}
+// Faits proposés dans un secteur : pas archivés, communs (ou propres à ce secteur), pas masqués dans ce secteur.
+function faitsDuSecteur(cat,sec){return (cat&&cat.faits||[]).filter(function(f){return !f.archive&&(!f.secteurs.length||f.secteurs.indexOf(sec)>=0)&&f.masques.indexOf(sec)<0})}
+// Nom affiché d'un message : libellé ACTUEL du fait (identifiant stable), sinon celui gardé à l'envoi (fait inconnu).
+function nomFait(m,cat){
+  var f=faitDe(cat,m&&m.fait),p=f&&m.precisId?precisDe(f,m.precisId):null;
+  return (f?f.nom:(m&&m.faitNom)||'Autre')+(p?' · '+p.nom:m&&m.precis?' · '+m.precis:'');
+}
+function nomCause(cat,id){var k=causeDe(cat,id);return k?k.nom:id?'Autre':''}
+function equipeDe(cat,id){var l=cat&&cat.equipes||[];for(var i=0;i<l.length;i++)if(l[i].id===id)return l[i];return null}
+function nomEquipe(cat,id){var e=equipeDe(cat,id);if(e)return e.nom;id=String(id||'');return id==='jour'?'Jour':id==='nuit'?'Nuit':id?id.charAt(0).toUpperCase()+id.slice(1).replace(/-/g,' '):'—'}
+// --- État d'un secteur -----------------------------------------------------------------------------------------------------
+function normReglages(r){
+  r=r&&typeof r==='object'?r:{};var rec=r.rec&&typeof r.rec==='object'?r.rec:{};
+  return {rec:{fois:lentier(rec.fois,2,10,LIAISON_REC.fois),jours:lentier(rec.jours,1,30,LIAISON_REC.jours)},maj:lms(r.maj),par:lligne(r.par,60)};
+}
+var LTYPES_HIST=['lu','comm','action','resolu'];
+function normHist(x){
+  if(!x||typeof x!=='object'||LTYPES_HIST.indexOf(x.t)<0||!lms(x.at))return null;
+  return {id:typeof x.id==='string'&&LID.test(x.id)?x.id:'',t:x.t,at:lms(x.at),par:lligne(x.par,60),parId:lligne(x.parId,40),
+    equipe:LEQ.test(String(x.equipe||''))?x.equipe:'',txt:ltxt(x.txt)};
+}
+function normLu(x){return x&&typeof x==='object'&&lms(x.at)?{at:lms(x.at),par:lligne(x.par,60),parId:lligne(x.parId,40)}:null}
+// Message : identifiants (fait, précision, cause, équipe) + libellés gardés à l'envoi (affichage si l'élément disparaissait).
+function normMsg(m){
+  if(!m||typeof m!=='object'||typeof m.id!=='string'||!LID.test(m.id)||!lms(m.at))return null;
+  var fait=LEQ.test(String(m.fait||''))?m.fait:'autre';
+  var o={id:m.id,fait:fait,faitNom:lligne(m.faitNom,LIAISON_LIM.nomFait),precisId:LEQ.test(String(m.precisId||''))?m.precisId:'',precis:lligne(m.precis,LIAISON_LIM.nomPrecis),
+    machine:typeof m.machine==='string'&&LID.test(m.machine)?m.machine:'',machineNom:lligne(m.machineNom,60),plateau:normPlateau(m.plateau),qte:lentier(m.qte,0,99,0),
+    cause:LEQ.test(String(m.cause||''))?m.cause:'',causeNom:lligne(m.causeNom,LIAISON_LIM.nomCause),
+    desc:ltxt(m.desc),deja:ltxt(m.deja),suivante:ltxt(m.suivante),photo:LPHOTO.test(String(m.photo||''))?m.photo:'',
+    equipe:LEQ.test(String(m.equipe||''))?m.equipe:'',auteur:lligne(m.auteur,60),auteurId:lligne(m.auteurId,40),at:lms(m.at),
+    etat:LIAISON_ORDRE.indexOf(m.etat)>=0?m.etat:'ouvert',lu:{},hist:[],fin:lms(m.fin)};
+  // « Lu » noté par équipe (identifiant de l'équipe → qui, quand).
+  var lu=m.lu&&typeof m.lu==='object'?m.lu:{};Object.keys(lu).slice(0,12).forEach(function(e){var x=LEQ.test(e)?normLu(lu[e]):null;if(x)o.lu[e]=x});
+  if(Array.isArray(m.hist))o.hist=compacterHist(m.hist.map(normHist).filter(Boolean));
+  return o;
+}
+function normProp(x){
+  if(!x||typeof x!=='object'||typeof x.id!=='string'||!LID.test(x.id)||!LEQ.test(String(x.fait||''))||!lms(x.at))return null;
+  return {id:x.id,fait:x.fait,at:lms(x.at),par:lligne(x.par,60),parId:lligne(x.parId,40),equipe:LEQ.test(String(x.equipe||''))?x.equipe:''};
+}
+// Brouillon d'action durable : créé par le script dans Tâches à faire ou Fiches réflexes (statut « brouillon », jamais montré
+// aux opérateurs), relié aux messages du fait récurrent. etat : « brouillon » puis « valide » (lu dans l'appli cible).
+function normDurable(x){
+  if(!x||typeof x!=='object'||typeof x.id!=='string'||!LID.test(x.id)||!LEQ.test(String(x.fait||''))||!lms(x.at))return null;
+  return {id:x.id,fait:x.fait,cible:x.cible==='fiches'?'fiches':'taches',ref:typeof x.ref==='string'&&LID.test(x.ref)?x.ref:'',titre:lligne(x.titre,120),
+    etat:x.etat==='valide'||x.etat==='retire'?x.etat:'brouillon',msgs:(Array.isArray(x.msgs)?x.msgs:[]).filter(function(i){return typeof i==='string'&&LID.test(i)}).slice(0,60),
+    at:lms(x.at),par:lligne(x.par,60),parId:lligne(x.parId,40)};
+}
+function normalizeState(s){
+  var o={v:2,sec:'',msgs:[],vus:[],reglages:normReglages(null),props:[],durables:[],archives:0,cat:normCatalogue(null)};
+  if(!s||typeof s!=='object')return o;
+  o.sec=LEQ.test(String(s.sec||''))?s.sec:'';
+  var vus={};
+  if(Array.isArray(s.msgs))s.msgs.forEach(function(m){var x=normMsg(m);if(x&&!vus[x.id]){vus[x.id]=1;o.msgs.push(x)}});
+  o.msgs.sort(function(a,b){return a.at-b.at||(a.id<b.id?-1:a.id>b.id?1:0)});
+  if(Array.isArray(s.vus))o.vus=s.vus.filter(function(x){return typeof x==='string'&&LID.test(x)}).slice(-LIAISON_VUS);
+  o.reglages=normReglages(s.reglages);
+  if(Array.isArray(s.props))o.props=s.props.map(normProp).filter(Boolean).slice(-50);
+  if(Array.isArray(s.durables))o.durables=s.durables.map(normDurable).filter(Boolean).slice(-50);
+  o.archives=lentier(s.archives,0,1e9,0);
+  o.cat=normCatalogue(s.cat);
+  return o;
+}
+// --- Équipes et heures --------------------------------------------------------------------------------------------------
+function minutesDe(h){var p=String(h).split(':');return Number(p[0])*60+Number(p[1])}
+function minutesA(t){var d=new Date(t);return d.getHours()*60+d.getMinutes()}
+// Une équipe est présente de son début (compris) à sa fin (non comprise) ; fin avant le début = le lendemain (Nuit 23 h-6 h).
+function presente(e,m){var d=minutesDe(e.debut),f=minutesDe(e.fin);return d<f?m>=d&&m<f:m>=d||m<f}
+// Équipes présentes à l'heure t (heure de Google) : aucune (hors des horaires), une, ou deux (chevauchement 11 h-15 h).
+function equipesA(t,cat){var m=minutesA(t);return ((cat||{}).equipes||[]).filter(function(e){return presente(e,m)}).map(function(e){return e.id})}
+// Équipe « qui arrive » (badge de l'accueil, télé) : parmi les présentes, celle qui a commencé le plus tard ; hors des horaires,
+// la prochaine à commencer.
+function equipeArrivee(t,cat){
+  var m=minutesA(t),l=(cat||{}).equipes||[],best=null,v=1e9,pres=l.filter(function(e){return presente(e,m)});
+  (pres.length?pres:l).forEach(function(e){var d=minutesDe(e.debut),x=pres.length?(m-d+1440)%1440:(d-m+1440)%1440;if(x<v){v=x;best=e}});
+  return best?best.id:'';
+}
+// Heure du dernier début de l'équipe avant t (« depuis le début de votre équipe »).
+function debutEquipe(t,cat,id){
+  var e=equipeDe(cat,id);if(!e)return 0;
+  var d=new Date(t),p=e.debut.split(':');d.setHours(Number(p[0]),Number(p[1]),0,0);
+  if(d.getTime()>t)d.setDate(d.getDate()-1);
+  return d.getTime();
+}
+// Heure = celle de Google (now), sauf action faite HORS LIGNE (a.hl) : heure de l'appareil recalée sur Google, jamais avant la
+// dernière heure Google connue de l'appareil (a.hg), jamais plus de 12 h en arrière ni dans le futur (même règle que les Fours).
+function heureAction(a,now){
+  var at=lms(a.at),hg=lms(a.hg);
+  if(!a.hl||!at||at>now+300000||at<now-LIAISON_HL_MAX)return now;
+  if(hg&&hg<=now+300000&&at<hg)at=hg;
+  return Math.min(at,now);
+}
+function trouverMsg(s,id){for(var i=0;i<s.msgs.length;i++)if(s.msgs[i].id===id)return s.msgs[i];return null}
+function lvu(s,a){s.vus.push(a.id);s.vus=s.vus.slice(-LIAISON_VUS)}
+// Historique trop long : on retire les plus anciens commentaires seulement (relecture du 23/10).
+function compacterHist(h){h=h.slice();for(var i=0;h.length>LIAISON_HIST&&i<h.length;){if(h[i].t==='comm')h.splice(i,1);else i++}return h}
+function lhist(m,e){m.hist.push(e);m.hist=compacterHist(m.hist)}
+// Brouillon d'action durable encore « brouillon » pour ce fait et cette appli (un 2e clic l'ouvre au lieu d'en créer un autre).
+function durableOuvert(s,fait,cible){for(var i=s.durables.length-1;i>=0;i--){var d=s.durables[i];if(d.fait===fait&&d.cible===cible&&d.etat==='brouillon')return d}return null}
+// Applique une action (déjà faite = ignorée). '' si tout va bien, sinon la raison du refus (montrée à l'écran).
+//  ecrire   {fait, precisId, machine, machineNom, plateau, qte, cause, desc, deja, suivante, photo, equipe} : nouveau message ;
+//           fait, précision et cause : proposés dans ce secteur (catalogue, pas archivés) ;
+//  lu       {mid, equipe} : « Lu, pris en compte » par l'équipe (une fois par équipe ; pas pour l'équipe qui l'a écrit) ;
+//  comm     {mid, txt}    : commentaire (toute personne connectée) ;
+//  action   {mid, txt}    : action corrective → « Action en cours » ; resoudre {mid, txt} : « Résolu ».
+//            RÉSERVÉS au manager du secteur (Liaison en Modification) ou à un administrateur — a.gerant posé par le script,
+//            jamais par la tablette — et à l'auteur du message (a.parId = auteurId) ;
+//  proposer {fait, equipe} : une équipe propose au manager une action durable (fait récurrent) ;
+//  durable  {fait, cible, titre, ref, msgs} : brouillon créé par le SCRIPT dans Tâches / Fiches (a.cree posé par le script) ;
+//  durable-etat {did, etat} : le script note « valide » quand le brouillon a été validé dans l'appli cible ;
+//  reglages {reglages, depuis} : CONSOLE seulement (a.console posé par le script) ; refus si changés ailleurs.
+// par / parId : la personne connectée (nom et identifiant du pack) ; jamais son code.
+function appliquer(s,a,now){
+  if(!a||typeof a!=='object'||typeof a.id!=='string'||!LID.test(a.id))return 'Action invalide.';
+  if(s.vus.indexOf(a.id)>=0)return '';
+  var at=heureAction(a,now),par=lligne(a.par,60),pid=lligne(a.parId,40),cat=s.cat,m,f,txt;
+  if(a.type==='reglages'){
+    if(a.console!==true)return 'Les réglages du cahier se changent dans la console (manager du secteur).';
+    if(lms(a.depuis)!==s.reglages.maj)return 'Les réglages ont été changés ailleurs : relisez-les avant de modifier.';
+    var r=normReglages(a.reglages);r.maj=Math.max(now,s.reglages.maj+1);r.par=par;s.reglages=r;lvu(s,a);return '';
+  }
+  if(a.type==='durable-etat'){
+    if(a.console!==true&&a.script!==true)return 'Action réservée au script.';
+    for(var i=0;i<s.durables.length;i++)if(s.durables[i].id===a.did)s.durables[i].etat=a.etat==='valide'?'valide':'brouillon';
+    lvu(s,a);return '';
+  }
+  if(!par)return 'Signature manquante : connectez-vous avec votre code personnel.';
+  if(a.type==='ecrire'){
+    f=faitDe(cat,a.fait);
+    if(!f||faitsDuSecteur(cat,s.sec).indexOf(f)<0)return 'Choisissez le fait constaté (ce fait n’est plus proposé : rechargez la liste).';
+    var p0=a.precisId?precisDe(f,a.precisId):null;if(a.precisId&&(!p0||p0.archive))return 'Cette précision n’est plus proposée : choisissez-en une autre.';
+    var k0=a.cause?causeDe(cat,a.cause):null;if(a.cause&&(!k0||k0.archive))return 'Cette cause n’est plus proposée : choisissez-en une autre.';
+    var suiv=ltxt(a.suivante);if(!suiv)return 'Écrivez ce que l’équipe suivante doit savoir.';
+    if(!equipeDe(cat,a.equipe))return 'Choisissez l’équipe émettrice.';
+    if(trouverMsg(s,a.id)){lvu(s,a);return ''}
+    m=normMsg({id:a.id,fait:f.id,faitNom:f.nom,precisId:p0?p0.id:'',precis:p0?p0.nom:'',machine:a.machine,machineNom:a.machineNom,
+      plateau:a.plateau,qte:a.qte,cause:k0?k0.id:'',causeNom:k0?k0.nom:'',desc:a.desc,deja:a.deja,suivante:suiv,photo:a.photo,equipe:a.equipe,auteur:par,auteurId:pid,at:at,etat:'ouvert'});
+    if(!m)return 'Message invalide.';
+    s.msgs.push(m);lvu(s,a);return '';
+  }
+  if(a.type==='proposer'){
+    if(!faitDe(cat,a.fait))return 'Fait inconnu.';
+    s.props=s.props.concat([normProp({id:a.id,fait:a.fait,at:at,par:par,parId:pid,equipe:a.equipe})]).slice(-50);lvu(s,a);return '';
+  }
+  if(a.type==='durable'){
+    if(a.gerant!==true)return 'Préparer une action durable : réservé au manager du secteur.';
+    if(a.cree!==true)return 'Le brouillon est créé par le script Google (mettez à jour le script).';
+    if(!faitDe(cat,a.fait))return 'Fait inconnu.';
+    if(durableOuvert(s,a.fait,a.cible==='fiches'?'fiches':'taches')){lvu(s,a);return ''}
+    var d=normDurable({id:a.id,fait:a.fait,cible:a.cible,ref:a.ref,titre:a.titre,etat:'brouillon',msgs:a.msgs,at:at,par:par,parId:pid});
+    if(!d||!d.ref)return 'Brouillon invalide.';
+    s.durables=s.durables.concat([d]).slice(-50);lvu(s,a);return '';
+  }
+  m=trouverMsg(s,a.mid);
+  if(!m)return 'Ce message n’est plus dans le cahier (archivé dans la Google Sheet) : rien n’a été fait.';
+  var eq=LEQ.test(String(a.equipe||''))?a.equipe:'';
+  if(a.type==='lu'){
+    if(!eq||!equipeDe(cat,eq))return 'Choisissez d’abord votre équipe.';
+    if(eq===m.equipe)return 'Ce message vient de votre équipe : « Lu, pris en compte » est pour les autres équipes.';
+    if(!m.lu[eq]){m.lu[eq]={at:at,par:par,parId:pid};if(m.etat==='ouvert')m.etat='lu';lhist(m,{id:a.id,t:'lu',at:at,par:par,parId:pid,equipe:eq,txt:''})}
+    lvu(s,a);return '';
+  }
+  if(m.etat==='resolu')return 'Ce message est déjà résolu.';
+  txt=ltxt(a.txt);
+  if(a.type==='comm'){
+    if(!txt)return 'Écrivez d’abord votre commentaire.';
+    // Identifiant stable du commentaire (même texte, même personne, même message) : un 2e appui n'ajoute rien.
+    if(m.hist.some(function(x){return x.t==='comm'&&x.id===a.id}))return '';
+    lhist(m,{id:a.id,t:'comm',at:at,par:par,parId:pid,equipe:eq,txt:txt});lvu(s,a);return '';
+  }
+  if(a.type==='action'||a.type==='resoudre'){
+    if(!(a.gerant===true||(pid&&pid===m.auteurId)))return 'L’action corrective et « Résolu » sont réservés au manager du secteur et à l’auteur du message.';
+    if(a.type==='action'){if(!txt)return 'Décrivez l’action corrective.';m.etat='action';lhist(m,{id:a.id,t:'action',at:at,par:par,parId:pid,equipe:eq,txt:txt})}
+    else{m.etat='resolu';m.fin=at;lhist(m,{id:a.id,t:'resolu',at:at,par:par,parId:pid,equipe:eq,txt:txt})}
+    lvu(s,a);return '';
+  }
+  return 'Action inconnue.';
+}
+// Un message est à lire pour CHACUNE des autres équipes du secteur ; une équipe qui l'a lu ne l'a plus « à lire » (il reste
+// dans « Ouverts » jusqu'à « Résolu »).
+function aLire(s,equipe){return equipe?(s&&s.msgs||[]).filter(function(m){return m.etat!=='resolu'&&m.equipe!==equipe&&!m.lu[equipe]}):[]}
+function aLireParEquipe(s){var o={};((s&&s.cat||{}).equipes||[]).forEach(function(e){o[e.id]=aLire(s,e.id).length});return o}
+// Faits récurrents du secteur : même fait au moins « fois » fois dans les « jours » derniers jours (messages gardés).
+function recurrences(s,now){
+  var reg=s.reglages||normReglages(null),depuis=now-reg.rec.jours*86400000,o={},ordre=[],l=[];
+  (s.msgs||[]).forEach(function(m){if(m.at>=depuis&&m.at<=now+300000){if(!o[m.fait]){o[m.fait]=[];ordre.push(m.fait)}o[m.fait].push(m)}});
+  ordre.forEach(function(id){var x=o[id];if(x.length>=reg.rec.fois)l.push({fait:id,nom:nomFait({fait:id,faitNom:x[x.length-1].faitNom},s.cat),n:x.length,ids:x.map(function(m){return m.id}),dernier:x[x.length-1].at})});
+  return l.sort(function(a,b){return b.n-a.n});
+}
+// Brouillon d'action durable relié à un message (affiché sur la fiche du message).
+function durablesDuMessage(s,mid){return (s.durables||[]).filter(function(d){return d.msgs.indexOf(mid)>=0})}
+// Taille : au plus LIAISON_MAX messages (les plus anciens RÉSOLUS sortent), jamais plus de LIAISON_PLAFOND. Renvoie les
+// messages sortis (le script Google les écrit dans l'onglet « Liaison — historique »).
+function ranger(s){
+  var sortis=[];if(s.msgs.length<=LIAISON_MAX)return sortis;
+  var partir={},n=s.msgs.length,cle=function(m){return m.fin||m.at};
+  s.msgs.filter(function(m){return m.etat==='resolu'}).sort(function(a,b){return cle(a)-cle(b)}).forEach(function(m){if(n>LIAISON_MAX){partir[m.id]=1;n--}});
+  s.msgs.forEach(function(m){if(n>LIAISON_PLAFOND&&!partir[m.id]){partir[m.id]=1;n--}});
+  s.msgs=s.msgs.filter(function(m){if(partir[m.id]){sortis.push(m);return false}return true});
+  s.archives+=sortis.length;
+  return sortis;
+}
+
+// Garde-fou de la charte (2026-10-23, corrigé après relecture) : relecture sur l'appareil, SANS IA ni réseau, jamais bloquante.
+// Il repère des mots et des tournures (il ne « comprend » pas le texte) : reproche (« encore »), généralisation, ordre,
+// jugement, équipe visée, tutoiement, cris (MAJUSCULES, « !! »), et les noms des personnes du pack (site.personnes).
+// Noms : seulement écrits avec une majuscule ; les mots courants qui sont aussi des prénoms (claire, rose, pierre…) ne sont
+// signalés que sous la forme « Prénom Nom ». MAJUSCULES : jamais les sigles ni les noms des machines du parc (PROX, DMG MORI).
+// La reformulation suit le style « à privilégier » de la charte ; elle est PROPOSÉE (« Utiliser ce texte »), jamais imposée,
+// et jamais vide. Même code sur la tablette et dans la console (LiaisonCommun), et pour les phrases prêtes de la console.
+var GardeFou=(function(){
+  var B='(?<![\\p{L}\\d_])',E='(?![\\p{L}\\d_])',U='giu',UC='gu';
+  // Navigateur trop ancien (pas de \p{L} ni de regard arrière) : limites de mots simples.
+  try{new RegExp(B+'x'+E,U)}catch(e){B='\\b';E='\\b';U='gi';UC='g'}
+  function re(s,f){return new RegExp(s.replace(/\\b<|\\b>/g,function(x){return x==='\\b<'?B:E}),f||U)}
+  var SIGLES=['QR','CAO','FAO','USB','OK','N1','DAG','CSV','PC','PDF','UV','WZA','PROX','DMG','MORI','TP','CNC','SAV','NC','RAS'];
+  var EXCEPTIONS=[]; // mots en capitales permis en plus (noms des machines du parc), posés par la page : GardeFou.exceptions([...])
+  var MAJ='[A-ZÀÂÄÇÉÈÊËÎÏÔÖÙÛÜ]';
+  function permis(m){return SIGLES.indexOf(m)>=0||EXCEPTIONS.indexOf(m)>=0||/\d/.test(m)}
+  var REGLES=[
+    {re:re('\\b<encore\\b>'),quoi:'« encore »',pq:'sonne comme un reproche.',sug:'Décrivez le fait d’aujourd’hui. Si le fait revient, l’appli le repère et propose une action durable.',
+      rep:function(s){return s.replace(re('\\b<encore (un|une|des|le|la|les)\\b>'),'$1').replace(re('\\b<encore\\b> ?'),'')}},
+    {re:re('\\b<toujours\\b>'),quoi:'« toujours »',pq:'généralise.',sug:'Dites ce qui a été constaté aujourd’hui : combien, où.'},
+    {re:re('\\b<jamais\\b>'),quoi:'« jamais »',pq:'généralise.',sug:'Dites ce qui a été constaté aujourd’hui : combien, où.'},
+    {re:re('\\b<il faut\\b>|\\b<vous devez\\b>|\\b<tu dois\\b>|\\b<faut que\\b>'),quoi:'une tournure d’ordre',pq:'peut être reçue comme un reproche.',sug:'Proposez plutôt : « Pourriez-vous … ? Merci. »',
+      rep:function(s){return s.replace(re('\\b<il faut\\b>'),'pourriez-vous').replace(re('\\b<vous devez\\b>'),'pourriez-vous')}},
+    {re:re('n[\'’]importe quoi|\\b<nul(?:le)?s?\\b>|\\b<bâcl\\p{L}*|\\b<mal fait\\b>|\\b<incompétent\\p{L}*|\\b<pas fait\\b>|\\b<pas vérifié|\\b<personne ne\\b>|\\b<personne n[\'’]'),quoi:'un jugement',pq:'porte sur le travail ou les gens, pas sur le fait.',sug:'Décrivez seulement ce qui est constaté.'},
+    {re:re('\\s?\\b<correctement\\b>|\\s?\\b<comme il faut\\b>|\\s?\\b<sérieusement\\b>'),quoi:'« correctement »',pq:'sous-entend que le travail a été mal fait.',sug:'Demandez le contrôle précis : « Pourriez-vous contrôler la présence de… ? »',
+      rep:function(s){return s.replace(re('\\s?\\b<(?:correctement|comme il faut|sérieusement)\\b>'),'')}},
+    {re:re('\\b<(?:faute|coupable|responsable de l[\'’]erreur)\\b>'),quoi:'« faute »',pq:'cherche « qui » au lieu de « pourquoi ».',sug:'Charte : comprendre pourquoi, pas chercher qui.'},
+    {re:re('\\b<(?:l[\'’]équipe (?:de |du |d[\'’])?|la |le )(?:nuit|jour|matin|après-midi|apres-midi) (?:a|ont|n[\'’]a|n[\'’]ont)\\b>'),quoi:'une équipe visée',pq:'le message désigne une équipe plutôt que le fait.',sug:'Décrivez le fait : « un châssis est absent sur le plateau… »'},
+    {re:re('\\b<tu\\b>|\\b<t[\'’]'),quoi:'le tutoiement',pq:'vise une personne.',sug:'Le message s’adresse aux autres équipes : « vous » ou une phrase sans destinataire.'},
+    {re:/!{2,}/g,quoi:'plusieurs « ! »',pq:'donnent un ton fâché.',sug:'Un point suffit.',rep:function(s){return s.replace(/!{2,}/g,'.')}},
+    {re:re('\\b<'+MAJ+'{3,}\\b>',UC),quoi:'des MAJUSCULES',pq:'se lisent comme un cri.',sug:'Écrivez en minuscules.',filtre:function(m){return !permis(m)},
+      rep:function(s){return s.replace(re('\\b<'+MAJ+'{3,}\\b>',UC),function(m){return permis(m)?m:m.toLowerCase()})}}
+  ];
+  // Mots de l'atelier jamais pris pour des noms ; mots courants qui sont aussi des prénoms ou des noms : seulement « Prénom Nom ».
+  var COMMUNS=['four','fours','jour','nuit','matin','midi','plateau','machine','equipe','équipe','manager','chef','poste','atelier','frittage','fraisage','grattage','resine','résine','prox','trumpf','bonjour','merci'];
+  var COURANTS=['claire','rose','blanc','blanche','pierre','ambre','constant','petit','martin','marine','olive','céleste','grand','legrand','noël','noel','lebrun','brun','rousseau','leroy','roy','vincent','laurent','france','prudence','victoire','dominique','camille','julien','marie','jean'];
+  function echap(t){return t.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}
+  function majuscule(w){var c=w.charAt(0);return c!==c.toLowerCase()&&c===c.toUpperCase()}
+  function listesNoms(noms){
+    var vus={},mots=[],complets=[],courants=[];
+    (noms||[]).forEach(function(n){n=String(n||'').trim();if(!n)return;
+      var ws=n.split(/[\s\-’'.,]+/).filter(function(w){return w.length>=2});
+      if(ws.length>1&&complets.indexOf(n)<0)complets.push(n);
+      ws.forEach(function(w){var k=w.toLowerCase();if(w.length<3||vus[k]||!majuscule(w)||COMMUNS.indexOf(k)>=0)return;vus[k]=1;(COURANTS.indexOf(k)<0?mots:courants).push(w)});
+    });
+    var tri=function(a,b){return b.length-a.length};
+    return {mots:mots.sort(tri),complets:complets.sort(tri),courants:courants.sort(tri)};
+  }
+  // Repérage SENSIBLE À LA CASSE (relecture du 23/10) : « claire » (couleur) n'est jamais un nom.
+  function regleNoms(noms){
+    var L=listesNoms(noms),parts=L.complets.map(function(n){return echap(n).replace(/\s+/g,'\\s+')}).concat(L.mots.map(echap));
+    // Mot courant (Claire, Martin…) avec une majuscule AU MILIEU d'une phrase : c'est un nom ; en début de phrase : non.
+    var cour=L.courants.length&&B!=='\\b'?'(?<!(?:^|[.!?:;])\\s*)(?:'+L.courants.map(echap).join('|')+')\\b>|':'';
+    var civ='\\b<(?:M\\.|Mme|Monsieur|Madame) \\p{Lu}\\p{L}*',src=(parts.length?'\\b<(?:'+parts.join('|')+')\\b>|':'')+cour+civ,r;
+    try{r=re(src,UC)}catch(e){r=re((parts.length?'\\b<(?:'+parts.join('|')+')\\b>|':'')+'\\b<(?:M\\.|Mme|Monsieur|Madame) [A-Z]\\w*','g')}
+    return {re:r,quoi:'un prénom ou un nom',pq:'désigne une personne : le cahier ne vise personne.',sug:'Retirez le nom. L’auteur est déjà signé et la cause se décrit sans nom.',prenom:true};
+  }
+  function regles(noms){return REGLES.concat([regleNoms(noms)])}
+  function verifier(txt,noms){
+    var hits=[];if(!txt)return hits;
+    regles(noms).forEach(function(r,n){
+      r.re.lastIndex=0;var m;
+      while((m=r.re.exec(txt))){if(!m[0]){r.re.lastIndex++;continue}if(r.filtre&&!r.filtre(m[0]))continue;hits.push({n:n,i:m.index,l:m[0].length,mot:m[0],prenom:!!r.prenom});if(!r.re.global)break}
+    });
+    return hits.sort(function(a,b){return a.i-b.i});
+  }
+  // Phrases d'un texte (sans « regard arrière » écrit tel quel : un vieux navigateur refuserait toute la page).
+  function phrasesDe(t){return (String(t||'').match(/[^.!?]+[.!?]*\s*|[.!?]+\s*/g)||[]).map(function(p){return p.trim()}).filter(Boolean)}
+  // Une phrase qui nomme quelqu'un est retirée entière (retirer le seul prénom laisserait « … a oublié »). Proposition vide ou
+  // réduite à « Bonjour » : '' (aucune proposition n'est faite).
+  function reformuler(txt,noms){
+    var rs=regles(noms),rn=rs[rs.length-1].re;
+    var s=phrasesDe(txt).filter(function(p){rn.lastIndex=0;return !rn.test(p)}).join(' ');
+    rs.forEach(function(r){if(r.rep)s=r.rep(s)});
+    s=s.replace(/[ \t]{2,}/g,' ').replace(/\s+([.,])/g,'$1').replace(/,\s*\./g,'.').trim();
+    if(!s||/^[\s.,!?]*$/.test(s))return '';
+    s=phrasesDe(s).map(function(p){return /pourriez-vous/i.test(p)?p.replace(/[.!]?$/,' ?').replace(/\s+\?$/,' ?'):p}).join(' ');
+    s=s.charAt(0).toLowerCase()+s.slice(1);
+    s=/^bonjour/i.test(s)?s.charAt(0).toUpperCase()+s.slice(1):'Bonjour, '+s;
+    if(/pourriez-vous/i.test(s)&&!/merci/i.test(s))s+=' Merci d’avance.';
+    if(/^bonjour[\s,.!]*(merci[^.]*\.?)?$/i.test(s))return '';
+    return s;
+  }
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+  function surligner(txt,hits){
+    var out='',p=0,k=0;
+    hits.forEach(function(h){if(h.i<p)return;k++;out+=esc(txt.slice(p,h.i))+'<mark>'+esc(h.mot)+'<sup>'+k+'</sup></mark>';p=h.i+h.l});
+    return out+esc(txt.slice(p));
+  }
+  // Texte réel (pas un pseudo-élément CSS) : lu par les lecteurs d'écran.
+  var GF_OK='✓ Ton factuel, rien à revoir.';
+  function nbPoints(txt,noms){var v={};verifier(txt,noms).forEach(function(h){v[h.n]=1});return Object.keys(v).length}
+  // Panneau sous un champ de texte (cle = nom du champ, pour « Utiliser ce texte » ; pas de bouton si rien à proposer).
+  function panneau(txt,cle,noms){
+    if(!txt||!String(txt).trim())return '<div class="gf" aria-live="polite"><span class="muted" style="font-size:15px">La relecture de la charte se fait ici, sur l’appareil, pendant que vous écrivez.</span></div>';
+    var rs=regles(noms),hits=verifier(txt,noms);
+    if(!hits.length)return '<div class="gf ok" aria-live="polite">'+GF_OK+'</div>';
+    var vus={},lignes=[],k=0,nb=0;
+    hits.forEach(function(h){k++;var r=rs[h.n];if(vus[h.n])return;vus[h.n]=1;nb++;
+      lignes.push('<li><b>'+k+'. '+(r.prenom?'⚑ ':'')+r.quoi+'</b> '+r.pq+' <span class="muted">'+r.sug+'</span></li>')});
+    var nouv=reformuler(txt,noms);
+    var ap=nouv&&nouv!==String(txt).trim()?'<div class="ap"><b>Proposition de texte :</b> '+esc(nouv)+'<div style="margin-top:6px"><button type="button" class="btn sm" data-act="gf-utiliser" data-cle="'+esc(cle)+'">✓ Utiliser ce texte</button> <span class="muted">ou gardez le vôtre, rien n’est bloqué.</span></div></div>':'';
+    var nom=hits.some(function(h){return h.prenom})?'<p class="alerte-nom">⚑ Un nom de personne a été repéré. Le cahier ne désigne personne : merci de le retirer.</p>':'';
+    return '<div class="gf" aria-live="polite"><div class="tt">• À relire ('+nb+' point'+(nb>1?'s':'')+') : '+surligner(String(txt),hits)+'</div>'+nom+'<ul>'+lignes.join('')+'</ul>'+ap+'</div>';
+  }
+  // Noms des machines du parc écrits en capitales (PROX 5, DMG MORI…) : jamais signalés.
+  function exceptions(l){EXCEPTIONS=[];(l||[]).forEach(function(n){String(n||'').split(/[^A-Za-zÀ-ÿ0-9]+/).forEach(function(w){if(w.length>=2&&w===w.toUpperCase()&&EXCEPTIONS.indexOf(w)<0)EXCEPTIONS.push(w)})})}
+  return {verifier:verifier,reformuler:reformuler,panneau:panneau,nbPoints:nbPoints,exceptions:exceptions,OK:GF_OK};
+})();
+
+return {normalizeState:normalizeState,appliquer:appliquer,aLire:aLire,aLireParEquipe:aLireParEquipe,recurrences:recurrences,ranger:ranger,normPlateau:normPlateau,formePlateau:formePlateau,normCatalogue:normCatalogue,garderArchives:garderArchives,faitDe:faitDe,causeDe:causeDe,precisDe:precisDe,faitsDuSecteur:faitsDuSecteur,nomFait:nomFait,nomCause:nomCause,equipeDe:equipeDe,nomEquipe:nomEquipe,normReglages:normReglages,equipesA:equipesA,equipeArrivee:equipeArrivee,debutEquipe:debutEquipe,durableOuvert:durableOuvert,durablesDuMessage:durablesDuMessage,LIAISON_ETATS:LIAISON_ETATS,LIAISON_ORDRE:LIAISON_ORDRE,LIAISON_REC:LIAISON_REC,LIAISON_TXT:LIAISON_TXT,LIAISON_MAX:LIAISON_MAX,LIAISON_LIM:LIAISON_LIM,LIAISON_ICONES:LIAISON_ICONES,LIAISON_CATALOGUE_DEFAUT:LIAISON_CATALOGUE_DEFAUT,GardeFou:GardeFou};
+})(); // <liaison-commun> (remplacé par construire-unique.mjs assemblerConsole)
+const LI={onglet:'tableau',d:null,t:0,sel:null,f:{secteur:'',equipe:'',fait:'',machine:'',periode:'14'},comm:'',action:'',msg:null,reg:null,regSale:false,dur:null,lecture:0,cle:'',
+  cat:null,catSale:false,acc:null,accB:null,accLecture:0,accMsg:null};
+const LI_ICONES={chassis:'Châssis',etiquette:'Étiquette',decoupe:'Découpe',production:'Production',inversion:'Inversion',manquant:'Manquant',rapport:'Rapport',retard:'Retard',machine:'Machine',alerte:'Alerte',outil:'Outil',autre:'Autre'};
+const liNow=()=>Date.now()+(LI.d&&LI.d.ecart||0);
+const liCat=()=>LI.d&&LI.d.catalogue?LI.d.catalogue:LiaisonCommun.normCatalogue(null);
+function liCss(){
+  if(document.getElementById('liCss'))return;
+  const st=document.createElement('style');st.id='liCss';
+  st.textContent='.li-secs{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}.li-sec{text-align:left;cursor:pointer;margin:0;font:inherit;color:inherit}'+
+    '.li-sec h2{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}.li-ch{display:grid;grid-template-columns:1fr 1fr;gap:8px}.li-ch div{border-radius:10px;padding:6px 8px;background:var(--line2,#eef2f3)}'+
+    '.li-ch b{display:block;font-size:24px;font-variant-numeric:tabular-nums}.li-ch span{font-size:15px;color:var(--muted,#5d6f78)}'+
+    '.li-e{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:2px 10px;font-size:15px;font-weight:700;border:1px solid transparent;white-space:nowrap}'+
+    '.li-e.ouvert{background:#FFF1D6;color:#A85A00;border-color:#E08A00}.li-e.lu{background:#e3eefb;color:#1d5aa6;border-color:#1d5aa6}.li-e.action{background:#DDF3F5;color:#065E66;border-color:#0B8A96}.li-e.resolu{background:#E2F5E7;color:#1F7A3A;border-color:#1F7A3A}'+
+    '.li-filtres{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin:12px 0}.li-filtres label{display:flex;flex-direction:column;font-size:15px;gap:3px;flex:1 1 150px}'+
+    '.li-tbl tr.cl{cursor:pointer}.li-tbl tr.cl:hover td,.li-tbl tr.cl:focus td{background:var(--accent-soft,#DDF3F5)}'+
+    '.li-barres{display:flex;flex-direction:column;gap:8px}.li-barre{display:grid;grid-template-columns:minmax(120px,240px) 1fr 40px;gap:10px;align-items:center;font-size:15px}'+
+    '.li-barre .f{height:22px;border-radius:6px;background:var(--line2,#eef2f3);overflow:hidden}.li-barre .f i{display:block;height:100%;background:#0B8A96;border-radius:6px}.li-barre b{text-align:right}'+
+    '.li-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}.li-stats .card{margin:0}'+
+    '.li-suivi{display:flex;margin:12px 0 4px;flex-wrap:wrap;padding:0}.li-suivi li{list-style:none;flex:1 1 120px;padding:8px 8px 8px 0;font-size:15px;font-weight:650;color:var(--muted,#5d6f78)}'+
+    '.li-suivi .pt{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:50%;border:2px solid var(--line,#d9e1e5);margin-right:6px;font-weight:800}'+
+    '.li-suivi li.fait{color:inherit}.li-suivi li.fait .pt{border-color:#1F7A3A;background:#E2F5E7;color:#1F7A3A}.li-suivi li.ici{color:inherit}.li-suivi li.ici .pt{border-color:#0B8A96;background:#DDF3F5;color:#065E66}'+
+    '.li-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-top:10px}.li-kv{border:1px solid var(--line2,#eef2f3);border-radius:10px;padding:8px 10px}.li-kv .k{font-size:15px;color:var(--muted,#5d6f78)}.li-kv .v{font-weight:650;overflow-wrap:anywhere}'+
+    '.li-bloc{margin-top:12px}.li-bloc>h3{font-size:15px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted,#5d6f78);margin:0 0 4px}.li-bloc p{white-space:pre-wrap;overflow-wrap:anywhere;margin:0}'+
+    '.li-histo{list-style:none;padding:0;margin:0}.li-histo li{display:flex;gap:10px;padding:8px 0;border-top:1px solid var(--line2,#eef2f3);font-size:15px;flex-wrap:wrap}.li-histo .h{white-space:nowrap;color:var(--muted,#5d6f78);min-width:110px}'+
+    '.li-signe{font-size:15px;color:var(--muted,#5d6f78);margin-top:10px;border-top:1px dashed var(--line,#d9e1e5);padding-top:8px}'+
+    '#page .gf{margin-top:8px;border-radius:12px;border:1px solid var(--line,#d9e1e5);padding:10px 12px}#page .gf.ok{border-color:#1F7A3A;background:#E2F5E7;color:#1F7A3A;font-weight:700;font-size:15px}'+
+    '#page .gf .tt{font-weight:750;color:#A85A00;font-size:15px;overflow-wrap:anywhere}'+
+    '#page .gf ul{margin:6px 0 0;padding-left:0;list-style:none}#page .gf li{padding:6px 0;border-top:1px solid var(--line2,#eef2f3);font-size:15px}#page .gf li:first-child{border-top:0}'+
+    '#page .gf .ap{margin-top:8px;padding:10px;border-radius:10px;background:#DDF3F5;color:#15242b;font-size:15px}#page .gf .muted{color:var(--muted,#5d6f78)}#page .gf mark{background:#fff1c2;color:#15242b;border-bottom:2px dotted #A85A00;padding:0 2px;border-radius:3px}'+
+    '#page .gf mark sup{font-weight:800;color:#A85A00;font-size:12px}#page .alerte-nom{color:#A85A00;font-weight:700;font-size:15px;margin:6px 0 0}#page .btn.sm{min-height:44px;font-size:15px;padding:6px 12px}'+
+    '.li-tri{display:inline-flex;gap:3px;background:var(--line2,#eef2f3);padding:4px;border-radius:12px;flex-wrap:wrap}.li-tri button{border:0;background:transparent;border-radius:9px;padding:6px 12px;min-height:44px;font:inherit;font-weight:600;font-size:15px;color:var(--muted,#5d6f78);cursor:pointer}'+
+    '.li-tri button[aria-pressed="true"]{background:var(--card,#fff);color:inherit;outline:2px solid #0B8A96;outline-offset:-2px}'+
+    '.li-cat .card{margin:0 0 12px}.li-cat .ligne{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0}.li-cat .ligne .in{flex:1 1 180px}.li-cat .arch{opacity:.6}'+
+    '.li-cat textarea{width:100%;min-height:90px}.li-avis{color:#A85A00;font-weight:700;font-size:15px;margin:4px 0 0}.li-ico{width:28px;height:28px;flex:none;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}';
+  document.head.appendChild(st);
+}
+const LI_ETAT=e=>{const x=LiaisonCommun.LIAISON_ETATS[e]||LiaisonCommun.LIAISON_ETATS.ouvert;return '<span class="li-e '+esc(e)+'">'+x.sym+' '+x.nom+'</span>'};
+const liEq=e=>LiaisonCommun.nomEquipe(liCat(),e);
+const liJH=t=>t?dateFr(t)+' '+heureFr(t):'';
+const LI_DUR={brouillon:'• brouillon (à compléter et valider)',valide:'✓ validé',retire:'✕ retiré'};
+async function liLire(force){
+  if(!force&&LI.d&&Date.now()-LI.t<15000)return LI.d;
+  const j=await appel('liaison-lire',{});
+  if(j.status!==200)throw new Error(j.data&&j.data.error||'Lecture impossible.');
+  LI.d=Object.assign({},j.data,{ecart:j.data.heure?j.data.heure-Date.now():0});LI.t=Date.now();
+  return LI.d;
+}
+// Secteurs affichés : ceux de la Liaison permis, filtrés par le sélecteur du haut s'il en choisit un.
+function liSecteurs(d){const l=Object.keys(d.secteurs||{});return filtreSecteur()&&l.includes(S.secteur)?[S.secteur]:l}
+function liEtat(d,sec){const s=LiaisonCommun.normalizeState(Object.assign({},(d.secteurs[sec]||{}).state,{cat:d.catalogue}));(s.durables||[]).forEach((x,i)=>{const o=(((d.secteurs[sec]||{}).state||{}).durables||[])[i];if(o&&o.etat)x.etat=o.etat});return s}
+const liModif=(d,sec)=>!!(d.secteurs[sec]&&d.secteurs[sec].niveau==='modif');
+function liTous(d){
+  const o=[];liSecteurs(d).forEach(sec=>{liEtat(d,sec).msgs.forEach(m=>o.push(Object.assign({sec},m)))});
+  return o.sort((a,b)=>b.at-a.at);
+}
+function liFiltrer(d){
+  const f=LI.f,now=liNow();
+  return liTous(d).filter(m=>(!f.secteur||m.sec===f.secteur)&&(!f.equipe||m.equipe===f.equipe)&&(!f.fait||m.fait===f.fait)&&(!f.machine||m.machineNom===f.machine)&&(f.periode==='tout'||now-m.at<=Number(f.periode)*864e5));
+}
+PAGES.liaison=async()=>{
+  liCss();
+  let h=enTete('liaison','Messages entre les équipes : suivi, actions correctives, faits qui reviennent. Jamais de statistique par personne.',
+    '<button class="btn" data-li="csv">'+svg('imprim')+'Exporter (tableur)</button>');
+  if(!LiaisonCommun)return h+'<div class="msg err">'+svg('alerte')+'<div><b>Code du cahier de liaison absent de cette console</b> (Liaison\\Liaison.html) : la console est à reconstruire.</div></div>';
+  let d;
+  try{d=await liLire(false)}catch(e){if(e.message==='session')throw e;
+    if(/Opération refusée|mettez à jour/i.test(e.message))return h+'<div class="msg warn">'+svg('alerte')+'<div><b>Le script Google du cahier de liaison n’est pas encore en ligne.</b> Il sera mis en ligne par le responsable du pack (Script-Google-liaison.txt).</div></div>';
+    return h+'<div class="msg err">'+svg('alerte')+'<div><b>'+esc(e.message)+'</b></div></div>'}
+  GardeFou_exceptions(d);
+  const secs=liSecteurs(d);
+  if(!secs.length)return h+'<div class="msg info">'+svg('aide')+'<div><b>Aucun secteur pour le cahier de liaison.</b> '+(filtreSecteur()?'Choisissez « Tous » en haut.':'Demandez l’accès à l’administrateur (Accès des managers › Cahier de liaison).')+'</div></div>';
+  if(LI.msg)h+='<div class="msg '+LI.msg[0]+'" role="status">'+svg(LI.msg[0]==='ok'?'ok':'alerte')+'<div>'+LI.msg[1]+'</div></div>';
+  if(LI.sel){const t=liTous(d).find(m=>m.id===LI.sel.id&&m.sec===LI.sel.sec);if(t)return h+liFiche(d,t);LI.sel=null}
+  const O=LI.onglet;
+  h+='<div class="row" role="tablist" aria-label="Cahier de liaison" style="margin-bottom:14px">'+[['tableau','Tableau par secteur'],['liste','Messages'],['stats','Statistiques'],['reglages','Réglages']].map(([k,t])=>'<button class="chip" role="tab" data-li="onglet" data-v="'+k+'" aria-pressed="'+(O===k)+'">'+t+'</button>').join('')+'</div>';
+  if(O!=='reglages')h+=liRecurrences(d,secs);
+  h+=O==='liste'?liListe(d):O==='stats'?liStats(d):O==='reglages'?liReglages(d,secs):liTableau(d,secs);
+  LI.cle=JSON.stringify(secs.map(s=>(d.secteurs[s]||{}).rev));
+  return h;
+};
+// Noms des machines en capitales (PROX, DMG MORI…) : jamais signalés par le garde-fou de la console.
+function GardeFou_exceptions(d){try{const l=[];Object.keys(d.secteurs||{}).forEach(s=>(((d.secteurs[s]||{}).state||{}).msgs||[]).forEach(m=>{if(m.machineNom)l.push(m.machineNom)}));LiaisonCommun.GardeFou.exceptions(l.concat(d.machines||[]))}catch(e){}}
+// Faits récurrents : préparer un VRAI brouillon (Tâches à faire ou Fiches réflexes). Un 2e clic ouvre le brouillon existant.
+function liRecurrences(d,secs){
+  const now=liNow(),br=d.brouillons||{};let h='';
+  if(LI.dur){const D=LI.dur,s=liEtat(d,D.sec),f=LiaisonCommun.faitDe(s.cat,D.fait);
+    if(f){const ex=c=>{const x=LiaisonCommun.durableOuvert(s,f.id,c);return x?' <span class="tag">déjà préparé : « '+esc(x.titre)+' »</span>':''};
+      h+='<section class="card" style="border:2px solid #0B8A96"><h2>'+svg('plus')+'Préparer une action durable · '+esc(secNom(D.sec))+'</h2><p>'+esc(f.nom)+' : le fait revient. Un <b>brouillon</b> est créé dans l’appli choisie avec le titre « '+esc(f.nom)+' — '+esc(secNom(D.sec))+' » et une note. <b>Les opérateurs ne le voient pas</b> tant qu’il n’est pas complété et validé (Contenus des applis). Rien d’autre n’est inventé.</p>'+
+        '<div class="row">'+(br.taches?'<button class="btn pri" data-li="dur-ok" data-c="taches">'+pastille('taches','s')+' Brouillon de tâche'+ex('taches')+'</button>':'')+(br.fiches?'<button class="btn pri" data-li="dur-ok" data-c="fiches">'+pastille('fiches','s')+' Brouillon de fiche réflexe'+ex('fiches')+'</button>':'')+'<button class="btn" data-li="dur-non">Pas maintenant</button></div>'+
+        (br.taches||br.fiches?'':'<p class="hint">Il faut aussi le droit de Modification sur « Tâches à faire » ou « Fiches réflexes » pour ce secteur.</p>')+'</section>'}}
+  secs.forEach(sec=>{const s=liEtat(d,sec);LiaisonCommun.recurrences(s,now).forEach(r=>{
+    const lim=now-s.reglages.rec.jours*864e5,prop=s.props.filter(p=>p.fait===r.fait&&p.at>=lim).pop(),preps=s.durables.filter(p=>p.fait===r.fait);
+    h+='<div class="msg warn">'+svg('alerte')+'<div style="flex:1"><b>'+esc(secNom(sec))+' · '+esc(r.nom)+' : '+r.n+' fois en '+s.reglages.rec.jours+' jours</b><br>Fait qui revient : proposer une action corrective durable (rien n’est créé automatiquement).'+
+      preps.map(p=>'<br>Action durable : '+(p.cible==='fiches'?'fiche réflexe':'tâche')+' « '+esc(p.titre)+' » — <b>'+LI_DUR[p.etat]+'</b> (préparée le '+esc(liJH(p.at))+' par '+esc(p.par)+')'+(p.etat==='brouillon'&&droit(p.cible==='fiches'?'c-fiches':'c-taches')?' <button class="btn sm" data-li="aller" data-p="'+(p.cible==='fiches'?'c-fiches':'c-taches')+'" data-s="'+esc(sec)+'">Ouvrir le brouillon</button>':'')).join('')+
+      (prop?'<br>• Proposé par l’équipe '+esc(liEq(prop.equipe))+' le '+esc(liJH(prop.at)):'')+'</div>'+
+      (liModif(d,sec)?'<button class="btn" data-li="dur" data-s="'+esc(sec)+'" data-f="'+esc(r.fait)+'">Préparer une action durable</button>':'')+'</div>'})});
+  return h;
+}
+function liTableau(d,secs){
+  const now=liNow();
+  return '<div class="li-secs">'+secs.map(sec=>{const s=liEtat(d,sec),l=s.msgs,eq=LiaisonCommun.equipeArrivee(now,s.cat);
+    const ouv=l.filter(m=>m.etat!=='resolu').length,nl=LiaisonCommun.aLire(s,eq).length,rec=LiaisonCommun.recurrences(s,now).length,res=l.filter(m=>m.etat==='resolu'&&m.fin&&now-m.fin<=7*864e5).length;
+    return '<button class="card li-sec" data-li="sec" data-v="'+esc(sec)+'"><h2>'+esc(secNom(sec))+(rec?'<span class="tag warn">▲ Récurrent</span>':'')+'</h2><div class="li-ch">'+
+      '<div><b>'+ouv+'</b><span>○ ouverts</span></div><div><b>'+nl+'</b><span>• à lire (équipe '+esc(liEq(eq))+')</span></div><div><b>'+rec+'</b><span>▲ récurrents</span></div><div><b>'+res+'</b><span>✓ résolus 7 j</span></div></div>'+
+      '<p class="hint" style="margin:8px 0 0">'+(d.secteurs[sec].niveau==='modif'?'Modification':'Lecture seule')+(s.archives?' · '+s.archives+' archivés dans la Sheet':'')+'</p></button>'}).join('')+'</div><p class="hint" style="margin-top:10px">Touchez un secteur pour voir ses messages.</p>';
+}
+function liListe(d){
+  const f=LI.f,l=liFiltrer(d),tous=liTous(d),cat=liCat(),C=LiaisonCommun;
+  const sel=(cle,lab,opts)=>'<label>'+lab+'<select class="in" data-li-f="'+cle+'">'+opts.map(([v,n])=>'<option value="'+esc(v)+'"'+(f[cle]===v?' selected':'')+'>'+esc(n)+'</option>').join('')+'</select></label>';
+  const machines=[...new Set(tous.filter(m=>!f.secteur||m.sec===f.secteur).map(m=>m.machineNom).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'fr'));
+  const eqs=cat.equipes.map(e=>[e.id,e.nom]).concat([...new Set(tous.map(m=>m.equipe).filter(e=>e&&!C.equipeDe(cat,e)))].map(e=>[e,liEq(e)]));
+  return '<div class="li-filtres">'+sel('secteur','Secteur',[['','Tous']].concat(liSecteurs(d).map(s=>[s,secNom(s)])))+sel('equipe','Équipe',[['','Toutes']].concat(eqs))+
+    sel('fait','Fait',[['','Tous']].concat(cat.faits.map(x=>[x.id,x.nom+(x.archive?' (archivé)':'')])))+sel('machine','Machine',[['','Toutes']].concat(machines.map(x=>[x,x])))+
+    sel('periode','Période',[['1','Dernières 24 h'],['7','7 jours'],['14','14 jours'],['30','30 jours'],['tout','Tout']])+'</div>'+
+    '<p class="hint" style="margin-bottom:8px">'+l.length+' message'+(l.length>1?'s':'')+'</p>'+
+    (l.length?'<div style="overflow-x:auto"><table class="li-tbl"><thead><tr><th>Date</th><th>Secteur</th><th>Fait</th><th>Machine</th><th>Plateau</th><th>Équipe</th><th>État</th></tr></thead><tbody>'+
+    l.map(m=>'<tr class="cl" tabindex="0" data-li="voir" data-id="'+esc(m.id)+'" data-s="'+esc(m.sec)+'"><td>'+esc(liJH(m.at))+'</td><td>'+esc(secNom(m.sec))+'</td><td>'+esc(C.nomFait(m,cat))+'</td><td>'+esc(m.machineNom||'—')+'</td><td>'+esc(m.plateau||'—')+'</td><td>'+esc(liEq(m.equipe))+'</td><td>'+LI_ETAT(m.etat)+'</td></tr>').join('')+'</tbody></table></div>':'<div class="card vide">Aucun message avec ces filtres.</div>');
+}
+// Statistiques : faits, machines, équipes, causes, secteurs (identifiants stables, libellés actuels). Jamais par personne.
+function liStats(d){
+  const l=liFiltrer(d),C=LiaisonCommun,cat=liCat();
+  const compte=cle=>{const o={};l.forEach(m=>{const k=cle(m);if(k)o[k]=(o[k]||0)+1});return Object.entries(o).sort((a,b)=>b[1]-a[1])};
+  const barres=(t,e)=>{const max=Math.max(1,...e.map(x=>x[1]));return '<section class="card"><h2>'+t+'</h2>'+(e.length?'<div class="li-barres">'+e.map(([k,n])=>'<div class="li-barre"><span>'+esc(k)+'</span><span class="f"><i style="width:'+(n/max*100)+'%"></i></span><b>'+n+'</b></div>').join('')+'</div>':'<p class="hint">Rien sur la période.</p>')+'</section>'};
+  return '<p class="hint" style="margin:0 0 12px">Période et secteur : filtres de l’onglet « Messages » ('+(LI.f.periode==='tout'?'tout':LI.f.periode==='1'?'24 h':LI.f.periode+' jours')+', '+l.length+' messages). <b>Jamais de statistique par personne.</b></p><div class="li-stats">'+
+    barres('Faits les plus fréquents',compte(m=>C.nomFait({fait:m.fait,faitNom:m.faitNom},cat)))+barres('Par machine',compte(m=>m.machineNom))+barres('Par équipe',compte(m=>'Équipe '+liEq(m.equipe)))+
+    barres('Par cause probable',compte(m=>C.nomCause(cat,m.cause)||m.causeNom||'Non renseignée'))+barres('Par secteur',compte(m=>secNom(m.sec)))+'</div>';
+}
+// Réglages : récurrence par secteur (Modification du secteur) ; catalogue commun (administrateurs).
+function liReglages(d,secs){
+  const C=LiaisonCommun,J=[1,2,3,5,7,10,14,21,30],F=[2,3,4,5,6,8,10];
+  if(!LI.reg||!LI.regSale){LI.reg={};secs.forEach(sec=>{LI.reg[sec]=JSON.parse(JSON.stringify(liEtat(d,sec).reglages))})}
+  let h='<h2 style="margin:0 0 8px">Fait qui revient (par secteur)</h2><p class="hint">Un fait qui revient est signalé quand il est noté <b>au moins N fois en J jours</b> dans le secteur.</p>'+
+    '<div class="li-stats">'+secs.map(sec=>{const r=LI.reg[sec]||C.normReglages(null),mod=liModif(d,sec),dis=mod?'':' disabled';
+      return '<section class="card"><h2>'+esc(secNom(sec))+(mod?'':' <span class="tag">'+svg('oeil')+' Lecture seule</span>')+'</h2>'+
+        '<label class="lbl">Au moins<select class="in" data-li-r="fois" data-s="'+esc(sec)+'"'+dis+'>'+F.map(n=>'<option value="'+n+'"'+(n===r.rec.fois?' selected':'')+'>'+n+' fois</option>').join('')+'</select></label>'+
+        '<label class="lbl">en<select class="in" data-li-r="jours" data-s="'+esc(sec)+'"'+dis+'>'+J.map(n=>'<option value="'+n+'"'+(n===r.rec.jours?' selected':'')+'>'+n+' jour'+(n>1?'s':'')+'</option>').join('')+'</select></label>'+
+        (r.maj?'<p class="hint" style="margin:8px 0 0">Changé le '+esc(liJH(r.maj))+(r.par?' par '+esc(r.par):'')+'.</p>':'')+
+        (mod?'<div class="row" style="margin-top:10px"><button class="btn pri" data-li="reg-enr" data-s="'+esc(sec)+'">Enregistrer · '+esc(secNom(sec))+'</button></div>':'')+'</section>'}).join('')+'</div>'+
+    (LI.regSale?'<div class="row" style="margin-top:12px"><span class="tag warn">• pas encore enregistré</span><button class="btn" data-li="reg-annuler">Annuler</button></div>':'');
+  return h+liCatalogue(d);
+}
+// --- Catalogue commun (administrateurs, décision du 23/10 : « je dois pouvoir faire toutes les modifications ») ------------
+// Faits (nom, icône, ordre, précisions, phrases prêtes, propres à un secteur ou masqués dans un secteur), causes, phrases
+// « à savoir », équipes. Retirer = ARCHIVER (jamais effacé : les anciens messages, les statistiques et l'export le gardent).
+// Le garde-fou de la charte relit chaque phrase prête. Le script Google refuse si le catalogue a changé ailleurs (409).
+function liCatalogue(d){
+  const C=LiaisonCommun,adm=!!(d.admin||(S.moi&&S.moi.admin));
+  if(!LI.cat||!LI.catSale)LI.cat=JSON.parse(JSON.stringify(liCat()));
+  const K=LI.cat,dis=adm?'':' disabled',secsSite=(S.site&&S.site.secteurs&&S.site.secteurs.length?S.site.secteurs:Object.keys(d.secteurs||{})),noms=d.noms||[];
+  const avisPhrases=l=>l.map((p,i)=>{const n=C.GardeFou.nbPoints(p,noms);return n?'<p class="li-avis">• Phrase '+(i+1)+' : '+C.GardeFou.verifier(p,noms).map(x=>'« '+esc(x.mot.trim())+' »').join(', ')+' — à relire (charte).</p>':''}).join('');
+  const ico=id=>'<svg class="li-ico" viewBox="0 0 24 24" aria-hidden="true">'+(C.LIAISON_ICONES[id]||C.LIAISON_ICONES.autre)+'</svg>';
+  const btn=(act,lab,data,cls)=>adm?'<button type="button" class="btn sm'+(cls?' '+cls:'')+'" data-lc="'+act+'"'+Object.keys(data||{}).map(k=>' data-'+k+'="'+esc(data[k])+'"').join('')+'>'+lab+'</button>':'';
+  let h='<section class="card li-cat" style="margin-top:16px"><h2>'+svg('crayon')+' Catalogue commun du cahier'+(adm?'':' <span class="tag">'+svg('oeil')+' Administrateurs seulement</span>')+'</h2>'+
+    '<p class="hint">Les mêmes listes pour tous les secteurs ; un fait peut être propre à un secteur ou masqué dans un secteur. Retirer = archiver : plus proposé, mais les anciens messages l’affichent toujours. Les tablettes reçoivent la liste à jour toutes seules.'+(K.maj?' Dernier changement : '+esc(liJH(K.maj))+(K.par?' par '+esc(K.par):'')+'.':'')+'</p>';
+  // Équipes
+  h+='<h3>Équipes (mêmes horaires dans tous les secteurs)</h3>'+K.equipes.map((e,i)=>'<div class="ligne"><input class="in" aria-label="Nom de l’équipe" data-lc-v="eq-nom" data-i="'+i+'" value="'+esc(e.nom)+'" maxlength="'+C.LIAISON_LIM.nomEquipe+'"'+dis+'>'+
+    '<label class="lbl" style="margin:0">De<input class="in" type="time" data-lc-v="eq-debut" data-i="'+i+'" value="'+esc(e.debut)+'"'+dis+'></label><label class="lbl" style="margin:0">à<input class="in" type="time" data-lc-v="eq-fin" data-i="'+i+'" value="'+esc(e.fin)+'"'+dis+'></label>'+
+    (K.equipes.length>1?btn('eq-x','Retirer',{i}):'')+'</div>').join('')+(K.equipes.length<C.LIAISON_LIM.equipes?btn('eq-plus','+ Ajouter une équipe'):'');
+  // Faits
+  h+='<h3>Faits ('+K.faits.filter(f=>!f.archive).length+' proposés'+(K.faits.some(f=>f.archive)?', '+K.faits.filter(f=>f.archive).length+' archivés':'')+')</h3>';
+  K.faits.forEach((f,i)=>{
+    h+='<div class="card'+(f.archive?' arch':'')+'"><div class="ligne">'+ico(f.ico)+'<input class="in" aria-label="Nom du fait" data-lc-v="f-nom" data-i="'+i+'" value="'+esc(f.nom)+'" maxlength="'+C.LIAISON_LIM.nomFait+'"'+dis+'>'+
+      '<select class="in" style="flex:0 1 170px" aria-label="Icône" data-lc-v="f-ico" data-i="'+i+'"'+dis+'>'+Object.keys(LI_ICONES).map(k=>'<option value="'+k+'"'+(k===f.ico?' selected':'')+'>'+LI_ICONES[k]+'</option>').join('')+'</select>'+
+      btn('f-haut','↑',{i})+btn('f-bas','↓',{i})+(f.archive?btn('f-remettre','Remettre',{i}):btn('f-archiver','Archiver',{i}))+(f.archive?'<span class="tag">archivé</span>':'')+'</div>'+
+      '<div class="ligne"><span class="hint">Secteurs :</span>'+secsSite.map(s=>'<label class="chip"><input type="checkbox" data-lc-v="f-sec" data-i="'+i+'" data-s="'+esc(s)+'"'+(f.secteurs.includes(s)?' checked':'')+dis+'> seulement '+esc(secNom(s))+'</label>').join('')+
+      '<span class="hint">(rien de coché : tous) · Masqué dans :</span>'+secsSite.map(s=>'<label class="chip"><input type="checkbox" data-lc-v="f-masque" data-i="'+i+'" data-s="'+esc(s)+'"'+(f.masques.includes(s)?' checked':'')+dis+'> '+esc(secNom(s))+'</label>').join('')+'</div>'+
+      '<div><b>Précisions</b>'+f.precis.map((p,j)=>'<div class="ligne'+(p.archive?' arch':'')+'"><input class="in" aria-label="Précision" data-lc-v="p-nom" data-i="'+i+'" data-j="'+j+'" value="'+esc(p.nom)+'" maxlength="'+C.LIAISON_LIM.nomPrecis+'"'+dis+'>'+(p.archive?btn('p-remettre','Remettre',{i,j})+'<span class="tag">archivée</span>':btn('p-archiver','Archiver',{i,j}))+'</div>').join('')+
+      (f.precis.length<C.LIAISON_LIM.precis?btn('p-plus','+ Précision',{i}):'')+'</div>'+
+      '<label class="lbl" style="display:block;margin-top:8px">Phrases prêtes « constaté » (une par ligne)<textarea class="in" data-lc-v="f-phrases" data-i="'+i+'"'+dis+'>'+esc(f.phrases.join('\n'))+'</textarea></label><div data-lc-avis="f'+i+'">'+avisPhrases(f.phrases)+'</div></div>';
+  });
+  if(K.faits.length<C.LIAISON_LIM.faits)h+=btn('f-plus','+ Ajouter un fait');
+  // Causes
+  h+='<h3>Causes probables</h3>'+K.causes.map((k,i)=>'<div class="ligne'+(k.archive?' arch':'')+'"><input class="in" aria-label="Cause" data-lc-v="c-nom" data-i="'+i+'" value="'+esc(k.nom)+'" maxlength="'+C.LIAISON_LIM.nomCause+'"'+dis+'>'+(k.archive?btn('c-remettre','Remettre',{i})+'<span class="tag">archivée</span>':btn('c-archiver','Archiver',{i}))+'</div>').join('')+
+    (K.causes.length<C.LIAISON_LIM.causes?btn('c-plus','+ Ajouter une cause'):'');
+  // Phrases « à savoir »
+  h+='<h3>Phrases prêtes « ce que l’équipe suivante doit savoir »</h3><textarea class="in" data-lc-v="suite"'+dis+'>'+esc(K.suite.join('\n'))+'</textarea><div data-lc-avis="suite">'+avisPhrases(K.suite)+'</div>'+
+    '<p class="hint">Repères remplacés sur la tablette : {sur le plateau} {du plateau} {machine} (vides si rien n’est saisi), {plateau} {quantité} (phrase cachée si vide), {nt} {s} {est} {manque} (pluriel). Aucune consigne de sécurité ni geste : seulement le fait.</p>';
+  if(adm)h+='<div class="row" style="margin-top:12px">'+(LI.catSale?'<span class="tag warn">• pas encore enregistré</span><button class="btn" data-lc="annuler">Annuler</button>':'')+'<button class="btn pri" data-lc="enr"'+(LI.catSale?'':' disabled')+'>Enregistrer le catalogue</button></div>';
+  return h+'</section>';
+}
+function liSuivi(m){
+  const O=LiaisonCommun.LIAISON_ORDRE,i=O.indexOf(m.etat),res=m.etat==='resolu';
+  return '<ol class="li-suivi" aria-label="Suivi du message">'+O.map((e,k)=>'<li class="'+(k<i||res?'fait':k===i?'ici':'')+'"><span class="pt">'+(k<i||res?'✓':k+1)+'</span>'+(k===i?'<span class="sr">Étape actuelle : </span>':'')+LiaisonCommun.LIAISON_ETATS[e].nom.replace(' par l’équipe suivante','')+'</li>').join('')+'</ol>';
+}
+function liFiche(d,m){
+  const C=LiaisonCommun,cat=liCat(),s=liEtat(d,m.sec),mod=liModif(d,m.sec),noms=d.noms||[],durs=C.durablesDuMessage(s,m.id);
+  let h='<button class="btn" data-li="fermer">← Retour à la liste</button><section class="card" style="margin-top:12px"><div class="row" style="gap:12px"><div style="flex:1 1 240px"><h2 style="margin:0">'+esc(C.nomFait(m,cat))+'</h2><span class="hint">'+esc(secNom(m.sec))+' · équipe '+esc(liEq(m.equipe))+' · '+esc(liJH(m.at))+'</span></div>'+LI_ETAT(m.etat)+'</div>'+liSuivi(m)+
+    '<div class="li-g">'+[['Secteur',secNom(m.sec)],['Machine',m.machineNom||'—'],['N° de plateau',m.plateau||'—'],['Quantité concernée',m.qte||'—'],['Cause probable',C.nomCause(cat,m.cause)||m.causeNom||'Non renseignée']].map(([k,v])=>'<div class="li-kv"><div class="k">'+k+'</div><div class="v">'+esc(v)+'</div></div>').join('')+'</div>'+
+    (durs.length?'<div class="li-bloc"><h3>Action durable</h3>'+durs.map(x=>'<p>'+(x.cible==='fiches'?'Fiche réflexe':'Tâche')+' « '+esc(x.titre)+' » — <b>'+LI_DUR[x.etat]+'</b></p>').join('')+'</div>':'')+
+    '<div class="li-bloc"><h3>Ce qui a été constaté</h3><p>'+esc(m.desc||'—')+'</p></div>'+(m.deja?'<div class="li-bloc"><h3>Déjà fait / proposé</h3><p>'+esc(m.deja)+'</p></div>':'')+
+    '<div class="li-bloc"><h3>À savoir pour l’équipe suivante</h3><p><b>'+esc(m.suivante)+'</b></p></div>'+(m.photo?'<div class="li-bloc"><h3>Photo</h3>'+boutonPhoto(m.photo)+'</div>':'')+
+    '<p class="li-signe">Signé automatiquement : '+esc(m.auteur)+' · équipe '+esc(liEq(m.equipe))+' · '+esc(liJH(m.at))+'</p>'+
+    '<div class="li-bloc"><h3>Historique</h3><ul class="li-histo"><li><span class="h">'+esc(liJH(m.at))+'</span><span>Message écrit par l’équipe '+esc(liEq(m.equipe))+'.</span></li>'+
+    m.hist.map(x=>'<li><span class="h">'+esc(liJH(x.at))+'</span><span><b>'+(x.t==='lu'?'Équipe '+esc(liEq(x.equipe))+' ('+esc(x.par)+')':esc(x.par))+'</b> · '+(x.t==='lu'?'Lu, pris en compte.':x.t==='action'?'▶ Action corrective : '+esc(x.txt):x.t==='resolu'?'✓ Résolu'+(x.txt?' : '+esc(x.txt):'.'):esc(x.txt))+'</span></li>').join('')+'</ul></div>';
+  if(m.etat!=='resolu'&&mod){
+    h+='<div class="li-bloc"><label class="lbl" for="liComm">Ajouter un commentaire <span class="hint">(facultatif)</span></label><textarea class="in" rows="3" id="liComm" data-li-champ="comm" maxlength="'+C.LIAISON_TXT+'" style="width:100%">'+esc(LI.comm)+'</textarea><div data-li-gf="comm">'+C.GardeFou.panneau(LI.comm,'comm',noms)+'</div>'+
+      '<div class="row" style="margin-top:8px"><button class="btn" data-li="comm">Ajouter le commentaire</button></div></div>'+
+      '<div class="li-bloc"><label class="lbl" for="liAct">Action corrective <span class="hint">(manager du secteur)</span></label><textarea class="in" rows="3" id="liAct" data-li-champ="action" maxlength="'+C.LIAISON_TXT+'" style="width:100%" placeholder="Ce qui est mis en place pour que le fait ne revienne pas.">'+esc(LI.action)+'</textarea><div data-li-gf="action">'+C.GardeFou.panneau(LI.action,'action',noms)+'</div>'+
+      '<div class="row" style="margin-top:8px"><button class="btn" data-li="action">▶ Enregistrer l’action en cours</button><button class="btn pri" data-li="resoudre">✓ Marquer résolu</button></div></div>';
+  }else if(m.etat!=='resolu')h+='<p class="hint li-bloc">Lecture seule : l’action corrective et « Résolu » demandent la Modification du cahier de liaison pour ce secteur.</p>';
+  return h+'</section>';
+}
+// Export tableur (CSV, Excel) : messages filtrés des secteurs en Modification ; la signature y est, comme le cahier papier.
+// Relecture du 23/10 : une valeur qui commence par = + - @ (ou tabulation, retour chariot) est préfixée d'une apostrophe,
+// pour qu'un tableur ne l'exécute jamais comme une formule.
+const liCellule=v=>{v=String(v==null?'':v);if(/^[=+\-@\t\r]/.test(v))v="'"+v;return '"'+v.replace(/"/g,'""')+'"'};
+function liCsv(){
+  const d=LI.d;if(!d)return;
+  const l=liFiltrer(d).filter(m=>liModif(d,m.sec)),C=LiaisonCommun,cat=liCat();
+  if(!l.length){LI.msg=['warn','Rien à exporter : l’export demande la Modification du secteur (et des messages dans les filtres).'];return chargerPage()}
+  const lignes=[['Date','Secteur','Équipe','Fait','Machine','Plateau','Quantité','Cause probable','Constaté','Déjà fait / proposé','À savoir','État','Signé']]
+    .concat(l.map(m=>[liJH(m.at),secNom(m.sec),liEq(m.equipe),C.nomFait(m,cat),m.machineNom,m.plateau,m.qte||'',C.nomCause(cat,m.cause)||m.causeNom||'',m.desc,m.deja,m.suivante,C.LIAISON_ETATS[m.etat].nom,m.auteur]));
+  const b=new Blob(['﻿'+lignes.map(r=>r.map(liCellule).join(';')).join('\r\n')],{type:'text/csv;charset=utf-8'}),a=document.createElement('a');
+  a.href=URL.createObjectURL(b);a.download='cahier-liaison-'+new Date().toISOString().slice(0,10)+'.csv';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);
+  LI.msg=['ok','✓ '+l.length+' message'+(l.length>1?'s':'')+' exporté'+(l.length>1?'s':'')+' (filtres de l’onglet « Messages »).'];chargerPage();
+}
+async function liEnvoyer(sec,actions,ok){
+  const j=await appel('liaison-actions',{sec,actions});
+  if(j.status!==200){LI.msg=['err','<b>'+esc(j.data&&j.data.error||'Enregistrement impossible.')+'</b>'];return false}
+  if(LI.d&&LI.d.secteurs[sec]){LI.d.secteurs[sec]=Object.assign({},LI.d.secteurs[sec],{rev:j.data.rev,state:j.data.state});LI.t=Date.now()}
+  const r=Object.values(j.data.refus||{});
+  LI.msg=r.length?['err','<b>✕ '+esc(r.join(' '))+'</b>']:['ok','✓ '+ok];
+  return !r.length;
+}
+// Identifiant stable d'un commentaire (même message, même texte) : un 2e clic n'ajoute rien.
+const liEmpreinte=s=>{let h1=0x811c9dc5,h2=5381;for(const c of String(s)){const k=c.codePointAt(0);h1=Math.imul(h1^k,16777619)>>>0;h2=(Math.imul(h2,33)+k)>>>0}return h1.toString(36)+h2.toString(36)};
+async function liAction(b){
+  const a=b.dataset.li;S.dernierGeste=Date.now();
+  if(a==='onglet'){LI.onglet=b.dataset.v;LI.msg=null;LI.sel=null;return chargerPage()}
+  if(a==='sec'){LI.f.secteur=b.dataset.v;LI.f.machine='';LI.onglet='liste';LI.msg=null;return chargerPage()}
+  if(a==='voir'){LI.sel={id:b.dataset.id,sec:b.dataset.s};LI.comm='';LI.action='';LI.msg=null;scrollTo(0,0);return chargerPage()}
+  if(a==='fermer'){LI.sel=null;LI.msg=null;return chargerPage()}
+  if(a==='csv')return liCsv();
+  if(a==='dur'){LI.dur={sec:b.dataset.s,fait:b.dataset.f};LI.msg=null;scrollTo(0,0);return chargerPage()}
+  if(a==='dur-non'){LI.dur=null;return chargerPage()}
+  if(a==='dur-ok'){const D=LI.dur;if(!D)return;b.disabled=true;
+    const j=await appel('liaison-durable',{sec:D.sec,fait:D.fait,cible:b.dataset.c}),part=b.dataset.c==='fiches'?'c-fiches':'c-taches',nom=b.dataset.c==='fiches'?'Fiches réflexes':'Tâches à faire';
+    if(j.status!==200){LI.msg=['err','<b>'+esc(j.data&&j.data.error||'Brouillon non créé.')+'</b>'];return chargerPage()}
+    if(LI.d&&LI.d.secteurs[D.sec])LI.d.secteurs[D.sec]=Object.assign({},LI.d.secteurs[D.sec],{rev:j.data.rev,state:j.data.state});
+    LI.msg=['ok','✓ '+(j.data.existe?'Brouillon déjà préparé':'Brouillon créé')+' dans <b>'+nom+'</b> ('+esc(secNom(D.sec))+') : « '+esc(j.data.durable&&j.data.durable.titre||'')+' ». Les opérateurs ne le voient pas : complétez-le puis validez-le.'+(droit(part)?' <button class="btn" data-li="aller" data-p="'+part+'" data-s="'+esc(D.sec)+'">Ouvrir « '+nom+' »</button>':'')];LI.dur=null;
+    try{delete S.charge['contenu-lire|'+JSON.stringify({app:b.dataset.c,secteur:D.sec})]}catch(e){}
+    return chargerPage()}
+  if(a==='aller'){if(secteursVisibles().includes(b.dataset.s))S.secteur=b.dataset.s;S.page=b.dataset.p;S.menu=false;try{history.replaceState(null,'','#'+S.page)}catch(x){}render();scrollTo(0,0);return}
+  if(a==='comm'||a==='action'||a==='resoudre'){
+    const m=LI.sel;if(!m)return;const txt=(a==='comm'?LI.comm:LI.action).trim();
+    if(a==='comm'&&!txt){LI.msg=['warn','Écrivez d’abord votre commentaire.'];return chargerPage()}
+    if(a==='action'&&!txt){LI.msg=['warn','Décrivez l’action corrective.'];return chargerPage()}
+    b.disabled=true;
+    const id=a==='comm'?'k'+liEmpreinte(m.id+'|'+txt+'|'+(S.moi&&S.moi.nom)):a.charAt(0)+alea(10);
+    const ok=await liEnvoyer(m.sec,[{id,type:a,mid:m.id,txt}],a==='comm'?'Commentaire ajouté.':a==='action'?'Action corrective enregistrée : « Action en cours ».':'Message résolu.');
+    if(ok){if(a==='comm')LI.comm='';else LI.action=''}
+    return chargerPage();
+  }
+  if(a==='reg-annuler'){LI.reg=null;LI.regSale=false;LI.msg=null;return chargerPage()}
+  if(a==='reg-enr'){const sec=b.dataset.s,r=LI.reg&&LI.reg[sec];if(!r||!LI.d)return;
+    const ok=await liEnvoyer(sec,[{id:'r'+alea(10),type:'reglages',depuis:liEtat(LI.d,sec).reglages.maj,reglages:r}],'Réglages du cahier enregistrés pour '+esc(secNom(sec))+'.');
+    if(ok){LI.regSale=false;LI.reg=null}else{try{await liLire(true)}catch(e){}}
+    return chargerPage()}
+}
+// Catalogue : boutons (data-lc) et saisies (data-lc-v). Saisie de texte : pas de redessin (curseur gardé).
+const LI_NOUVEAU=p=>p+alea(6);
+function liCatBouton(b){
+  const K=LI.cat,a=b.dataset.lc,i=Number(b.dataset.i),j=Number(b.dataset.j),fait=K&&K.faits[i];
+  if(a==='annuler'){LI.cat=null;LI.catSale=false;LI.msg=null;return chargerPage()}
+  if(a==='enr')return liCatEnregistrer();
+  if(!K)return;
+  const ser=JSON.stringify(liCat()),connu=(t,id)=>ser.includes('"id":"'+id+'"'); // élément déjà enregistré : archivé, jamais retiré
+  if(a==='eq-plus')K.equipes.push({id:LI_NOUVEAU('equipe-'),nom:'Nouvelle équipe',debut:'08:00',fin:'16:00'});
+  if(a==='eq-x')K.equipes.splice(i,1);
+  if(a==='f-plus')K.faits.push({id:LI_NOUVEAU('fait-'),nom:'Nouveau fait',ico:'autre',archive:false,secteurs:[],masques:[],phrases:[],precis:[]});
+  if(a==='f-haut'&&i>0)K.faits.splice(i-1,0,K.faits.splice(i,1)[0]);
+  if(a==='f-bas'&&i<K.faits.length-1)K.faits.splice(i+1,0,K.faits.splice(i,1)[0]);
+  if(a==='f-archiver'){if(connu('f',fait.id))fait.archive=true;else K.faits.splice(i,1)}
+  if(a==='f-remettre')fait.archive=false;
+  if(a==='p-plus')fait.precis.push({id:LI_NOUVEAU('precision-'),nom:'Nouvelle précision',archive:false,phrases:[]});
+  if(a==='p-archiver'){const p=fait.precis[j];if(connu('p',p.id))p.archive=true;else fait.precis.splice(j,1)}
+  if(a==='p-remettre')fait.precis[j].archive=false;
+  if(a==='c-plus')K.causes.push({id:LI_NOUVEAU('cause-'),nom:'Nouvelle cause',archive:false});
+  if(a==='c-archiver'){const k=K.causes[i];if(connu('c',k.id))k.archive=true;else K.causes.splice(i,1)}
+  if(a==='c-remettre')K.causes[i].archive=false;
+  LI.catSale=true;LI.msg=null;return chargerPage();
+}
+async function liCatEnregistrer(){
+  const K=LI.cat;if(!K||!LI.d)return;
+  const j=await appel('liaison-catalogue-ecrire',{depuis:LI.d.crev||0,catalogue:K});
+  if(j.status===200){LI.d.catalogue=j.data.catalogue;LI.d.crev=j.data.crev;LI.cat=null;LI.catSale=false;LI.msg=['ok','✓ Catalogue enregistré : les tablettes le reçoivent à leur prochaine lecture (moins d’une minute).'];try{await liLire(true)}catch(e){}}
+  else if(j.status===409){LI.d.catalogue=j.data.catalogue;LI.d.crev=j.data.crev;LI.msg=['err','<b>'+esc(j.data.error)+'</b> Vos changements sont gardés à l’écran : vérifiez-les puis enregistrez de nouveau.']}
+  else LI.msg=['err','<b>'+esc(j.data&&j.data.error||'Catalogue refusé.')+'</b>'];
+  return chargerPage();
+}
+function liCatSaisie(el,fin){
+  const K=LI.cat;if(!K)return;const k=el.dataset.lcV,i=Number(el.dataset.i),j=Number(el.dataset.j),f=K.faits[i];
+  const lignes=v=>v.split('\n').map(x=>x.trim()).filter(Boolean);
+  if(k==='eq-nom')K.equipes[i].nom=el.value;else if(k==='eq-debut')K.equipes[i].debut=el.value;else if(k==='eq-fin')K.equipes[i].fin=el.value;
+  else if(k==='f-nom')f.nom=el.value;else if(k==='f-ico')f.ico=el.value;
+  else if(k==='f-sec'||k==='f-masque'){const l=k==='f-sec'?f.secteurs:f.masques,s=el.dataset.s;if(el.checked&&!l.includes(s))l.push(s);if(!el.checked&&l.includes(s))l.splice(l.indexOf(s),1)}
+  else if(k==='p-nom')f.precis[j].nom=el.value;else if(k==='c-nom')K.causes[i].nom=el.value;
+  else if(k==='f-phrases'){f.phrases=lignes(el.value);const x=document.querySelector('[data-lc-avis="f'+i+'"]');if(x)x.innerHTML=liAvis(f.phrases)}
+  else if(k==='suite'){K.suite=lignes(el.value);const x=document.querySelector('[data-lc-avis="suite"]');if(x)x.innerHTML=liAvis(K.suite)}
+  if(!LI.catSale){LI.catSale=true;document.querySelectorAll('[data-lc="enr"]').forEach(x=>x.disabled=false)}
+  if(fin&&(k==='f-ico'||k==='f-sec'||k==='f-masque'))chargerPage();
+}
+function liAvis(l){const C=LiaisonCommun,noms=(LI.d&&LI.d.noms)||[];return l.map((p,i)=>C.GardeFou.nbPoints(p,noms)?'<p class="li-avis">• Phrase '+(i+1)+' : '+C.GardeFou.verifier(p,noms).map(x=>'« '+esc(x.mot.trim())+' »').join(', ')+' — à relire (charte).</p>':'').join('')}
+document.addEventListener('click',e=>{
+  const g=e.target.closest&&e.target.closest('#page [data-act="gf-utiliser"]');
+  if(g&&S.page==='liaison'&&LiaisonCommun){const k=g.dataset.cle,n=(LI.d&&LI.d.noms)||[],r=x=>LiaisonCommun.GardeFou.reformuler(x,n)||x;if(k==='comm')LI.comm=r(LI.comm);else if(k==='action')LI.action=r(LI.action);chargerPage();return}
+  const c=e.target.closest&&e.target.closest('[data-lc]');if(c&&!c.disabled&&S.page==='liaison'&&LiaisonCommun){liCatBouton(c);return}
+  const b=e.target.closest&&e.target.closest('[data-li]');if(!b||b.disabled||!LiaisonCommun)return;
+  if(b.closest('[data-lia-carte]'))return;
+  liAction(b).catch(x=>{if(x&&x.message!=='session'){LI.msg=['err','<b>'+esc(x.message)+'</b>'];chargerPage()}});
+});
+document.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target&&e.target.matches&&e.target.matches('tr[data-li="voir"]')){e.preventDefault();e.target.click()}});
+document.addEventListener('input',e=>{const el=e.target;if(!el||!el.dataset||S.page!=='liaison'||!LiaisonCommun)return;
+  if(el.dataset.lcV){liCatSaisie(el,false);return}
+  const c=el.dataset.liChamp;if(!c)return;if(c==='comm')LI.comm=el.value;else LI.action=el.value;
+  const p=document.querySelector('[data-li-gf="'+c+'"]');if(p)p.innerHTML=LiaisonCommun.GardeFou.panneau(el.value,c,(LI.d&&LI.d.noms)||[])});
+document.addEventListener('change',e=>{
+  const el=e.target;if(!el||!el.dataset||S.page!=='liaison')return;
+  if(el.dataset.lcV){liCatSaisie(el,true);return}
+  const f=el.dataset.liF;if(f){LI.f[f]=el.value;if(f==='secteur')LI.f.machine='';chargerPage();return}
+  const k=el.dataset.liR;if(!k||!LI.reg)return;const r=LI.reg[el.dataset.s];if(!r)return;
+  r.rec[k]=Number(el.value);LI.regSale=true;LI.msg=null;chargerPage();
+});
+// Relecture toutes les 30 s sur la page (pas pendant une saisie, une fiche ou un brouillon de réglages).
+setInterval(()=>{
+  if(!S.jeton||!S.moi||!LiaisonCommun||S.page!=='liaison'||LI.lecture||LI.sel||LI.regSale||LI.catSale||LI.dur||document.visibilityState!=='visible'||Date.now()-LI.t<30000)return;
+  LI.lecture=1;
+  liLire(true).then(d=>{const k=JSON.stringify(liSecteurs(d).map(s=>(d.secteurs[s]||{}).rev));if(S.page==='liaison'&&k!==LI.cle&&!saisieEnCours())chargerPage()}).catch(()=>{}).finally(()=>{LI.lecture=0});
+},5000);
+
+// --- Accès des managers : le cahier de liaison, secteur par secteur (Aucun / Lecture / Modification) ---------------------
+// Rangé à part dans le compte (c.liaison), enregistré par son propre bouton (liaison-droits-ecrire, administrateur).
+function liaisonAccesCarte(c,estAdmin){
+  if(!c)return '';
+  const tete='<section class="card" data-lia-carte="1"><h2>'+pastille('liaison','s')+' Cahier de liaison <span class="hint" style="font-weight:500">· par secteur</span></h2>';
+  if(estAdmin)return tete+'<p class="hint" style="margin:0">Administrateur : tous les droits, dans tous les secteurs (catalogue, brouillons, réglages).</p></section>';
+  const D=LI.acc;
+  if(!D||Date.now()-D.t>60000){
+    if(!LI.accLecture){LI.accLecture=1;appel('liaison-droits-lire',{}).then(j=>{LI.acc={t:Date.now(),ok:j.status===200,data:j.data||{},err:j.data&&j.data.error||''}}).catch(()=>{}).finally(()=>{LI.accLecture=0;if(S.page==='acces'&&!saisieEnCours())chargerPage()})}
+    if(!D)return tete+'<p class="hint" style="margin:0">'+svg('horloge')+' Lecture des droits du cahier…</p></section>';
+  }
+  if(!D.ok)return tete+'<p class="hint" style="margin:0">'+(/Opération refusée/.test(D.err)?'Le script Google du cahier de liaison n’est pas encore en ligne.':esc(D.err||'Lecture impossible.'))+'</p></section>';
+  const k=(D.data.comptes||[]).find(x=>x.id===c.id)||{secteurs:{},maj:0};
+  if(!LI.accB||LI.accB.id!==c.id)LI.accB={id:c.id,secteurs:Object.assign({},k.secteurs),maj:k.maj,sale:false};
+  const B=LI.accB,niv=[['','✕ Aucun'],['lecture','◐ Lecture'],['modif','✓ Modification']];
+  return tete+'<p class="hint">Lecture = voir les messages et les statistiques. Modification = en plus : commentaire, action corrective, « Résolu », export tableur, réglages du secteur ; sur les tablettes, action corrective et « Résolu ». Préparer un brouillon d’action durable demande aussi la Modification de « Tâches à faire » ou « Fiches réflexes ».</p>'+
+    (LI.accMsg?'<div class="msg '+LI.accMsg[0]+'" role="status">'+svg(LI.accMsg[0]==='ok'?'ok':'alerte')+'<div>'+LI.accMsg[1]+'</div></div>':'')+
+    '<table class="perm"><tbody>'+(D.data.secteurs||[]).map(s=>'<tr><td style="width:160px"><b>'+esc(secNom(s))+'</b></td><td><div class="li-tri" role="group" aria-label="Cahier de liaison — '+esc(secNom(s))+'">'+
+      niv.map(([v,n])=>'<button type="button" data-lia="niv" data-s="'+esc(s)+'" data-v="'+v+'" aria-pressed="'+((B.secteurs[s]||'')===v)+'">'+n+'</button>').join('')+'</div></td></tr>').join('')+'</tbody></table>'+
+    '<div class="row" style="margin-top:10px">'+(B.sale?'<span class="tag warn">• pas encore enregistré</span><button class="btn" data-lia="annuler">Annuler</button>':'')+'<button class="btn pri" data-lia="enr"'+(B.sale?'':' disabled')+'>Enregistrer le cahier de liaison</button></div></section>';
+}
+document.addEventListener('click',async e=>{
+  const b=e.target.closest&&e.target.closest('[data-lia]');if(!b||b.disabled||S.page!=='acces'||!LI.accB)return;
+  const a=b.dataset.lia,B=LI.accB;LI.accMsg=null;
+  if(a==='niv'){if(b.dataset.v)B.secteurs[b.dataset.s]=b.dataset.v;else delete B.secteurs[b.dataset.s];B.sale=true;return chargerPage()}
+  if(a==='annuler'){LI.accB=null;return chargerPage()}
+  if(a==='enr'){
+    b.disabled=true;
+    try{const j=await appel('liaison-droits-ecrire',{id:B.id,secteurs:B.secteurs,depuis:B.maj});
+      if(j.status===200){const l=LI.acc.data.comptes=LI.acc.data.comptes||[],i=l.findIndex(x=>x.id===j.data.compte.id);if(i<0)l.push(j.data.compte);else l[i]=j.data.compte;LI.accB=null;LI.accMsg=['ok','✓ Droits du cahier de liaison enregistrés : ils s’appliquent à la prochaine action de la personne (tablettes : 5 minutes au plus).']}
+      else{LI.accMsg=['err','<b>'+esc(j.data&&j.data.error||'Enregistrement refusé.')+'</b>'];if(j.status===409&&j.data.compte){const l=LI.acc.data.comptes,i=l.findIndex(x=>x.id===j.data.compte.id);if(i>=0)l[i]=j.data.compte;LI.accB=null}}}
+    catch(x){if(x&&x.message!=='session')LI.accMsg=['err','<b>'+esc(x.message)+'</b>']}
+    return chargerPage();
+  }
+});
+// Écrans télé : une page par secteur (fait, machine, état ; ni texte, ni auteur, ni photo).
+function liaisonEcransCarte(){
+  const secs=secteursVisibles().length?secteursVisibles():['frittage'];
+  return '<section class="card" style="margin-top:16px"><h2>'+pastille('liaison','s')+'Cahier de liaison</h2><p class="hint">Messages ouverts des autres équipes : seulement le fait, la machine et l’état (ni texte, ni auteur, ni photo). Aussi dans l’écran tournant (une page par secteur, à cocher).</p><div class="row">'+
+    secs.map(s=>'<a class="btn" href="/ecran-liaison?secteur='+encodeURIComponent(s)+'" target="_blank" rel="noopener">'+svg('ecran')+'Ouvrir · '+esc(secNom(s))+'</a>').join('')+'</div></section>';
+}
+// </liaison-console>
 // Écrans télé : ouverts sur ce PC (plein écran depuis l'écran lui-même).
 PAGES.ecrans=async()=>{
   let h=enTete('ecrans','Les écrans télé de l’atelier, ouverts sur ce PC.');
@@ -4455,7 +5289,7 @@ PAGES.ecrans=async()=>{
   return h+'<div class="secs"><section class="card"><h2>'+pastille('lancements','s')+'Écran de l’atelier (lancements)</h2><p class="hint">Fichiers à lancer, en temps réel. Le même affichage que l’onglet « Écran atelier » des tablettes.</p><a class="btn pri" href="/ecran" target="_blank" rel="noopener">Ouvrir l’écran</a></section>'+
     secteursVisibles().map(s=>'<section class="card"><h2>'+pastille('maintenance','s')+'Maintenance — '+esc(secNom(s))+'</h2><p class="hint">Échéances des maintenances du secteur.</p><a class="btn pri" href="/ecran-maintenance?secteur='+encodeURIComponent(s)+'" target="_blank" rel="noopener">Ouvrir l’écran</a></section>').join('')+'</div>'+
     '<section class="card" style="margin-top:16px"><h2>'+pastille('fours','s')+'Fours (minuteurs)</h2><p class="hint">Les fours du frittage : temps restant, plateaux à sortir (sirène si cochée dans Fours › Réglages).</p><a class="btn pri" href="/ecran-fours" target="_blank" rel="noopener">Ouvrir l’écran</a></section>'+
-    '<p class="hint">Sur l’écran, le bouton « Plein écran » l’affiche en entier.</p>'+vueTournant()+vueEcranAuto();
+    (typeof liaisonEcransCarte==='function'?liaisonEcransCarte():'')+'<p class="hint">Sur l’écran, le bouton « Plein écran » l’affiche en entier.</p>'+vueTournant()+vueEcranAuto();
 };
 // Écran ouvert au démarrage de ce PC (lot 7b) : mêmes réglages que l'ancienne console (navigateur de ce PC) ; le bouton
 // « Quitter » de l'écran l'annule et revient à la console.
@@ -4508,7 +5342,7 @@ function vueTournant(){
   let rang=0;
   // Manager (lecture) : seulement les écrans de ses secteurs.
   const vis=e=>adm||!e.secteur||secteursVisibles().includes(e.secteur);
-  h+=d.ecrans.map((e,i)=>!vis(e)?'':'<div class="tr-l'+(e.on?'':' off')+'"><span class="tr-n">'+(e.on?++rang:'—')+'</span>'+pastille(e.id==='lancements'?'lancements':e.id==='fours'?'fours':'maintenance','s')+
+  h+=d.ecrans.map((e,i)=>!vis(e)?'':'<div class="tr-l'+(e.on?'':' off')+'"><span class="tr-n">'+(e.on?++rang:'—')+'</span>'+pastille(e.id==='lancements'?'lancements':e.id==='fours'?'fours':/^liaison:/.test(e.id)?'liaison':'maintenance','s')+
     '<label class="tr-c"><input type="checkbox" data-tr-on="'+i+'"'+(e.on?' checked':'')+dis+'><span>'+esc(e.nom)+(e.nouveau?' <span class="tag">nouveau</span>':'')+'</span></label>'+
     '<span class="tr-r"><label class="tr-d"><span class="tr-dt">'+(e.pages?'Durée par page':'Durée')+'</span><select class="in" data-tr-duree="'+i+'" aria-label="'+(e.pages?'Durée par page':'Durée')+' — '+esc(e.court)+'"'+dis+'>'+d.durees.map(s=>'<option value="'+s+'"'+(s===e.duree?' selected':'')+'>'+trDuree(s)+'</option>').join('')+'</select></label>'+
     '<button class="btn tr-f" type="button" data-tr-monte="'+i+'" aria-label="Monter « '+esc(e.court)+' »"'+(i===0||!adm?' disabled':'')+'>↑</button>'+
@@ -4573,7 +5407,7 @@ document.addEventListener('click',e=>{
 // Administration et apparence (lot 7c, 2026-10-15) : mêmes réglages que l'Administration des tablettes (Apparence,
 // Site et secteurs, Secteurs et zones), administrateur seulement, enregistrés par le script (administration-ecrire).
 // Personnes, Qui voit quoi et Parc machines ont leurs propres parties. L'ancienne console reste en secours (#gerer).
-const ADM_TEXTES={releve:'État des machines et consignes entre équipes',taches:'Je coche les tâches que je prends',fiches:'J’ai un problème sur une machine',maintenance:'Je fais une maintenance guidée',procedures:'Je consulte une procédure claire, étape par étape',lancements:'Fichiers à lancer et état des machines',fours:'Minuteur des fours de traitement thermique',tableau:'Suivi des relèves et du « qui fait quoi »'};
+const ADM_TEXTES={releve:'État des machines et consignes entre équipes',taches:'Je coche les tâches que je prends',fiches:'J’ai un problème sur une machine',maintenance:'Je fais une maintenance guidée',procedures:'Je consulte une procédure claire, étape par étape',lancements:'Fichiers à lancer et état des machines',fours:'Minuteur des fours de traitement thermique',liaison:'Cahier entre les équipes',tableau:'Suivi des relèves et du « qui fait quoi »'};
 const ADM_COULEURS=[['#0b8a96','Bleu-vert'],['#1f6fd1','Bleu'],['#1f7a3a','Vert'],['#6a4bc4','Violet'],['#c0262d','Rouge'],['#c27206','Orange'],['#2c3e46','Ardoise']];
 const ADM_INACTIVITE=[5,10,15,20,30,60,0];
 const admNomAppli=id=>(D_APPLIS.find(a=>a[0]===id)||[id,id])[1];
