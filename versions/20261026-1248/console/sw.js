@@ -4,7 +4,7 @@
 // Page : réseau d'abord (toujours la version publiée), copie gardée seulement si le réseau manque.
 // VERSION est posée à la construction (empreinte de la page) : chaque publication = nouveau service worker = bandeau
 // « Nouvelle version disponible » dans la page ; il ne prend la main que quand la personne recharge.
-var VERSION="1c0517722a4c";
+var VERSION="15390da9d188";
 var CACHE='console-atelier-'+VERSION;
 var STATIQUES=['./manifest.webmanifest','./icone-192.png','./icone-512.png'];
 var HORS_LIGNE='<!doctype html><html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'+
@@ -36,7 +36,8 @@ self.addEventListener('fetch',function(e){
   var nom=url.pathname.slice(base.length);
   if(req.mode==='navigate'||nom===''||nom==='index.html'){
     e.respondWith(fetch(req,{cache:'no-store'}).then(function(r){
-      if(r.ok){var c=r.clone();caches.open(CACHE).then(function(k){k.put('./',c)})}
+      // Seule la page de la console est gardée (2026-10-26 : jamais une autre page du dossier, ex. tablette-essai.html).
+      if(r.ok&&(nom===''||nom==='index.html')){var c=r.clone();caches.open(CACHE).then(function(k){k.put('./',c)})}
       return r;
     }).catch(function(){
       return caches.match('./').then(function(r){return r||new Response(HORS_LIGNE,{status:503,headers:{'Content-Type':'text/html; charset=utf-8'}})});
