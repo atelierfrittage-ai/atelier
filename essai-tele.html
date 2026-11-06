@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Essai télé connectée</title>
+<style>
+/* Page d'essai (2026-10-26) : ouverte dans le NAVIGATEUR d'une télé connectée, elle dit si l'écran télé du pack
+   peut y tourner. Autonome, aucune donnée envoyée, aucun code. Écrite en JavaScript ancien (ES5) pour démarrer
+   même sur un vieux navigateur de télé ; les fonctions récentes sont seulement TESTÉES. Commande à la télécommande :
+   flèches + OK. */
+html{font-size:clamp(14px,1.25vw,40px)}
+*{box-sizing:border-box}
+body{margin:0;background:#0d1b21;color:#fff;font-family:"Segoe UI",Roboto,Arial,sans-serif;padding:1.6rem 2.4rem}
+h1{margin:0 0 .3rem;font-size:2.4rem}
+.sous{color:#a9bcc4;font-size:1.2rem;margin:0 0 1.2rem}
+.grille{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-flex-wrap:wrap;flex-wrap:wrap;margin:0 -.5rem}
+.t{width:25%;padding:.5rem}
+.c{background:#16262d;border:3px solid #26404a;border-radius:1rem;padding:.8rem 1rem;height:100%}
+.c b{display:block;font-size:1.25rem}
+.c span{display:block;font-size:1rem;color:#a9bcc4;margin-top:.3rem;word-wrap:break-word}
+.c.ok{border-color:#3fb56e}.c.ok b:before{content:"\2713  ";color:#6fd08e}
+.c.ko{border-color:#ff6b57}.c.ko b:before{content:"\2715  ";color:#ff8a7a}
+.c.mi{border-color:#ffb020}.c.mi b:before{content:"!  ";color:#ffc24d}
+.c.at b:before{content:"\2026  ";color:#a9bcc4}
+.boutons{margin:1.2rem 0}
+button{font:inherit;font-size:1.4rem;font-weight:700;color:#fff;background:#0e4d55;border:4px solid #0e4d55;border-radius:1rem;padding:.8rem 1.6rem;margin:0 .8rem .8rem 0;cursor:pointer}
+button:focus,button:hover{border-color:#ffd24d;outline:none;background:#136e79}
+.bilan{font-size:1.8rem;font-weight:800;margin:1rem 0;padding:1rem 1.4rem;border-radius:1rem;background:#16262d;border:3px solid #26404a}
+.code{font-family:Consolas,monospace;font-size:1.6rem;color:#ffd24d}
+.demo{margin-top:1.2rem;height:9rem;position:relative;overflow:hidden;border-radius:1rem;background:#16262d}
+.demo div{position:absolute;top:1rem;left:1rem;right:1rem;bottom:1rem;border-radius:.8rem;display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;justify-content:center;font-size:2rem;font-weight:800;opacity:0;-webkit-transition:opacity .6s;transition:opacity .6s}
+.demo div.vu{opacity:1}
+.horloge{float:right;font-size:2.4rem;font-weight:700}
+@media (max-width:900px){.t{width:50%}}
+</style>
+</head>
+<body>
+<div class="horloge" id="h">--:--:--</div>
+<h1>Essai de la télé connectée</h1>
+<p class="sous">Cette page vérifie si le navigateur de la télé peut afficher l'écran télé de l'atelier. Rien n'est envoyé. Avec la télécommande : flèches pour choisir, OK pour appuyer.</p>
+<div class="boutons">
+  <button id="bPlein" autofocus>1. Plein écran</button>
+  <button id="bSon">2. Tester le son (bip)</button>
+  <button id="bRecharger">3. Recharger la page</button>
+  <button id="bRefaire">Refaire les essais</button>
+</div>
+<div class="bilan" id="bilan">Essais en cours…</div>
+<div class="grille" id="g"></div>
+<div class="demo" id="demo"><div style="background:#1f7a3a">Écran 1 : Lancements</div><div style="background:#a85a00">Écran 2 : Maintenance</div><div style="background:#0e4d55">Écran 3 : Fours</div></div>
+<p class="sous" style="margin-top:1rem">Les 3 écrans ci-dessus doivent défiler en fondu toutes les 4 secondes, sans saccade. Donnez-moi le code jaune du bilan : il résume tout.</p>
+<script>
+(function(){
+  'use strict';
+  var R={}, ORDRE=[];
+  function el(id){return document.getElementById(id)}
+  function pose(k,nom,etat,det){
+    if(!R[k])ORDRE.push(k);
+    R[k]={nom:nom,etat:etat,det:det||''};
+    dessiner();
+  }
+  function dessiner(){
+    var h='',i,k,r,nOk=0,nKo=0,nMi=0,code='';
+    for(i=0;i<ORDRE.length;i++){k=ORDRE[i];r=R[k];
+      h+='<div class="t"><div class="c '+r.etat+'"><b>'+r.nom+'</b><span>'+String(r.det).replace(/[<>&]/g,'')+'</span></div></div>';
+      if(r.etat==='ok'){nOk++;code+='1'}else if(r.etat==='ko'){nKo++;code+='0'}else if(r.etat==='mi'){nMi++;code+='5'}else code+='-';
+    }
+    el('g').innerHTML=h;
+    var verdict=nKo===0&&nMi===0?'Tout est bon pour l’affichage.':nKo===0?'Utilisable, avec des limites (en orange).':'Des fonctions manquent (en rouge) : le mini-PC reste conseillé.';
+    el('bilan').innerHTML=verdict+'<br><span class="code">Code : TV-'+code+' ('+nOk+' bons, '+nMi+' limites, '+nKo+' manquants)</span>';
+  }
+  function essaye(f){try{return f()}catch(e){return false}}
+
+  function essais(){
+    R={};ORDRE=[];
+    // 1. Écran
+    var w=window.innerWidth,hh=window.innerHeight,dpr=window.devicePixelRatio||1;
+    pose('ecran','Taille de l’écran',w>=1200?'ok':'mi',w+' × '+hh+' (zoom '+dpr+')'+(w<1200?' : petit, le texte sera serré':''));
+    // 2. Moteur JavaScript récent (utilisé par les écrans du pack)
+    var es=essaye(function(){return new Function('const a=[1,2];let b=a.map(x=>x*2);const {c=3}={};class Z{};return `${b[1]}${c}`==="43"&&!!Promise&&!!(async function(){})')()});
+    var es2=essaye(function(){return new Function('const o={a:{b:1}};return o?.a?.b===1&&(null??2)===2')()});
+    pose('js','Programmes récents (JavaScript)',es&&es2?'ok':es?'mi':'ko',es&&es2?'compatible':es?'assez récent, quelques fonctions manquent':'trop ancien : les écrans du pack ne démarreront pas');
+    // 3. Mise en page
+    var grid=essaye(function(){return CSS&&CSS.supports&&CSS.supports('display','grid')&&CSS.supports('color','var(--x)')});
+    var cm=essaye(function(){return CSS.supports('color','color-mix(in srgb, red 50%, blue)')});
+    pose('css','Mise en page moderne',grid&&cm?'ok':grid?'mi':'ko',grid?(cm?'grilles, variables, mélanges de couleurs':'grilles OK, mélange de couleurs absent (couleurs un peu différentes)'):'grilles absentes : affichage cassé');
+    // 4. Mémoire de la page
+    var ls=essaye(function(){localStorage.setItem('essai-tele','1');var v=localStorage.getItem('essai-tele');localStorage.removeItem('essai-tele');return v==='1'});
+    pose('memoire','Mémoire de la page',ls?'ok':'mi',ls?'les réglages sont gardés':'les réglages seront oubliés à chaque ouverture');
+    // 5. Plein écran possible ?
+    var fs=!!(document.documentElement.requestFullscreen||document.documentElement.webkitRequestFullscreen);
+    pose('plein','Plein écran',fs?'at':'mi',fs?'appuyez sur « 1. Plein écran » pour essayer':'pas de plein écran par la page (barres du navigateur visibles)');
+    // 6. Son
+    var au=!!(window.AudioContext||window.webkitAudioContext);
+    pose('son','Son (sirène des fours)',au?'at':'ko',au?'appuyez sur « 2. Tester le son »':'pas de son possible depuis la page');
+    // 7. Logo 3D (WebGL)
+    var gl=essaye(function(){var c=document.createElement('canvas');return !!(c.getContext('webgl')||c.getContext('experimental-webgl'))});
+    pose('3d','Logo 3D (WebGL)',gl?'ok':'mi',gl?'disponible':'absent : logo à plat (pas grave)');
+    // 8. Rester allumé
+    var wl=('wakeLock' in navigator);
+    pose('veille','Empêcher la mise en veille',wl?'ok':'mi',wl?'possible par la page':'à régler dans les menus de la télé (couper la veille automatique)');
+    // 9. Réseau : lire une page du site
+    pose('reseau','Lecture des données (réseau)','at','essai en cours…');
+    if(window.fetch){
+      var t0=Date.now();
+      fetch('version.json?x='+t0,{cache:'no-store'}).then(function(r){
+        var d=r.headers.get('date');
+        pose('reseau','Lecture des données (réseau)',r.ok?'ok':'mi',r.ok?('réponse en '+(Date.now()-t0)+' ms'):('réponse '+r.status+' (normal si la page n’est pas sur le site du pack)'));
+        if(d){var ecart=Math.round((Date.now()-new Date(d).getTime())/1000);
+          pose('heure','Heure de la télé',Math.abs(ecart)<120?'ok':'mi',Math.abs(ecart)<120?'juste (écart '+ecart+' s)':'décalée de '+Math.round(ecart/60)+' min : à régler dans la télé');}
+      })['catch'](function(){pose('reseau','Lecture des données (réseau)','ko','impossible de lire le site : Wi-Fi ou filtrage')});
+    }else pose('reseau','Lecture des données (réseau)','ko','fonction « fetch » absente : les écrans du pack ne se mettront pas à jour');
+    // 10. Fluidité
+    pose('fluide','Fluidité des animations','at','mesure sur 3 secondes…');
+    if(window.requestAnimationFrame){var n=0,d0=null;
+      var tic=function(t){if(d0===null)d0=t;n++;if(t-d0<3000)requestAnimationFrame(tic);else{var ips=Math.round(n*1000/(t-d0));
+        pose('fluide','Fluidité des animations',ips>=40?'ok':ips>=20?'mi':'ko',ips+' images / seconde'+(ips<40?' (saccades possibles)':''))}};
+      requestAnimationFrame(tic);
+    }else pose('fluide','Fluidité des animations','ko','pas d’animation fluide possible');
+    // 11. Minuterie régulière (rotation des écrans, relectures)
+    pose('minuterie','Minuterie (rotation, mises à jour)','at','mesure sur 5 secondes…');
+    var m0=Date.now(),mn=0,mi=setInterval(function(){mn++;if(mn>=10){clearInterval(mi);var ecartM=Math.abs((Date.now()-m0)-5000);
+      pose('minuterie','Minuterie (rotation, mises à jour)',ecartM<500?'ok':'mi',ecartM<500?'régulière':'irrégulière (écart '+ecartM+' ms)')}},500);
+    // 12. Rechargements (combien de fois la page a été rechargée par le bouton 3)
+    var nb=essaye(function(){return +(sessionStorage.getItem('essai-tele-rech')||0)})||0;
+    if(nb)pose('rech','Rechargement de la page','ok','rechargée '+nb+' fois sans souci');
+    // 13. Navigateur
+    pose('nav','Navigateur de la télé','ok',navigator.userAgent.slice(0,140));
+  }
+
+  el('bPlein').onclick=function(){
+    var d=document.documentElement,f=d.requestFullscreen||d.webkitRequestFullscreen;
+    if(!f){pose('plein','Plein écran','mi','pas de plein écran par la page');return}
+    try{var p=f.call(d);
+      var fin=function(){setTimeout(function(){var ok=!!(document.fullscreenElement||document.webkitFullscreenElement);pose('plein','Plein écran',ok?'ok':'mi',ok?'réussi':'refusé par la télé')},800)};
+      if(p&&p.then)p.then(fin,fin);else fin();
+    }catch(e){pose('plein','Plein écran','mi','refusé : '+e.message)}
+  };
+  el('bSon').onclick=function(){
+    var A=window.AudioContext||window.webkitAudioContext;if(!A){pose('son','Son (sirène des fours)','ko','pas de son possible');return}
+    try{var c=new A();if(c.resume)c.resume();var o=c.createOscillator(),g=c.createGain();o.frequency.value=880;g.gain.value=0.2;o.connect(g);g.connect(c.destination);
+      o.start(0);o.stop(c.currentTime+0.6);
+      setTimeout(function(){pose('son','Son (sirène des fours)',c.state==='running'?'ok':'mi',c.state==='running'?'bip joué : l’avez-vous entendu ?':'son bloqué par la télé ('+c.state+')')},700);
+    }catch(e){pose('son','Son (sirène des fours)','ko','erreur : '+e.message)}
+  };
+  el('bRecharger').onclick=function(){
+    essaye(function(){sessionStorage.setItem('essai-tele-rech',String((+(sessionStorage.getItem('essai-tele-rech')||0))+1))});
+    location.reload();
+  };
+  el('bRefaire').onclick=essais;
+
+  // Navigation à la télécommande (flèches gauche/droite entre les boutons)
+  var bs=document.getElementsByTagName('button');
+  document.addEventListener('keydown',function(e){
+    var k=e.keyCode,i,a=document.activeElement,pos=-1;
+    for(i=0;i<bs.length;i++)if(bs[i]===a)pos=i;
+    if(k===39||k===40){bs[(pos+1)%bs.length].focus();e.preventDefault()}
+    else if(k===37||k===38){bs[(pos-1+bs.length)%bs.length].focus();e.preventDefault()}
+  });
+  setTimeout(function(){bs[0].focus()},300);
+
+  // Horloge et démo de rotation
+  setInterval(function(){var d=new Date(),p=function(n){return (n<10?'0':'')+n};el('h').innerHTML=p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds())},1000);
+  var ds=el('demo').getElementsByTagName('div'),di=0;ds[0].className='vu';
+  setInterval(function(){ds[di].className='';di=(di+1)%ds.length;ds[di].className='vu'},4000);
+
+  essais();
+})();
+</script>
+</body>
+</html>

@@ -1,6 +1,7 @@
 {
- "name": "Dent All Group — Pack Tablettes",
- "short_name": "Atelier",
+ "name": "Lynk",
+ "short_name": "Lynk",
+ "description": "Lynk · Dent All Group · Atelier",
  "start_url": "./",
  "scope": "./",
  "display": "standalone",
