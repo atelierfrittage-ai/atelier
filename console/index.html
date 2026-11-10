@@ -4081,6 +4081,8 @@ var EcranFours=(function(){
   ].join('\n');
   function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
   function pad(n){return (n<10?'0':'')+n}
+  // Plateau mis au four par le scan « Mise au four » sans n° (2026-11-10) : n° technique SANS-N-HHMM → « sans n° ».
+  function numAff(n){return /^SANS-N-/.test(String(n||''))?'sans n°':n}
   function hm(t){var d=new Date(t);return pad(d.getHours())+':'+pad(d.getMinutes())}
   // Temps restant : « 42:10 » (minutes:secondes) ; plus d'une heure : « 1 h 05 ».
   function reste(ms){var s=Math.ceil(ms/1000),m=Math.floor(s/60);return m>=60?Math.floor(m/60)+' h '+pad(m%60):pad(m)+':'+pad(s%60)}
@@ -4095,10 +4097,10 @@ var EcranFours=(function(){
     if(e.etat==='cours'){
       var pc=Math.max(0,Math.min(100,100-e.reste*100/Math.max(1,e.c.fin-e.c.debut)));
       return h+'<div class="big" data-reste="'+esc(f.id)+'">'+reste(e.reste)+'<small>restant</small></div><div class="bar"><i style="width:'+pc.toFixed(1)+'%"></i></div>'+
-        '<div class="fin">Fin à <b>'+hm(e.c.fin)+'</b></div><div class="pl">Plateau <b style="white-space:nowrap">'+esc(e.c.num)+'</b>'+(e.c.par?' · '+esc(e.c.par):'')+'</div></article>';
+        '<div class="fin">Fin à <b>'+hm(e.c.fin)+'</b></div><div class="pl">Plateau <b style="white-space:nowrap">'+esc(numAff(e.c.num))+'</b>'+(e.c.par?' · '+esc(e.c.par):'')+'</div></article>';
     }
     return h+'<div class="big" data-reste="'+esc(f.id)+'">'+depasse(e.depasse)+'</div><div class="fin">'+(e.depasse>=60000?'de dépassement · ':'')+'temps fini à <b>'+hm(e.c.fin)+'</b></div>'+
-      '<div class="pl">Plateau à sortir : <b style="white-space:nowrap">'+esc(e.c.num)+'</b></div></article>';
+      '<div class="pl">Plateau à sortir : <b style="white-space:nowrap">'+esc(numAff(e.c.num))+'</b></div></article>';
   }
   // o = {sombre, tournant, logo() → adresse, boutons() → HTML, surPages}. E.maj(d) : d = {liste, state, now (fonction ou
   // nombre : heure corrigée), majAt, err, sonBloque}. E.tic() : temps restants mis à jour chaque seconde (sans tout redessiner).
