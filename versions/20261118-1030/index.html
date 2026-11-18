@@ -14,7 +14,7 @@ window.addEventListener('error',function(e){var t=e.target;window.PACK_ERREURS.p
 <link rel="icon" href="icone-192.png">
 <link rel="apple-touch-icon" href="icone-192.png">
 <meta name="mobile-web-app-capable" content="yes">
-<script>window.PACK_VERSION={"id":"20261118-1004","num":65,"date":1794992658672,"notes":"","sources":1794991758000};</script>
+<script>window.PACK_VERSION={"id":"20261118-1030","num":66,"date":1794994254386,"notes":"","sources":1794993810000};</script>
 <script>
 // Configuration de départ du pack en ligne (personnes et codes : Google).
 window.PACK_SITE={
@@ -2854,7 +2854,9 @@ function vApplis(se){
   // Accueil connecté compact (2026-11-12, campagne designer B1, maquette accueil-compact) : plus de grand logo 3D (la 1re
   // tuile était à 1 145 px sur un écran de 768) ; « Bonjour … » sur une ligne, les tuiles juste dessous, les messages
   // repliés en une ligne sous les tuiles. Le grand logo reste sur « Qui êtes-vous ? ».
-  let h=(ui.msg?'<div class="banner">'+esc(ui.msg)+'</div>':'')+
+  // 2026-11-18 (demande de l'utilisateur, choix « grand logo comme avant ») : le grand logo 3D revient au-dessus de
+  // « Bonjour / Bienvenue » ; les tuiles descendent d'autant.
+  let h=vLogo(se.site)+(ui.msg?'<div class="banner">'+esc(ui.msg)+'</div>':'')+
     '<section class="card bonjour"><div class="row"><div class="grow"><h1>'+(se.libre?'Bienvenue':'Bonjour '+esc(se.personne.nom))+'</h1><p class="hint" style="margin:0">'+(se.libre?'Accès libre · ':'')+esc(roleNom(se.personne.role))+' · '+esc(se.zone.nom)+' · <span id="siteNom">'+esc(se.site.nom||'Dent All Group')+'</span></p></div>'+
     '<button class="btn btn-aide" data-act="aide">'+icone('aide','bi')+'Mode d’emploi</button>'+
     (se.sansCode?'<button class="btn" data-act="adm-login" title="Administration (code administrateur)">'+icone('admin','bi')+'Administration</button>':'<button class="btn" data-act="logout">Se déconnecter</button>')+'</div></section>'+
