@@ -356,7 +356,9 @@ ol.file{margin:8px 0 0;padding-left:22px}
 .lanv .card h2{font-size:24px}.lanv .st{font-size:17px;padding:3px 12px}
 .lanv .hint{color:var(--ink);font-size:16px}.lanv h3{font-size:17px!important;color:var(--ink)}
 .lanv ol b{font-size:19px}.lanv .in{font-size:16px}.lanv .in::placeholder{color:var(--muted);opacity:1}
-.lanv table{font-size:16px}.lanv table th{color:var(--ink)}ol.file li{margin:0 0 8px}
+.lanv table{font-size:16px}.lanv table th{color:var(--ink)}
+/* Plateau à lancer (machine pas en fonctionnement, au moins un fichier) : écriture en ORANGE (2026-11-18). */
+.lanv .lgo h3{color:var(--warn)!important}.lanv .lgo ol b{color:var(--warn)}ol.file li{margin:0 0 8px}
 .det .row .btn,.etape .btn,.row .btn[aria-label]{min-width:44px}
 /* Campagne 2026-10-17 : barre du haut fine, tableaux qui défilent dans leur carte, menu repliable sur téléphone. */
 #sync *,.btn *,.nav button *{pointer-events:none}
@@ -2977,7 +2979,7 @@ PAGES.lancements=async()=>{
     // a changé entre-temps (état et fichier vus).
     const libre=mod&&m.etat!=='libre'?(S.remettre===c?'<div class="row" style="margin:6px 0"><button class="btn dan plein" data-lan="libre-ok" data-m="'+esc(c)+'" data-etat="'+esc(m.etat)+'" data-fid="'+esc(m.fichier?m.fichier.id:'')+'">Oui, remettre '+esc(x.nom)+' libre</button><button class="btn" data-lan="libre-non">Annuler</button></div><p class="hint" style="margin:0 0 6px">À faire seulement si l’atelier a oublié « Fin de production » : la machine redevient libre et c’est noté dans l’historique.</p>':
       '<button class="btn" data-lan="libre" data-m="'+esc(c)+'" style="margin:6px 0">Remettre libre</button>'):'';
-    return '<section class="card"><h2 style="display:block;overflow-wrap:anywhere">'+esc(x.nom)+'</h2><p style="margin:-4px 0 8px"><span class="st st-'+esc(m.etat)+'">'+ETATS_LANC[m.etat]+'</span>'+(m._attente?repereLanc(m):'')+'</p>'+
+    return '<section class="card'+(f.length&&m.etat!=='fonctionnement'&&!x.hs?' lgo':'')+'"><h2 style="display:block;overflow-wrap:anywhere">'+esc(x.nom)+'</h2><p style="margin:-4px 0 8px"><span class="st st-'+esc(m.etat)+'">'+ETATS_LANC[m.etat]+'</span>'+(m._attente?repereLanc(m):'')+'</p>'+
       (x.hs?'<div class="msg err" style="margin:0 0 8px">'+svg('alerte')+'<div><b>Hors service : '+f.length+' fichier(s) à reprendre.</b> Retirez-les ou remettez-les sur une autre machine.</div></div>':'')+
       (x.autre?'<p class="hint" style="margin:0 0 6px">Machine qui n’est plus dans la liste du parc (encore occupée).</p>':'')+
       (m.fichier?'<p style="margin:0 0 6px"><b>Fichier en cours : '+esc(m.fichier.num)+'</b>'+(m.fichier.note?' <span class="hint">· '+esc(m.fichier.note)+'</span>':'')+'</p>'+boutonPhoto(m.fichier.photo):m.etat==='fonctionnement'?'<p class="hint" style="margin:0 0 6px">Fichier en cours : aucun (lancé sans fichier)</p>':'')+
