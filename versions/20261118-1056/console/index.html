@@ -351,7 +351,12 @@ textarea.in{min-height:84px;resize:vertical;font:inherit}
 .etape{border:1px dashed #c9d3d7;border-radius:10px;padding:10px 12px;margin:0 0 10px;display:grid;gap:10px;background:#fbfdfd}
 ol.file{margin:8px 0 0;padding-left:22px}
 .row.etape{display:flex;align-items:flex-end}
-.mgrid.lanc{grid-template-columns:repeat(auto-fill,minmax(min(380px,100%),1fr))}ol.file li{margin:0 0 8px}
+.mgrid.lanc{grid-template-columns:repeat(auto-fill,minmax(min(380px,100%),1fr))}
+/* Lancements plus lisibles (2026-11-18, « on voit mal les écritures ») : textes plus grands et plus foncés. */
+.lanv .card h2{font-size:24px}.lanv .st{font-size:17px;padding:3px 12px}
+.lanv .hint{color:var(--ink);font-size:16px}.lanv h3{font-size:17px!important;color:var(--ink)}
+.lanv ol b{font-size:19px}.lanv .in{font-size:16px}.lanv .in::placeholder{color:var(--muted);opacity:1}
+.lanv table{font-size:16px}.lanv table th{color:var(--ink)}ol.file li{margin:0 0 8px}
 .det .row .btn,.etape .btn,.row .btn[aria-label]{min-width:44px}
 /* Campagne 2026-10-17 : barre du haut fine, tableaux qui défilent dans leur carte, menu repliable sur téléphone. */
 #sync *,.btn *,.nav button *{pointer-events:none}
@@ -2967,7 +2972,7 @@ PAGES.lancements=async()=>{
   const st=r.data.state||{},liste=listeLanc(r.data),mod=peutModif('lancements');
   if(S.msgLanc)h+='<div class="msg '+S.msgLanc[0]+'" role="status">'+svg(S.msgLanc[0]==='ok'?'ok':'alerte')+'<div>'+S.msgLanc[1]+'</div></div>';
   if(!liste.length)return h+'<div class="card vide">Aucune machine : elles viennent du parc (machines rangées dans la zone de la Relève).</div>';
-  h+='<div class="mgrid'+(mod?' lanc':'')+'">'+liste.map(x=>{const c=x.cle,m=(st.machines||{})[c]||{etat:'libre'},f=(st.files||{})[c]||[];
+  h+='<div class="lanv"><div class="mgrid'+(mod?' lanc':'')+'">'+liste.map(x=>{const c=x.cle,m=(st.machines||{})[c]||{etat:'libre'},f=(st.files||{})[c]||[];
     // « Remettre libre » (bureau, droit Modification) : la machine est notée libre dans l'historique ; Google refuse si elle
     // a changé entre-temps (état et fichier vus).
     const libre=mod&&m.etat!=='libre'?(S.remettre===c?'<div class="row" style="margin:6px 0"><button class="btn dan plein" data-lan="libre-ok" data-m="'+esc(c)+'" data-etat="'+esc(m.etat)+'" data-fid="'+esc(m.fichier?m.fichier.id:'')+'">Oui, remettre '+esc(x.nom)+' libre</button><button class="btn" data-lan="libre-non">Annuler</button></div><p class="hint" style="margin:0 0 6px">À faire seulement si l’atelier a oublié « Fin de production » : la machine redevient libre et c’est noté dans l’historique.</p>':
@@ -2978,9 +2983,9 @@ PAGES.lancements=async()=>{
       (m.fichier?'<p style="margin:0 0 6px"><b>Fichier en cours : '+esc(m.fichier.num)+'</b>'+(m.fichier.note?' <span class="hint">· '+esc(m.fichier.note)+'</span>':'')+'</p>'+boutonPhoto(m.fichier.photo):m.etat==='fonctionnement'?'<p class="hint" style="margin:0 0 6px">Fichier en cours : aucun (lancé sans fichier)</p>':'')+
       (m.depuis&&m.etat!=='libre'?'<p class="hint" style="margin:0 0 6px">Depuis '+heureFr(m.depuis)+(m.par?' · '+esc(m.par):'')+'</p>':'')+libre+
       '<h3 style="font-size:15px;margin:10px 0 4px">À lancer ('+f.length+')</h3>'+(mod&&!x.hs?vueLancEdition(c,f):mod&&x.hs&&f.length?vueLancEdition(c,f,true):f.length?'<ol style="margin:0;padding-left:22px">'+f.map(y=>'<li><b>'+esc(y.num)+'</b>'+(y.note?' · '+esc(y.note):'')+(y.photo?' '+boutonPhoto(y.photo):'')+'</li>').join('')+'</ol>':'<p class="hint" style="margin:0">Rien à lancer.</p>')+'</section>'}).join('')+'</div>';
-  const hi=(st.histo||[]).slice(-15).reverse();
+  const hi=(st.histo||[]).slice(-15).reverse();h+='<div class="lanv">';
   if(hi.length)h+='<section class="card" style="margin-top:16px"><h2>Derniers fichiers fabriqués'+(mod?'<span class="grow"></span>'+(S.viderHisto?'<button class="btn dan plein" data-lan="vider-ok">Oui, effacer l’historique</button><button class="btn" data-lan="vider-non">Annuler</button>':'<button class="btn dan" data-lan="vider">Effacer l’historique</button>'):'')+'</h2><table><thead><tr><th>Machine</th><th>Fichier</th><th>Fin de production</th><th>Par</th></tr></thead><tbody>'+hi.map(x=>'<tr><td>'+esc(x.machine)+'</td><td>'+esc(x.num||'—')+'</td><td>'+(x.fin?dateFr(x.fin)+' '+heureFr(x.fin):'')+(x.motif==='bureau'?' <span class="hint">· remise libre par le bureau</span>':'')+'</td><td>'+esc(x.par||'')+'</td></tr>').join('')+'</tbody></table></section>';
-  return h;
+  return h+'</div></div>';
 };
 
 
