@@ -11,6 +11,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="referrer" content="no-referrer">
 <title>Console de l’atelier</title>
+<!-- Icône de la fenêtre et de la barre des tâches (2026-11-10) : logo Lynk ; « ?v=lynk » oblige Edge à oublier l'ancien logo. -->
+<link rel="icon" type="image/png" href="logo.png?v=lynk">
 <style>
 /* Console en ligne du Pack Tablettes (lot 3, 2026-10-15) : LECTURE SEULE, d'après la maquette validée.
    Page publique : elle ne contient AUCUN secret (seulement l'adresse du script Google, ajoutée par construire-unique.mjs).
@@ -727,6 +729,22 @@ button.sync{min-width:44px;justify-content:center}
 .qr-grande{display:flex;justify-content:center;background:var(--line2);border-radius:10px;padding:10px;overflow:hidden}
 .qr-grande .qr-lab{width:70mm;height:37mm;outline:1px solid #c9d3d8;flex:none}
 #qrImpression{display:none}
+/* Installer une nouvelle tablette (2026-11-12) : QR de l'adresse du pack, adresse, 4 étapes ; fiche A4 imprimable. */
+.inst-g{display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap}
+.inst-qr{flex:none;width:170px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:6px}
+.inst-qr svg{display:block;width:100%;height:auto}
+.inst-tx{flex:1 1 280px;min-width:0;overflow-wrap:anywhere}
+.inst-et{padding-left:22px;margin:8px 0}.inst-et li{margin:6px 0;line-height:1.4}
+#instImpression{display:none}
+@media print{
+  body.inst-imprime>*:not(#instImpression){display:none!important}
+  body.inst-imprime{background:#fff!important;margin:0}
+  body.inst-imprime #instImpression{display:block;color:#000;font-size:15pt;padding:12mm}
+  #instImpression h1{font-size:24pt;margin:0 0 8mm}
+  #instImpression .inst-qr{width:70mm;border:0}
+  #instImpression a{color:#000;text-decoration:none}
+  #instImpression .hint{color:#333}
+}
 @page etiquettes{size:A4 portrait;margin:0}
 @media print{
   body.qr-imprime>*:not(#qrImpression){display:none!important}
@@ -1574,6 +1592,8 @@ const PARTIES=[
   // Cahier de liaison (2026-10-23) : droits PAR SECTEUR (carte « Cahier de liaison » d'Accès des managers), pas dans le tableau.
   {id:'liaison',g:'direct',nom:'Cahier de liaison',ico:'liaison',parSecteur:1},
   {id:'ecrans',g:'direct',nom:'Écrans télé',ico:'ecran',pc:1},
+  // Télés pilotées à distance (2026-11-10) : chaque Raspberry Pi, ce qu'il affiche. Droit = celui de « Écrans télé ».
+  {id:'teles',g:'direct',nom:'Télés',ico:'ecran',pc:1,droitDe:'ecrans'},
   {id:'tablettes',g:'direct',nom:'Tablettes & alertes',ico:'tablette'},
   // Tablette d'essai (2026-10-26) : le vrai pack des tablettes, données d'essai séparées ; ouverte à toute personne connectée.
   {id:'essai',g:'direct',nom:'Tablette d’essai',ico:'essai',lect:1,essai:1},
@@ -1869,7 +1889,10 @@ function vueEnvoi(){
 }
 function vueBandeau(){
   const c=ENVOI.conflit,e=ENVOI.erreur,b=(a,t,cl)=>'<button class="btn'+(cl?' '+cl:'')+'" data-envoi="'+a+'">'+t+'</button>';
-  if(c)return '<div class="msg err" role="alert">'+svg('alerte')+'<div><b>« '+esc(c.libelle)+' » : '+esc(c.message)+'</b><br>Votre modification est gardée. La version actuelle de Google vient d’être relue.<div class="row" style="margin-top:8px">'+
+  // Envois bloqués derrière le conflit (console 2026-11-12, B6) : la file attend qu'il soit réglé ; on le dit.
+  const nb=ENVOI.file.length;
+  if(c)return '<div class="msg err" role="alert">'+svg('alerte')+'<div><b>« '+esc(c.libelle)+' » : '+esc(c.message)+'</b><br>Votre modification est gardée. La version actuelle de Google vient d’être relue.'+
+    (nb?'<br><b>'+nb+' autre'+(nb>1?'s modifications attendent':' modification attend')+' : réglez d’abord ce conflit (Réappliquer ou Abandonner), '+(nb>1?'elles partiront':'elle partira')+' ensuite.</b>':'')+'<div class="row" style="margin-top:8px">'+
     b('reappliquer','Réappliquer ma modification','pri')+b('abandonner','Abandonner ma modification')+(c.page&&c.page!==S.page?b('voir','Voir'):'')+'</div></div></div>';
   if(e&&e.reseau)return '<div class="msg warn" role="alert">'+svg('alerte')+'<div><b>'+esc(e.message)+'</b> '+enAttente()+' enregistrement(s) en attente : nouvel essai automatique toutes les 30 s.<div class="row" style="margin-top:8px">'+b('reessayer','Réessayer maintenant','pri')+'</div></div></div>';
   if(e)return '<div class="msg err" role="alert">'+svg('alerte')+'<div><b>« '+esc(e.t.libelle)+' » refusé : '+esc(e.message)+'</b><div class="row" style="margin-top:8px">'+(e.t.reprise?b('reprendre','Reprendre ma saisie','pri'):'')+(e.t.page&&e.t.page!==S.page?b('voir','Voir'):'')+b('fermer','Fermer')+'</div></div></div>';
@@ -1962,7 +1985,8 @@ function tachePack(o){return Object.assign({pack:true,esp:'pack',version:d=>Numb
 function vLogin(){
   return '<div class="login"><form class="box" id="fLogin" autocomplete="off">'+
     '<div class="row" style="gap:12px">'+marqueLynk('l')+'<div><div style="font-weight:800;font-size:15px;color:var(--accent-dark)">Lynk</div><div class="hint">Dent All Group</div></div></div>'+
-    '<h1>Console de l’atelier</h1><p class="sub">Entrez votre nom et votre code de la console (différent du code des tablettes).</p>'+
+    // Même titre que le menu (console 2026-11-12, B12) : « Console du bureau » sur le PC, « Console de l'atelier » en ligne.
+    '<h1>'+(CONSOLE_PC?'Console du bureau':'Console de l’atelier')+'</h1><p class="sub">Entrez votre nom et votre code de la console (différent du code des tablettes).</p>'+
     (URL_SCRIPT?'':'<div class="msg err">'+svg('alerte')+'<div><b>Console pas encore reliée à Google.</b><br>'+(CONSOLE_PC?'Console du PC : l’adresse de la Google Sheet n’est pas réglée. Ouvrez l’ancienne console (/ancienne) › Réglages.':/^(localhost|127\.0\.0\.1)$/.test(location.hostname)?'Essai sur ce PC : ajoutez l’adresse de l’imitation de Google (?google=http://localhost:…). Le vrai Google n’est jamais utilisé pendant un essai.':'Prévenez le responsable d’atelier.')+'</div></div>')+
     (navigator.onLine===false?'<div class="msg err" role="alert">'+svg('alerte')+'<div><b>Pas de connexion internet.</b> La console a besoin d’internet : vérifiez le Wi-Fi ou le câble, elle reprend toute seule au retour.</div></div>':'')+
     (S.err?'<div class="msg err" role="alert">'+svg('alerte')+'<div><b>'+esc(S.err)+'</b></div></div>':'')+
@@ -2080,10 +2104,15 @@ setInterval(()=>{
 function droit(id){
   const p=P(id);if(!p||!S.moi)return '';
   if(p.essai)return 'lecture'; // Tablette d'essai (2026-10-26) : pas encore un droit du script Google (aucune donnée réelle)
+  if(p.droitDe)return droit(p.droitDe); // Télés (2026-11-10) : même droit que « Écrans télé » (pas de partie à part dans le script)
   if(S.moi.admin)return p.lect?'lecture':'modif';
   if(p.admin)return '';
+  // Parties du seul frittage (console 2026-11-12, B4) : cachées à un manager qui ne voit pas le frittage (sinon une page
+  // sans issue « choisissez Frittage » qu'il ne peut pas choisir). Affichage seulement : le script refuse déjà la lecture.
+  if(PARTIES_FRITTAGE.includes(id)&&S.site&&!secteursVisibles().includes('frittage'))return '';
   return (S.moi.parties||{})[id]||'';
 }
+const PARTIES_FRITTAGE=['lancements','c-releve','fours','tableau'];
 function premierePartie(){const p=PARTIES.find(x=>!x.essai&&droit(x.id));return p?p.id:'aide'} // jamais l'essai par défaut (2026-10-26)
 const secteursVisibles=()=>(S.site&&S.site.secteurs)||[];
 const secteursAffiches=()=>S.secteur==='tous'?secteursVisibles():[S.secteur];
@@ -2313,7 +2342,8 @@ PAGES.accueil=async()=>{
   const nb=e=>lm?Object.values(lm).filter(m=>m.etat===e).length:0;
   // Fichier à lancer MAINTENANT : machine pas en fonctionnement, avec au moins un fichier (même règle que l'écran télé).
   const lancables=lm?Object.keys(lm).filter(n=>!lm[n]._hs&&lm[n]._n&&lm[n].etat!=='fonctionnement'&&!lm[n].fichier):[];
-  const tl=tabs&&tabs.ok?tabs.data.tablettes:null,tVues=tl?tl.filter(t=>vueAujourdhui(t.vu)).length:0;
+  // Tablettes : celles du secteur choisi, sans les anciens identifiants d'une tablette réinstallée (B3, B8).
+  const tl=tabs&&tabs.ok?(l=>{const a=tablettesAnciennes(l);return l.filter(t=>!a.has(t.id))})((tabs.data.tablettes||[]).filter(tabletteDuSecteur)):null,tVues=tl?tl.filter(t=>vueAujourdhui(t.vu)).length:0;
   const aujR=new Date().toDateString(),relJour=rel&&rel.ok?(rel.data.records||[]).filter(r=>new Date(r.createdAt).toDateString()===aujR).length:null;
   const titre=S.secteur==='tous'?(adm?'Tout l’atelier, d’un coup d’œil':'Vos secteurs'):'Secteur '+secNom(S.secteur);
   let h=enTete('accueil',esc(titre)+' — ce qui demande votre attention aujourd’hui. Actualisé toutes les minutes.',
@@ -2344,14 +2374,25 @@ PAGES.accueil=async()=>{
       :'<div class="msg ok" style="margin:0">'+svg('ok')+'<b>Rien à traiter dans ce que vous voyez.</b></div>')+'</section>';
   if(lm)h+='<section class="card"><h2>'+pastille('lancements','s')+'Lancements en direct<span class="grow"></span><button class="btn" data-go="lancements">Ouvrir les lancements</button></h2>'+
     (Object.keys(lm).length?Object.keys(lm).map(n=>{const m=lm[n];return '<div class="lan"><div><b>'+esc(n)+'</b> <span class="hint">'+(m.fichier?'· fichier en cours '+esc(m.fichier.num):'')+(m._n?' · '+m._n+' à lancer':'')+(m.depuis?' · depuis '+heureFr(m.depuis):'')+'</span></div><span class="st st-'+esc(m.etat)+'">'+ETATS_LANC[m.etat]+'</span></div>'}).join(''):'<div class="vide">Aucune machine en lancement.</div>')+'</section>';
-  h+='</div><div class="stack"><section class="card"><h2>Accès rapide</h2><div class="quick">'+PARTIES.filter(p=>p.id!=='accueil'&&droit(p.id)&&!p.pc).map(p=>'<button data-go="'+p.id+'">'+pastille(p.ico,'s')+p.nom+'</button>').join('')+'</div></section></div></div>';
+  h+='</div><div class="stack"><section class="card"><h2>Accès rapide</h2><div class="quick">'+PARTIES.filter(p=>p.id!=='accueil'&&droit(p.id)&&!p.pc).map(p=>'<button data-go="'+p.id+'">'+pastille(p.ico,'s')+p.nom+'</button>').join('')+
+    // Installer une nouvelle tablette (2026-11-12) : cadre de « Tablettes & alertes » (QR code de l'adresse du pack).
+    (droit('tablettes')?'<button data-go="tablettes" data-ancre="qrInstall">'+(t=>'<span class="pa s" style="--c1:'+t[0]+';--c2:'+t[1]+'">'+svg('qr')+'</span>')(TEINTE.tablettes||['#5d6f78','#2c3e46'])+'Installer une nouvelle tablette</button>':'')+
+    '</div></section></div></div>';
   return h;
 };
+// Lien vers un cadre d'une autre page (data-ancre) : la page s'ouvre en haut, puis le cadre est amené à l'écran dès
+// qu'il est dessiné (6 s au plus).
+document.addEventListener('click',e=>{
+  const b=e.target.closest&&e.target.closest('[data-ancre]');if(!b)return;
+  const id=b.dataset.ancre;let n=0;
+  const t=setInterval(()=>{const el=document.getElementById(id);if(el||++n>40){clearInterval(t);if(el)el.scrollIntoView({behavior:'smooth',block:'start'})}},150);
+});
 
 // Parc machines : lecture, et en « Modification » la fiche comme la console du PC (lot 5, 2026-10-15).
 // Le script vérifie tout (nom unique, échange de noms, secteurs autorisés, version) ; ici, seulement l'aide à la saisie.
-function machineVersBrouillon(m){return Object.assign({nom:'',secteur:'',zone:'',type:'',marque:'',modele:'',serie:'',mes:'',sav:'',broches:0,photo:'',plaque:'',notes:'',anciens:[]},JSON.parse(JSON.stringify(m)),{horsService:m.actif===false,broches:String(m.broches||0)})}
-function brouillonVersMachine(b){const m=JSON.parse(JSON.stringify(b));m.actif=!m.horsService;delete m.horsService;m.broches=m.secteur==='fraisage'?Math.max(0,Math.min(6,Math.round(Number(m.broches)||0))):0;return m}
+function machineVersBrouillon(m){return Object.assign({nom:'',secteur:'',zone:'',type:'',marque:'',modele:'',serie:'',mes:'',sav:'',broches:0,photo:'',plaque:'',notes:'',anciens:[]},JSON.parse(JSON.stringify(m)),{horsService:m.actif===false,pasLanc:m.lancements===false,broches:String(m.broches||0)})}
+// pasLanc : case « Pas dans les Lancements » (2026-11-18, frittage seulement) → lancements:false ; sinon champ absent.
+function brouillonVersMachine(b){const m=JSON.parse(JSON.stringify(b));m.actif=!m.horsService;delete m.horsService;if(m.pasLanc&&m.secteur==='frittage')m.lancements=false;else delete m.lancements;delete m.pasLanc;m.broches=m.secteur==='fraisage'?Math.max(0,Math.min(6,Math.round(Number(m.broches)||0))):0;return m}
 function vueFicheMachine(r){
   const E=S.edit,b=E.item,vis=r.data.secteurs||[],zs=(r.data.zones||[]).filter(z=>z.secteur===b.secteur),types=((r.data.parc||{}).types||[]).map(y=>y.nom);
   const f=[{k:'nom',t:'texte',l:'Nom (unique sur tout le site)',req:1},
@@ -2361,12 +2402,13 @@ function vueFicheMachine(r){
     {k:'mes',t:'date',l:'Mise en service'},{k:'sav',t:'texte',l:'SAV (contact)'},
     // Broches : seulement les machines du fraisage (demande de l'utilisateur, 2026-10-16) ; ailleurs 0.
     b.secteur==='fraisage'?{k:'broches',t:'choix',l:'Broches (pour les étapes « sur chaque broche »)',choix:[0,1,2,3,4,5,6].map(n=>[String(n),String(n)])}:null,
+    b.secteur==='frittage'?{k:'pasLanc',t:'case',l:'Pas dans les Lancements (machine sans fichier à lancer : tamiseuse…)'}:null,
     {k:'photo',t:'photo',l:'Photo de la machine'},{k:'plaque',t:'photo',l:'Photo de la plaque'},{k:'notes',t:'zone',l:'Notes'},{k:'horsService',t:'case',l:'Hors service'}];
   return '<aside class="card fiche edition"><h2>'+pastille('parc','s')+(E.nouveau?'Nouvelle machine':'Modifier « '+esc(E.nomAvant)+' »')+'</h2>'+
     (E.msg?'<div class="msg '+E.msg[0]+'">'+svg('alerte')+'<div>'+E.msg[1]+'</div></div>':'')+
     // Design général (lot 3) : les mêmes champs, rangés en 4 sections ; sommaire en haut de la fiche.
     dsFicheSections(f,b,[['identite','Identité','Nom, secteur, zone',['nom','secteur','zone'],(b.anciens||[]).length?'<p class="hint" style="margin:0">Anciens noms : '+esc(b.anciens.join(', '))+'</p>':''],
-      ['machines','Machine','Type et broches',['type','marque','modele','serie','broches'],''],['medias','Photos','Machine et plaque',['photo','plaque'],''],
+      ['machines','Machine','Type et broches',['type','marque','modele','serie','broches','pasLanc'],''],['medias','Photos','Machine et plaque',['photo','plaque'],''],
       ['reglages','Mise en service, SAV et notes','Suivi',['mes','sav','notes','horsService'],'']])+
     '<div class="row" style="margin-top:14px"><button class="btn" data-pe="annuler">Annuler</button><button class="btn pri" data-pe="enregistrer">Enregistrer</button></div></aside>';
 }
@@ -2411,7 +2453,7 @@ PAGES.parc=async()=>{
     const bloc=(t,titre,type,l)=>dsSec({t,titre,type,corps:l?'<dl>'+l+'</dl>':'<p class="hint" style="margin:0">Rien de renseigné.</p>'});
     h+='<aside class="card fiche"><h2>'+pastille('parc','s')+esc(sel.nom)+'<span class="grow"></span>'+(mod&&!/^tmp-/.test(sel.id)?'<button class="btn" data-pe="modifier" data-id="'+esc(sel.id)+'">'+svg('crayon')+'Modifier</button>':'')+'<button class="btn" data-parc="">Fermer</button></h2>'+
       bloc('identite','Identité','Secteur et zone',ligne('Secteur',secNom(sel.secteur))+ligne('Zone',sel.zone?zones[sel.zone]||sel.zone:'Tout le secteur')+ligne('Anciens noms',liste(sel.anciens)))+
-      bloc('machines','Machine','Type et broches',ligne('Type',sel.type)+ligne('Marque',sel.marque)+ligne('Modèle',sel.modele)+ligne('N° de série',sel.serie)+ligne('Broches',sel.secteur==='fraisage'&&sel.broches?sel.broches:''))+
+      bloc('machines','Machine','Type et broches',ligne('Type',sel.type)+ligne('Marque',sel.marque)+ligne('Modèle',sel.modele)+ligne('N° de série',sel.serie)+ligne('Broches',sel.secteur==='fraisage'&&sel.broches?sel.broches:'')+ligne('Lancements',sel.secteur==='frittage'&&sel.lancements===false?'Pas dans les Lancements':''))+
       dsSec({t:'medias',titre:'Photos',type:'Machine et plaque',corps:(sel.photo?'<h3 style="margin:0 0 4px;font-size:16px">Photo</h3>'+boutonPhoto(sel.photo):'')+(sel.plaque?'<h3 style="margin:14px 0 4px;font-size:16px">Plaque</h3>'+boutonPhoto(sel.plaque):'')||'<p class="hint" style="margin:0">Pas de photo.</p>'})+
       bloc('reglages','Mise en service, SAV et notes','Suivi',ligne('Mise en service',sel.mes)+ligne('SAV',sel.sav)+ligne('État',sel.actif===false?'Hors service':'En service')+ligne('Notes',sel.notes))+
       (mod&&!/^tmp-/.test(sel.id)?'<div class="row" style="margin-top:14px">'+(S.suppr===sel.id?'<button class="btn dan plein" data-pe="supprimer-ok">Oui, supprimer « '+esc(sel.nom)+' »</button><button class="btn" data-pe="supprimer-non">Annuler</button>':'<button class="btn dan" data-pe="supprimer" data-id="'+esc(sel.id)+'">Supprimer la machine</button>')+'</div>'+
@@ -2452,9 +2494,18 @@ function qrEtiquette(m,zones){
   return '<div class="qr-lab" data-qrid="'+esc(m.id)+'"><div class="qr-lab-qr">'+qrSvg('DAG-M:'+m.id)+'</div><div class="qr-lab-tx"><b style="font-size:'+qrTailleNom(m.nom)+'mm">'+esc(m.nom)+'</b>'+
     '<span class="lz">'+esc(lieu)+'</span><span class="sc">Scannez pour la maintenance</span></div></div>';
 }
-function qrPlanches(l,depart,zones){
+// Étiquettes des Lancements (2026-11-18) : 4 par machine, à coller sur la machine, lues à la douchette (ou à la caméra)
+// par l'appli Lancements : QR « DAG-L:<PREP|PRETE|LANCE|FIN>.<identifiant du parc> ». 6 machines par planche de 24.
+// [clé, texte, couleur, taille du texte en mm : « PRÉPARATION » doit tenir sur une ligne dans les 32 mm de la colonne]
+const QR_LANC=[['PREP','◐ EN PRÉPARATION','#41545C',3.9],['PRETE','■ PRÊTE','#A85A00',5.2],['LANCE','▶ LANCÉ','#1F7A3A',5.2],['FIN','✓ FIN DE FABRICATION','#B42318',4.2]];
+function qrEtiquetteLanc(m,k){
+  const e=QR_LANC.find(x=>x[0]===k);
+  return '<div class="qr-lab" data-qrid="'+esc(m.id)+'"><div class="qr-lab-qr">'+qrSvg('DAG-L:'+k+'.'+m.id)+'</div><div class="qr-lab-tx"><b style="font-size:'+e[3]+'mm;color:'+e[2]+';overflow-wrap:normal">'+e[1]+'</b>'+
+    '<span class="lz">'+esc(m.nom)+'</span><span class="sc">Lancements · scannez</span></div></div>';
+}
+function qrPlanches(l,depart,zones,lanc){
   const cases=[];for(let i=1;i<depart;i++)cases.push('<div class="qr-lab vide"><span>Déjà utilisée</span></div>');
-  l.forEach(m=>cases.push(qrEtiquette(m,zones)));
+  l.forEach(m=>{if(lanc)QR_LANC.forEach(e=>cases.push(qrEtiquetteLanc(m,e[0])));else cases.push(qrEtiquette(m,zones))});
   while(cases.length%QR_CASES)cases.push('<div class="qr-lab vide"><span>Vide</span></div>');
   const p=[];for(let i=0;i<cases.length;i+=QR_CASES)p.push('<div class="qr-planche" aria-label="Planche A4 n° '+(p.length+1)+'">'+cases.slice(i,i+QR_CASES).join('')+'</div>');
   return p;
@@ -2465,23 +2516,30 @@ function vueEtiquettes(r){
   const tout=((r.data.parc||{}).machines||[]).filter(m=>qrPourEtiquette(m)&&m.secteur===q.sec);
   const zs=(r.data.zones||[]).filter(z=>z.secteur===q.sec&&tout.some(m=>m.zone===z.id)),sansZone=tout.some(m=>!m.zone);
   if(q.zone!=='*'&&!(q.zone===''?sansZone:zs.some(z=>z.id===q.zone)))q.zone='*';
-  const {l,hs}=qrChoix(r),planches=l.length?qrPlanches(l,q.depart,zones):[],lib=typeof QRCode==='function';
+  const lanc=q.usage==='lanc',parM=lanc?QR_LANC.length:1;
+  const {l,hs}=qrChoix(r),planches=l.length?qrPlanches(l,q.depart,zones,lanc):[],lib=typeof QRCode==='function';
   let h='<div class="tb"><button class="btn" data-qr="fermer">← Retour à la liste des machines</button><span class="grow"></span></div>';
   if(!lib)h+='<div class="msg err">'+svg('alerte')+'<div><b>Étiquettes indisponibles</b> : la bibliothèque des QR codes manque dans cette console. Prévenez le responsable d’atelier (console à reconstruire).</div></div>';
   h+='<div class="qr-g"><section class="card"><h2>'+svg('qr')+' Étiquettes QR</h2>'+
-    '<div class="qr-etape"><h3><span class="n">1</span>Secteur</h3><div class="row">'+secs.map(s=>'<button class="chip" data-qr="sec" data-v="'+esc(s)+'" aria-pressed="'+(s===q.sec)+'">'+esc(secNom(s))+'</button>').join('')+'</div></div>'+
-    '<div class="qr-etape"><h3><span class="n">2</span>Zone</h3><div class="row"><button class="chip" data-qr="zone" data-v="*" aria-pressed="'+(q.zone==='*')+'">Toutes les zones</button>'+
+    // Usage (2026-11-18) : Maintenance (1 étiquette par machine) ou Lancements (4 par machine : préparation, prête,
+    // lancé, fin de fabrication).
+    '<div class="qr-etape"><h3><span class="n">1</span>Pour quelle appli ?</h3><div class="row">'+
+      '<button class="chip" data-qr="usage" data-v="maint" aria-pressed="'+!lanc+'">Maintenance (1 par machine)</button>'+
+      '<button class="chip" data-qr="usage" data-v="lanc" aria-pressed="'+lanc+'">Lancements (4 par machine)</button></div>'+
+      (lanc?'<p class="hint" style="margin:6px 0 0">Pour chaque machine : ◐ En préparation, ■ Prête, ▶ Lancé, ✓ Fin de fabrication. À coller sur la machine ; l’opérateur scanne l’étiquette dans l’appli Lancements.</p>':'')+'</div>'+
+    '<div class="qr-etape"><h3><span class="n">2</span>Secteur</h3><div class="row">'+secs.map(s=>'<button class="chip" data-qr="sec" data-v="'+esc(s)+'" aria-pressed="'+(s===q.sec)+'">'+esc(secNom(s))+'</button>').join('')+'</div></div>'+
+    '<div class="qr-etape"><h3><span class="n">3</span>Zone</h3><div class="row"><button class="chip" data-qr="zone" data-v="*" aria-pressed="'+(q.zone==='*')+'">Toutes les zones</button>'+
       zs.map(z=>'<button class="chip" data-qr="zone" data-v="'+esc(z.id)+'" aria-pressed="'+(q.zone===z.id)+'">'+esc(z.nom)+'</button>').join('')+
       (sansZone?'<button class="chip" data-qr="zone" data-v="" aria-pressed="'+(q.zone==='')+'">Tout le secteur (sans zone)</button>':'')+'</div></div>'+
-    '<div class="qr-etape"><h3><span class="n">3</span>Commencer à la case</h3><select class="in" id="qrDepart" aria-label="Première case libre de la planche">'+
+    '<div class="qr-etape"><h3><span class="n">4</span>Commencer à la case</h3><select class="in" id="qrDepart" aria-label="Première case libre de la planche">'+
       Array.from({length:QR_CASES},(_,i)=>'<option value="'+(i+1)+'"'+(q.depart===i+1?' selected':'')+'>Case '+(i+1)+(i?'':' (planche neuve)')+'</option>').join('')+'</select>'+
       '<p class="hint" style="margin:6px 0 0">Pour réutiliser une planche déjà entamée : les cases d’avant restent vides.</p></div>'+
     '<label class="qr-case"><input type="checkbox" id="qrHs"'+(q.hs?' checked':'')+'> Inclure les machines hors service'+(hs?' ('+hs+')':'')+'</label>'+
-    '<p class="qr-recap" role="status"><b>'+l.length+' étiquette'+(l.length>1?'s':'')+'</b> · '+planches.length+' planche'+(planches.length>1?'s':'')+' A4'+(hs&&!q.hs?' · '+hs+' hors service non imprimée'+(hs>1?'s':''):'')+'</p>'+
+    '<p class="qr-recap" role="status"><b>'+l.length*parM+' étiquette'+(l.length*parM>1?'s':'')+'</b>'+(lanc?' ('+l.length+' machine'+(l.length>1?'s':'')+')':'')+' · '+planches.length+' planche'+(planches.length>1?'s':'')+' A4'+(hs&&!q.hs?' · '+hs+' hors service non imprimée'+(hs>1?'s':''):'')+'</p>'+
     '<button class="btn pri qr-imprimer" data-qr="imprimer"'+(l.length&&lib?'':' disabled')+'>'+svg('imprim')+'Imprimer '+(planches.length>1?'les planches':'la planche')+'</button>'+
     '<p class="hint" style="margin:10px 0 0">Imprimez à <b>100 %</b> (taille réelle, sans « Ajuster à la page »), sur planche autocollante A4 de 24 étiquettes (70 × 37 mm).</p>'+
-    (l[0]?'<h3 style="margin:18px 0 8px;font-size:16px">Une étiquette, en vrai</h3><div class="qr-grande">'+qrEtiquette(l[0],zones)+'</div>':'')+
-    '<dl class="qr-kv"><dt>Étiquette</dt><dd>70 × 37 mm</dd><dt>QR</dt><dd>30 mm de côté</dd><dt>Contenu du QR</dt><dd>DAG-M:&lt;n° du parc&gt;</dd></dl></section>'+
+    (l[0]?'<h3 style="margin:18px 0 8px;font-size:16px">Une étiquette, en vrai</h3><div class="qr-grande">'+(lanc?qrEtiquetteLanc(l[0],'PREP'):qrEtiquette(l[0],zones))+'</div>':'')+
+    '<dl class="qr-kv"><dt>Étiquette</dt><dd>70 × 37 mm</dd><dt>QR</dt><dd>30 mm de côté</dd><dt>Contenu du QR</dt><dd>'+(lanc?'DAG-L:&lt;état&gt;.&lt;n° du parc&gt;':'DAG-M:&lt;n° du parc&gt;')+'</dd></dl></section>'+
     '<section class="qr-apercu" aria-label="Aperçu des planches A4">'+(planches.length?'<div class="qr-planches" id="qrPlanches">'+planches.join('')+'</div>':'<div class="card vide">Aucune machine à imprimer pour ce choix.</div>')+'</section></div>';
   return h;
 }
@@ -2510,6 +2568,8 @@ function actionQr(b){
   if(!S.qr)return chargerPage();
   if(a==='sec'){S.qr.sec=b.dataset.v;S.qr.zone='*';return chargerPage()}
   if(a==='zone'){S.qr.zone=b.dataset.v;return chargerPage()}
+  // Lancements : machines du frittage (la liste des Lancements) proposées d'abord.
+  if(a==='usage'){S.qr.usage=b.dataset.v;if(b.dataset.v==='lanc')return lire('parc-lire').then(r=>{if(r.ok&&qrSecteurs(r).includes('frittage')){S.qr.sec='frittage';S.qr.zone='*'}return chargerPage()});return chargerPage()}
   if(a==='imprimer'){qrImprimer();return Promise.resolve()}
   return chargerPage();
 }
@@ -2593,7 +2653,8 @@ PAGES.personnes=async()=>{
   const l=r.data.personnes.filter(personneDuSecteur).sort((a,b)=>a.nom.localeCompare(b.nom,'fr'));
   h+=noteFiltre(l.length,'personne(s), avec celles de tout le site');
   return h+'<section class="card">'+(l.length?'<table><thead><tr><th>Nom</th><th>Rôle</th><th>Rattachement</th><th>Code tablette</th>'+(mod?'<th></th>':'')+'</tr></thead><tbody>'+
-    l.map(p=>'<tr><td><b>'+esc(p.nom)+'</b>'+repere(p)+'</td><td>'+esc(ROLES_NOMS[p.role]||p.role)+'</td><td>'+esc(p.role==='admin'?'Toutes les zones':(p.secteurs.map(s=>'Tout le secteur '+secNom(s)).concat(p.zones.map(z=>zones[z]||z)).join(', ')||'Tout le site'))+'</td><td>'+(p.codeDefini?'<span class="tag ok">✓ défini</span>':'<span class="tag warn">pas encore</span>')+'</td>'+
+    // 1280 px (console 2026-11-12, B10) : nom long coupé à la ligne, code en pastille courte qui ne se coupe pas.
+    l.map(p=>'<tr><td style="overflow-wrap:anywhere;min-width:8em"><b>'+esc(p.nom)+'</b>'+repere(p)+'</td><td>'+esc(ROLES_NOMS[p.role]||p.role)+'</td><td>'+esc(p.role==='admin'?'Toutes les zones':(p.secteurs.map(s=>'Tout le secteur '+secNom(s)).concat(p.zones.map(z=>zones[z]||z)).join(', ')||'Tout le site'))+'</td><td style="white-space:nowrap">'+(p.codeDefini?'<span class="tag ok">✓ défini</span>':'<span class="tag warn">• à définir</span>')+'</td>'+
       (mod?'<td style="text-align:right;white-space:nowrap">'+(/^tmp-/.test(p.id)?'<span class="envoi">'+svg('actualiser')+' Enregistrement…</span>':p.modifiable&&!E?'<button class="btn" data-pp="modifier" data-id="'+esc(p.id)+'">'+svg('crayon')+'Modifier</button> '+(p.nom===S.moi.nom?'':S.suppr===p.id?'<button class="btn dan plein" data-pp="supprimer-ok">Oui, retirer</button><button class="btn" data-pp="supprimer-non">Non</button>':'<button class="btn dan" data-pp="supprimer" data-id="'+esc(p.id)+'">Retirer</button>'):p.modifiable?'':'<span class="hint">hors de vos secteurs</span>')+'</td>':'')+'</tr>').join('')+'</tbody></table>'
     :'<div class="vide">Aucune personne dans vos secteurs.</div>')+'</section>';
 };
@@ -2900,6 +2961,8 @@ PAGES.lancements=async()=>{
   let h=enTete('lancements','Les machines du frittage (ordre du parc), leur état et les fichiers à lancer. Actualisé toutes les 15 secondes.');
   if(horsFrittage())return h+horsFrittage();
   if(!r.ok)return h+refus(r);
+  // Avis du script (lot C, 2026-11-13) : lancements remis d'aplomb après des données illisibles (copie gardée dans un onglet).
+  if(r.data&&typeof r.data.avis==='string'&&r.data.avis)h+='<div class="msg warn" role="status">'+svg('alerte')+'<div>'+esc(r.data.avis)+'</div></div>';
   // Machines : la règle unique (liste du script ou de ce PC), sans dépendre du droit « Parc machines » (2026-10-21).
   const st=r.data.state||{},liste=listeLanc(r.data),mod=peutModif('lancements');
   if(S.msgLanc)h+='<div class="msg '+S.msgLanc[0]+'" role="status">'+svg(S.msgLanc[0]==='ok'?'ok':'alerte')+'<div>'+S.msgLanc[1]+'</div></div>';
@@ -2925,6 +2988,21 @@ PAGES.lancements=async()=>{
 // Mises à jour normale / test / bloquée : réglage du site (GitHub), donc sur le PC seulement et pour l'administrateur.
 // Alertes (mêmes règles que l'ancienne console) ; « Ignorer » est gardé sur ce PC (/api/alertes-ignorees).
 const dateVu=v=>{const m=/(\d\d)\/(\d\d)\/(\d{4}) (\d\d):(\d\d)/.exec(v||'');return m?new Date(+m[3],m[2]-1,+m[1],+m[4],+m[5]).getTime():0};
+// Tablette du secteur choisi (même règle pour la partie Tablettes et la carte de la Vue d'ensemble, console 2026-11-12, B3) :
+// zone envoyée par la tablette (« Zone · Tablette ») ; zone inconnue = montrée partout.
+const tabletteDuSecteur=t=>{if(!filtreSecteur())return true;const s=secteurDeZone(String(t.zone||'').split(' · ')[0].trim());return !s||secteursAffiches().includes(s)};
+// Même tablette réinstallée (testeur 2026-11-12, B8) : un nouvel identifiant à chaque réinstallation ou navigateur effacé,
+// donc la même tablette plusieurs fois (et ses alertes en double). Même zone et même nom : seule la plus récemment vue
+// compte ; les autres sont marquées « ancien identifiant » (à retirer) et ne donnent plus d'alerte.
+function tablettesAnciennes(l){
+  const m=new Map(),old=new Set();
+  for(const t of l){
+    const k=String(t.zone||'').trim().toLowerCase()+'|'+String(t.nom||'').trim().toLowerCase();if(k==='|')continue;
+    const x=m.get(k);if(!x){m.set(k,t);continue}
+    if((dateVu(t.vu)||0)>(dateVu(x.vu)||0)){old.add(x.id);m.set(k,t)}else old.add(t.id);
+  }
+  return old;
+}
 function alertesTablettes(l,site){
   const a=[],H=3600000,now=Date.now();
   for(const t of l.filter(t=>!!t.version&&t.version!=='fichier')){
@@ -2954,17 +3032,17 @@ PAGES.tablettes=async()=>{
   let h=enTete('tablettes','Les tablettes de vos zones : dernière connexion, version du pack et état envoyé. Jamais les codes des Réglages.');
   if(!r.ok)return h+refus(r);
   // Secteur choisi : les tablettes de ses zones (nom de zone envoyé par la tablette, « Zone · Tablette »).
-  const l=(r.data.tablettes||[]).filter(t=>{if(!filtreSecteur())return true;const s=secteurDeZone(String(t.zone||'').split(' · ')[0].trim());return !s||secteursAffiches().includes(s)});
+  const l=(r.data.tablettes||[]).filter(tabletteDuSecteur),anciennes=tablettesAnciennes(l);
   h+=noteFiltre(l.length,'tablette(s)');
   // Sur le PC : réglages des mises à jour (administrateur) et alertes ignorées sur ce PC.
-  let site=null,ign={},avis='';
+  let site=null,ign={},avis='',etatPC=null;
   if(CONSOLE_PC){
-    if(pe){const o=await pe;if(o.x){if(o.x.message==='session')throw o.x;avis=o.x.message}else{site=o.e.site||null;if(o.e.erreur)avis='GitHub : '+o.e.erreur}}
+    if(pe){const o=await pe;if(o.x){if(o.x.message==='session')throw o.x;avis=o.x.message}else{etatPC=o.e;site=o.e.site||null;if(o.e.erreur)avis='GitHub : '+o.e.erreur}}
     const oi=await pi;if(oi.x){if(oi.x.message==='session')throw oi.x}else ign=oi.i||{};
   }
   if(S.msgTab)h+='<div class="msg '+S.msgTab[0]+'" role="status">'+svg(S.msgTab[0]==='ok'?'ok':'alerte')+'<div>'+S.msgTab[1]+'</div></div>';
   if(avis)h+='<div class="msg warn">'+svg('alerte')+'<div>'+esc(avis)+'</div></div>';
-  const tout=alertesTablettes(l,site),vis=tout.filter(a=>!ign[a.cle]),nIgn=tout.length-vis.length,peutIgn=CONSOLE_PC&&mod;
+  const tout=alertesTablettes(l.filter(t=>!anciennes.has(t.id)),site),vis=tout.filter(a=>!ign[a.cle]),nIgn=tout.length-vis.length,peutIgn=CONSOLE_PC&&mod;
   h+='<section class="card" style="margin-bottom:16px"><h2>'+svg('alerte')+'Alertes <span class="tag '+(vis.length?'warn':'ok')+'">'+vis.length+'</span>'+(peutIgn&&vis.length>1?'<span class="grow"></span><button class="btn" data-tab="ign-tout">Tout ignorer</button>':'')+'</h2>'+
     (vis.length?'<div class="als">'+vis.map(a=>'<div class="al"><span class="sy">'+(a.niv==='err'?'!':'·')+'</span><div class="tx"><b>'+esc(a.t.zone||a.t.id)+(a.t.nom?' ('+esc(a.t.nom)+')':'')+'</b>'+esc(a.texte)+'</div>'+(peutIgn?'<button class="btn" data-tab="ign" data-cle="'+esc(a.cle)+'">Ignorer</button>':'')+'</div>').join('')+'</div>'
       :'<div class="msg ok" style="margin:0">'+svg('ok')+'<b>'+(nIgn?'Aucune alerte en cours.':'Aucune alerte : les tablettes se connectent et ont tout envoyé.')+'</b></div>')+
@@ -2973,17 +3051,60 @@ PAGES.tablettes=async()=>{
   const canal=t=>{const c=site&&site.tablettes&&site.tablettes[t.id];return c?c.canal:'normale'};
   const regCanal=CONSOLE_PC&&S.moi.admin&&site&&site.id;
   h+='<section class="card">'+(l.length?'<table><thead><tr><th>Tablette</th><th>Zone</th><th>Dernière connexion</th><th>Version</th><th>État</th>'+(regCanal?'<th>Mises à jour</th>':'')+(mod?'<th></th>':'')+'</tr></thead><tbody>'+
-    l.map(t=>'<tr><td><b>'+esc(t.nom||t.id)+'</b><br><span class="hint">'+esc(t.id)+'</span></td><td>'+esc(t.zone)+'</td><td>'+(vueAujourdhui(t.vu)?'<span class="tag ok">✓ '+esc(t.vu)+'</span>':'<span class="tag warn">! '+esc(t.vu||'jamais')+'</span>')+'</td><td>'+esc(t.version)+'</td><td>'+esc(t.etat)+'</td>'+
+    l.map(t=>'<tr><td><b>'+esc(t.nom||t.id)+'</b><br><span class="hint">'+esc(t.id)+'</span>'+(anciennes.has(t.id)?'<br><span class="tag">• ancien identifiant : même tablette vue plus récemment, vous pouvez le retirer</span>':'')+'</td><td>'+esc(t.zone)+'</td><td>'+(vueAujourdhui(t.vu)?'<span class="tag ok">✓ '+esc(t.vu)+'</span>':'<span class="tag warn">! '+esc(t.vu||'jamais')+'</span>')+'</td><td>'+esc(t.version)+'</td><td>'+esc(t.etat)+'</td>'+
       (regCanal?'<td><select class="in" data-canal="'+esc(t.id)+'" aria-label="Mises à jour de '+esc(t.nom||t.id)+'">'+[['normale','Normale'],['test','Tablette test'],['bloquee','Bloquée']].map(([k,n])=>'<option value="'+k+'"'+(canal(t)===k?' selected':'')+'>'+n+'</option>').join('')+'</select></td>':'')+
       (mod?'<td style="text-align:right;white-space:nowrap">'+(S.suppr===t.id?'<button class="btn dan plein" data-tab="suppr-ok">Oui, retirer</button><button class="btn" data-tab="suppr-non">Non</button>':'<button class="btn dan" data-tab="suppr" data-id="'+esc(t.id)+'">Retirer</button>')+'</td>':'')+'</tr>').join('')+'</tbody></table>'
     :'<div class="vide">Aucune tablette dans vos zones.</div>')+
     (mod?'<p class="hint" style="margin:10px 0 0">« Retirer » enlève l’appareil de la liste (onglet Tablettes de la Google Sheet) ; s’il se reconnecte, il réapparaît.'+(regCanal?' Son réglage de mises à jour est aussi remis à « Normale ».':'')+'</p>':'')+
     (CONSOLE_PC&&S.moi.admin&&!regCanal?'<p class="hint">Mises à jour normale / test / bloquée : publiez d’abord une version (« Nouvelle version du pack ») et réglez GitHub.</p>':'')+
     (!CONSOLE_PC&&S.moi.admin?'<p class="hint">Mises à jour normale / test / bloquée : sur le PC de l’atelier (console du PC).</p>':'')+'</section>';
-  return h;
+  return h+tabInstaller(etatPC,!CONSOLE_PC?'Elle est lue dans les réglages du site internet du pack (GitHub), rangés sur le PC du bureau : ouvrez cette page dans la console du PC (logiciel Lynk).'
+    :!S.moi.admin?'Elle est lue dans les réglages du site internet du pack (GitHub) du PC : seul un administrateur la voit ici. Demandez-lui la fiche imprimée.'
+    :!etatPC?'Le PC n’a pas pu lire l’état du site internet du pack'+(avis?' : '+avis:'.'):'');
 };
+// --- Installer une nouvelle tablette (2026-11-12, demande : le QR code n'existait que dans l'ancienne console) ---------
+// Même adresse que l'ancienne console (cadre « Adresse du pack pour les tablettes ») : celle du site internet du pack
+// (GitHub Pages), lue par le serveur du PC (/api/etat, administrateur). Adresse inconnue : on dit pourquoi (le cadre
+// reste). Jamais le code d'accès de l'atelier ni le code Google : seulement s'il est réglé ou non.
+function tabInstaller(e,pourquoi){
+  let h='<section class="card" id="qrInstall" style="margin-top:16px"><h2>'+svg('qr')+' Installer une nouvelle tablette</h2>';
+  const url=e&&e.url,g=e&&e.reglages&&e.reglages.github;
+  if(!url){
+    if(!pourquoi)pourquoi=g&&!(g.jeton&&g.depot)?'Le site internet du pack n’est pas encore créé (compte GitHub) : suivez le guide de l’ancienne console, onglet Réglages.'
+      // Message déjà terminé par un point (console 2026-11-12, B9 : « Réglages.. ») : pas de second point.
+      :e&&e.erreur?'GitHub ne répond pas : '+String(e.erreur).replace(/[.\s]+$/,'')+'. Réessayez dans un moment.':'Le site internet du pack n’a pas encore de version publiée : publiez-en une (« Nouvelle version du pack »).';
+    return h+'<div class="msg info" style="margin:0">'+svg('aide')+'<div><b>Adresse du pack inconnue ici.</b> '+esc(pourquoi)+'</div></div></section>';
+  }
+  const q=qrSvg(url);
+  h+='<div class="inst-g">'+instContenu(url,q,e)+'</div>'+
+    '<div class="row" style="margin-top:12px"><button class="btn pri" data-tab="inst-imprimer">'+svg('imprim')+'Imprimer</button>'+
+    '<span class="hint">Une page A4 à poser près des tablettes neuves (ni code d’accès ni code Google dessus).</span></div></section>';
+  return h;
+}
+// QR + adresse + les 4 étapes (mêmes que l'ancienne console) : à l'écran et sur la page imprimée.
+function instContenu(url,q,e){
+  const code=e&&e.reglages&&e.reglages.google&&e.reglages.google.code; // vrai/faux seulement, jamais le code
+  return '<div class="inst-qr">'+(q||'<p class="hint" style="margin:0">Code QR indisponible (bibliothèque absente de cette console) : tapez l’adresse sur la tablette.</p>')+'</div>'+
+    '<div class="inst-tx"><p style="margin-top:0">Adresse du pack :<br><a href="'+esc(url)+'" target="_blank" rel="noopener"><b>'+esc(url)+'</b></a></p>'+
+    '<ol class="inst-et"><li>Sur la tablette, ouvrez Chrome et scannez ce code (ou tapez l’adresse).</li><li>Menu ⋮ › <b>Ajouter à l’écran d’accueil</b> (ou « Installer l’application »).</li>'+
+    '<li>Ouvrez le pack par la nouvelle icône, tapez le <b>code d’accès de l’atelier</b> ('+(code?'il est dans la Google Sheet, menu Atelier ; jamais affiché ici':'pas encore réglé')+').</li>'+
+    '<li>L’administrateur se connecte et choisit la zone de la tablette.</li></ol>'+
+    '<p class="hint" style="margin-bottom:0">Ensuite, chaque nouvelle version publiée s’installe toute seule sur la tablette, à l’écran « Qui êtes-vous ? ».</p></div>';
+}
+// Impression : seulement la fiche (titre, QR en grand, adresse, étapes), comme les étiquettes QR du parc.
+function instImprimer(){
+  const g=document.querySelector('#qrInstall .inst-g');if(!g)return;
+  let d=document.getElementById('instImpression');if(d)d.remove();
+  d=document.createElement('div');d.id='instImpression';d.innerHTML='<h1>Installer une tablette Lynk</h1><div class="inst-g">'+g.innerHTML+'</div>';document.body.appendChild(d);
+  document.body.classList.add('inst-imprime');
+  const fin=()=>{document.body.classList.remove('inst-imprime');const x=document.getElementById('instImpression');if(x)x.remove();removeEventListener('afterprint',fin)};
+  addEventListener('afterprint',fin);
+  try{window.print()}catch(x){fin()}
+}
 async function actionTablettes(b){
-  const act=b.dataset.tab;S.msgTab=null;
+  const act=b.dataset.tab;
+  if(act==='inst-imprimer')return instImprimer();
+  S.msgTab=null;
   if(act==='suppr'){S.suppr=b.dataset.id;return chargerPage()}
   if(act==='suppr-non'){S.suppr=null;return chargerPage()}
   if(act==='suppr-ok'){
@@ -3424,7 +3545,7 @@ PAGES.acces=async()=>{
     '<table class="perm"><thead><tr><th>Partie de la console</th><th>Droit</th></tr></thead><tbody>'+
     GROUPES.filter(([g])=>g!=='flux').map(([g,t])=>'<tr class="grp"><td colspan="2">'+t+'</td></tr>'+PARTIES.filter(p=>p.g===g).map(p=>{
       const sp=parties.find(x=>x.id===p.id)||{},v=b.parties[p.id]||'';
-      const cell=p.essai?'<span class="hint" style="white-space:normal" title="Données d’essai seulement, rien n’est enregistré. Un réglage par manager viendra avec une prochaine version du script Google.">✓ Ouverte à tous les managers (lecture, données d’essai)</span>':p.parSecteur?'<span class="hint">Par secteur : carte « Cahier de liaison » plus bas</span>':p.admin||sp.admin?'<span class="lock">'+svg('cadenas')+'Administrateur seulement</span>':
+      const cell=p.droitDe?'<span class="hint">Même droit que « '+esc(P(p.droitDe).nom)+' »</span>':p.essai?'<span class="hint" style="white-space:normal" title="Données d’essai seulement, rien n’est enregistré. Un réglage par manager viendra avec une prochaine version du script Google.">✓ Ouverte à tous les managers (lecture, données d’essai)</span>':p.parSecteur?'<span class="hint">Par secteur : carte « Cahier de liaison » plus bas</span>':p.admin||sp.admin?'<span class="lock">'+svg('cadenas')+'Administrateur seulement</span>':
         '<div class="tri" role="radiogroup" aria-label="'+esc(p.nom)+'">'+[['','v0','masque','Masqué'],['lecture','v1','oeil','Lecture'],['modif','v2','crayon','Modification']].map(([k,cl,ic,l])=>
         '<button class="'+cl+'" role="radio" data-acc="droit" data-p="'+p.id+'" data-v="'+k+'" aria-checked="'+(v===k)+'" aria-pressed="'+(v===k)+'"'+(k==='modif'&&(p.lect||sp.lect)?' disabled title="Cette partie se consulte seulement"':'')+'>'+svg(ic)+l+'</button>').join('')+'</div>';
       return '<tr><td><span class="nm">'+pastille(p.ico,'s')+p.nom+'</span></td><td>'+cell+'</td></tr>'}).join('')).join('')+'</tbody></table>'+
@@ -3470,7 +3591,7 @@ async function actionAcces(b){
   if(act==='admin')return changeBrouillon(x=>{x.admin=!x.admin});
   if(act==='secteur')return changeBrouillon(x=>{const s=b.dataset.s;x.secteurs=x.secteurs.includes(s)?x.secteurs.filter(y=>y!==s):x.secteurs.concat(s)});
   if(act==='droit')return changeBrouillon(x=>{if(b.dataset.v)x.parties[b.dataset.p]=b.dataset.v;else delete x.parties[b.dataset.p]});
-  if(act==='modele')return changeBrouillon(x=>{const M=MODELES[b.dataset.v];x.parties={};PARTIES.forEach(p=>{if(p.admin||p.flux||p.parSecteur||p.essai)return;let v=M.f(p);if(v==='modif'&&p.lect)v='lecture';if(v)x.parties[p.id]=v})});
+  if(act==='modele')return changeBrouillon(x=>{const M=MODELES[b.dataset.v];x.parties={};PARTIES.forEach(p=>{if(p.admin||p.flux||p.parSecteur||p.essai||p.droitDe)return;let v=M.f(p);if(v==='modif'&&p.lect)v='lecture';if(v)x.parties[p.id]=v})});
   if(act==='annuler'){a.modifie=false;a.msg=null;a.couper=false;const r=await lire('comptes-lire'),c=r.ok&&r.data.comptes.find(x=>x.id===a.sel);a.b=c?brouillonDe(c):null;if(!c)a.sel='';return chargerPage()}
   if(act==='enregistrer'){
     // Temps masqué (2026-10-16) : affiché tout de suite, envoyé derrière avec la version du compte lue (depuis).
@@ -3834,7 +3955,7 @@ PAGES.liaisons=async()=>{
     '<label class="lbl">Code d’accès de la Google Sheet '+(go.code?'<span class="tag ok">✓ défini</span>':'<span class="tag warn">pas défini</span>')+'<input class="in" type="password" id="pcGoC" placeholder="vide = inchangé" autocomplete="new-password"></label></div>'+
     '<p class="hint">Après un changement d’adresse, rechargez cette page : la console se reconnecte à la nouvelle Google Sheet.</p></section>'+
     // Dossier du projet (2026-10-17) : sources et outil de mise à jour du script Google (partie « Script Google »).
-    '<section class="card" style="margin-top:16px"><h2>Dossier du projet</h2><div class="form"><label class="lbl">Dossier qui contient Atelier\\Google-Sheet (vide = recherche automatique, G:\\ERIC\\ChatGPT si présent)<input class="in" id="pcProjet" value="'+esc(((e.reglages||{}).projet||{}).reglage||'')+'" autocomplete="off"></label></div>'+
+    '<section class="card" style="margin-top:16px"><h2>Dossier du projet</h2><div class="form"><label class="lbl">Dossier qui contient Atelier\\Google-Sheet (par exemple G:\\ERIC\\ChatGPT)<input class="in" id="pcProjet" value="'+esc(((e.reglages||{}).projet||{}).reglage||'')+'" autocomplete="off"></label></div>'+
     '<p class="hint">'+(((e.reglages||{}).projet||{}).trouve?'Trouvé : '+esc(e.reglages.projet.trouve):'<b style="color:var(--warn)">Dossier du projet introuvable sur ce PC</b> : la partie « Script Google » ne peut pas fonctionner.')+'</p></section>';
   h+='<section class="card" style="margin-top:16px"><h2>Site internet (GitHub)</h2><div class="form"><label class="lbl">Nom du compte<input class="in" id="pcGhP" value="'+esc(g.proprietaire||'')+'" autocomplete="off"></label>'+
     '<label class="lbl">Dépôt<input class="in" id="pcGhD" value="'+esc(g.depot||'')+'" autocomplete="off"></label><label class="lbl">Branche<input class="in" id="pcGhB" value="'+esc(g.branche||'main')+'" autocomplete="off"></label>'+
@@ -4040,11 +4161,14 @@ var EcranFours=(function(){
     '.ef .tv-h{display:flex;align-items:center;gap:1.5vw;flex-wrap:wrap;background:linear-gradient(100deg,var(--ac),var(--ac2));color:#fff;border-radius:14px;padding:.6em 1.2em}',
     '.ef.sombre .tv-h{background:transparent;padding:0}',
     '.ef .tv-logo{width:4.2em;height:4.2em;flex:none;background:#fff;border-radius:50%;display:grid;place-items:center}',
-    '.ef.sombre .tv-logo{background:transparent}.ef .tv-logo img{width:80%;height:80%;object-fit:contain}',
+    '.ef.sombre .tv-logo{background:transparent}.ef .tv-logo img,.ef .tv-logo .logo-premium-plat{width:80%;height:80%;object-fit:contain}',
+    // Logo 3D (2026-11-10, demande : « tous les logos qui tournent en 3D ») : le vrai solide de commun/logo-premium.js, comme
+    // les écrans Lancements et Maintenance ; sans WebGL, le logo à plat qui tourne (avec perspective).
+    '.ef .tv-logo{perspective:600px}.ef .tv-logo.l3d{width:4.8em;height:4.8em;margin:-.3em 0}.ef .tv-logo canvas{display:block;width:100%;height:100%}',
     // Lynk (2026-11-05) : le petit logo tourne (calé sur l'horloge : pas d'à-coup quand l'écran se redessine) et le nom
     // « Lynk » s'affiche à côté, en haut à gauche.
-    '.ef .tv-logo img{animation:ef-tourne 6s linear infinite}@keyframes ef-tourne{from{transform:rotateY(0)}to{transform:rotateY(360deg)}}',
-    '@media (prefers-reduced-motion:reduce){.ef .tv-logo img{animation:none}}',
+    '.ef .tv-logo img,.ef .tv-logo .logo-premium-plat{animation:ef-tourne 6s linear infinite}@keyframes ef-tourne{from{transform:rotateY(0)}to{transform:rotateY(360deg)}}',
+    '@media (prefers-reduced-motion:reduce){.ef .tv-logo img,.ef .tv-logo .logo-premium-plat{animation:none}}',
     '.ef .tv-lynk{flex:none;font-size:1.8em;font-weight:800;letter-spacing:-.02em;line-height:1}',
     '.ef .tv-t{flex:1;min-width:240px}.ef .tv-t b{display:block;font-size:2em;line-height:1.05}.ef .tv-t small{color:rgba(255,255,255,.9);font-size:.8em}.ef.sombre .tv-t small{color:var(--doux)}',
     '.ef .tv-k{display:flex;gap:.8vw;flex-wrap:wrap}',
@@ -4121,7 +4245,7 @@ var EcranFours=(function(){
       var al=alarmes(s,L,now),encours=L.map(function(f,i){return {f:f,e:etats[i]}}).filter(function(x){return x.e.etat==='cours'}).sort(function(a,b){return a.e.c.fin-b.e.c.fin});
       E.cle=etats.map(function(e){return e.etat+(e.c?e.c.id:'')}).join('|');
       var date=new Date(now).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'}),h='';
-      h+='<header class="tv-h"><div class="tv-logo" aria-hidden="true">'+(o.logo&&o.logo()?'<img src="'+esc(o.logo())+'" alt="" style="animation-delay:-'+(Date.now()%6000)+'ms">':'')+'</div>'+(o.logo&&o.logo()?'<b class="tv-lynk">Lynk</b>':'')+'<div class="tv-t"><b>Fours</b><small>Frittage · traitement thermique · '+esc(date)+(d.majAt?' · mis à jour à '+hm(d.majAt):'')+'</small></div>'+
+      h+='<header class="tv-h"><div class="tv-logo l3d" aria-hidden="true"></div>'+(o.logo&&o.logo()?'<b class="tv-lynk">Lynk</b>':'')+'<div class="tv-t"><b>Fours</b><small>Frittage · traitement thermique · '+esc(date)+(d.majAt?' · mis à jour à '+hm(d.majAt):'')+'</small></div>'+
         '<div class="tv-k"><span class="k'+(al.length?' r':'')+'"><b>'+al.length+'</b>✕ à sortir</span><span class="k g"><b>'+n('cours')+'</b>▶ en cours</span><span class="k"><b>'+n('libre')+'</b>○ libre'+(n('libre')>1?'s':'')+'</span></div>'+
         '<div class="tv-clock">'+hm(now)+'</div></header>';
       h+=al.length?'<div class="band alerte" role="alert"><span class="n">✕</span><span class="t">'+(al.length>1?al.length+' plateaux à sortir':'Plateau à sortir')+'<span class="s">'+al.map(function(a){return esc(a.nom)+' : '+esc(a.num)+' ('+depasse(a.depasse)+')'}).join(' · ')+(d.sonBloque?' — son bloqué sur cet écran : touchez « Activer le son »':'')+'</span></span></div>':
@@ -4132,6 +4256,7 @@ var EcranFours=(function(){
         '<div class="message">Aucun four : ils viennent du parc machines (secteur Frittage, type « Four »).</div>';
       h+='<footer class="pied">'+(d.err?'<span class="err">⚠ '+esc(d.err)+'</span>':LEGENDE)+'<span class="droite">'+(pages>1?'Écran '+(E.page+1)+' / '+pages:'')+'</span>'+(o.boutons?'<span class="boutons">'+o.boutons()+'</span>':'')+'</footer>';
       el.innerHTML=h;
+      monterLogo();
       if(o.surPages)o.surPages(E.pages,E.page);
     };
     // Chaque seconde : seulement les temps restants ; un four qui change d'état (fin du temps) → tout redessiné.
@@ -4144,6 +4269,14 @@ var EcranFours=(function(){
         else if(e.etat==='sortir')b.textContent=depasse(e.depasse)});
       var c=el.querySelector('.tv-clock');if(c)c.textContent=hm(now);
     };
+    // Logo 3D (logo-premium.js, rendu mat) remis en place à chaque rendu ; sans WebGL : le logo à plat qui tourne, calé sur
+    // l'heure (pas d'à-coup au redessin). Même fonction que l'écran Lancements.
+    function monterLogo(){
+      var c=el.querySelector('.tv-logo'),src=o.logo?o.logo():'',W=el.ownerDocument.defaultView;if(!c)return;
+      if(!src){c.classList.remove('l3d');return}
+      var ok=false;try{ok=!!(W.LogoPremium&&W.LogoPremium.monter(c,src,{mat:true}))}catch(e){}
+      if(!ok){c.classList.remove('l3d');if(!c.querySelector('img'))c.innerHTML='<img src="'+esc(src)+'" alt="" style="animation-delay:-'+(Date.now()%6000)+'ms">'}
+    }
     E.allerPage=function(p){var n=Math.max(0,Number(p)||0);if(n!==E.page){E.page=n;E.peindre()}};
     E.suivante=function(){E.page=(E.page+1)%Math.max(1,E.pages);E.peindre()};
     E.minuterie=setInterval(function(){E.tic()},1000);
@@ -4524,7 +4657,10 @@ var LIAISON_ICONES={
 // (vides si rien n'est saisi), {plateau} {quantité} (phrase cachée si vide), {nt} {s} {est} {manque} (accord au pluriel).
 // Valeurs par défaut (décisions du 23/10) : les cases de la fiche + « Retard », les 3 précisions, « Méthode / organisation ».
 var LIAISON_CATALOGUE_DEFAUT={
-  equipes:[{id:'matin',nom:'Matin',debut:'07:00',fin:'15:00'},{id:'apres-midi',nom:'Après-midi',debut:'11:00',fin:'19:00'},{id:'nuit',nom:'Nuit',debut:'23:00',fin:'06:00'}],
+  // Horaires par défaut sans trou (2026-11-12, campagnes testeur B7 / tablette B10) : mêmes débuts que la décision du 23/10
+  // (Matin 7 h, Après-midi 11 h, Nuit 23 h), fins prolongées jusqu'au début de l'équipe suivante (avant : personne de
+  // 19 h à 23 h ni de 6 h à 7 h). Le responsable les règle ensuite dans la console.
+  equipes:[{id:'matin',nom:'Matin',debut:'07:00',fin:'15:00'},{id:'apres-midi',nom:'Après-midi',debut:'11:00',fin:'23:00'},{id:'nuit',nom:'Nuit',debut:'23:00',fin:'07:00'}],
   faits:[
     {id:'chassis',nom:'Châssis absent du plateau',ico:'chassis',phrases:['Bonjour, un châssis est absent{sur le plateau}{machine}.','Pourriez-vous contrôler la présence de chaque châssis avant fabrication ? Merci d’avance.']},
     {id:'etiquette',nom:'Étiquette manquante sur le plateau',ico:'etiquette',phrases:['Bonjour, l’étiquette est manquante{sur le plateau}{machine}.']},
@@ -5307,6 +5443,8 @@ PAGES.ecrans=async()=>{
   let h=enTete('ecrans','Les écrans télé de l’atelier, ouverts sur ce PC.');
   if(CONSOLE_PC)await tournantCharger(); // écran tournant (2026-10-21)
   if(!CONSOLE_PC)return h+'<div class="msg info">'+svg('aide')+'<div>Les écrans télé s’ouvrent depuis le PC de l’atelier (console du PC).</div></div>';
+  // Télés pilotées à distance (2026-11-10) : chaque Raspberry Pi se règle dans la partie « Télés ».
+  h+='<div class="msg info">'+svg('ecran')+'<div>Télés branchées sur un Raspberry Pi : choisissez ce que chacune affiche dans la partie <button class="btn" data-go="teles">Télés</button></div></div>';
   return h+'<div class="secs"><section class="card"><h2>'+pastille('lancements','s')+'Écran de l’atelier (lancements)</h2><p class="hint">Fichiers à lancer, en temps réel. Le même affichage que l’onglet « Écran atelier » des tablettes.</p><a class="btn pri" href="/ecran" target="_blank" rel="noopener">Ouvrir l’écran</a></section>'+
     secteursVisibles().map(s=>'<section class="card"><h2>'+pastille('maintenance','s')+'Maintenance — '+esc(secNom(s))+'</h2><p class="hint">Échéances des maintenances du secteur.</p><a class="btn pri" href="/ecran-maintenance?secteur='+encodeURIComponent(s)+'" target="_blank" rel="noopener">Ouvrir l’écran</a></section>').join('')+'</div>'+
     '<section class="card" style="margin-top:16px"><h2>'+pastille('fours','s')+'Fours (minuteurs)</h2><p class="hint">Les fours du frittage : temps restant, plateaux à sortir (sirène si cochée dans Fours › Réglages).</p><a class="btn pri" href="/ecran-fours" target="_blank" rel="noopener">Ouvrir l’écran</a></section>'+
@@ -5424,6 +5562,599 @@ document.addEventListener('click',e=>{
   // Le focus suit l'écran déplacé.
   chargerPage().then(()=>{let n=document.querySelector('[data-tr-'+(b.dataset.trMonte!=null?'monte':'descend')+'="'+j+'"]')||document.querySelector('[data-tr-on="'+j+'"]');if(n&&n.disabled)n=document.querySelector('[data-tr-on="'+j+'"]');if(n)n.focus()});
 });
+// <teles-console>
+// --- Télés pilotées à distance (2026-11-10, demande de l'utilisateur) ------------------------------------------------
+// Une télé = un Raspberry Pi qui ouvre /tele?id=<son nom> ; ici, on choisit ce qu'elle affiche : un écran Lynk (écran
+// tournant avec SON propre tour, fours, lancements, maintenance ou liaison d'un secteur), un message en grand, des images
+// (ou les pages d'un PDF) ou une page internet. Réglage rangé dans Google avec la configuration du pack (site.teles) par
+// le serveur de ce PC (/api/teles) : la télé le relit en moins de 30 s. Droit : celui de « Écrans télé » (lecture : voir ;
+// modification : changer). La console en ligne (sans le PC) ne le fait pas : il faudrait une mise à jour du script Google.
+const TV_TYPES=[['ecran','Écran Lynk'],['message','Message en grand'],['image','Images, PDF ou PowerPoint'],['video','Vidéo en boucle'],['web','Page internet'],['aucun','Rien (écran d’attente)']];
+// Vidéos (2026-11-12) : vérifiées (et converties s'il le faut) par le programme de ce PC, envoyées à Google en morceaux (le PC
+// et les télés sont sur des réseaux séparés), puis téléchargées par chaque télé. 10 au plus, jouées à la suite sans fin ;
+// 300 Mo au plus chacune une fois prête.
+const TV_VID_MO=300,TV_VID_MAX=10;
+const tvVidOk=f=>/\.(mp4|webm|m4v|mov|mkv)$/i.test(f.name);
+// Musique de fond (2026-11-16) : MP3 de 300 Mo au plus (plafond du circuit Google ; « pas de limite » demandé),
+// 50 morceaux au plus par télé (mêmes limites que le serveur).
+const TV_MUS_MO=300,TV_MUS_MAX=50;
+const tvMusOk=f=>/\.mp3$/i.test(f.name);
+const tvMo=o=>(o/1048576).toLocaleString('fr-FR',{maximumFractionDigits:o<10485760?1:0})+' Mo';
+const tvMinSec=s=>{s=Math.round(s);return s>=3600?Math.floor(s/3600)+' h '+String(Math.floor(s%3600/60)).padStart(2,'0')+' min':Math.floor(s/60)+' min '+String(s%60).padStart(2,'0')+' s'};
+const TV_ECRANS=[['tournant','Écran tournant (son propre tour)'],['fours','Fours (minuteurs)'],['lancements','Écran de l’atelier (lancements)'],['maintenance','Maintenance d’un secteur'],['liaison','Cahier de liaison d’un secteur']];
+// PowerPoint (2026-11-10) : converti en images par le PowerPoint du PC du bureau (/api/tele-pptx), 30 Mo au plus.
+const TV_IMG_MO=15,TV_PDF_MO=10,TV_PDF_PAGES=20,TV_IMAGES_MAX=30,TV_PPTX_MO=30,TV_MSG_MAX=10;
+const tvPptx=f=>/\.(pptx|ppsx|ppt)$/i.test(f.name);
+// Date « AAAA-MM-JJTHH:MM » d'un champ datetime-local (heure de ce PC).
+const tvLoc=v=>{const d=new Date(v),p=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'T'+p(d.getHours())+':'+p(d.getMinutes())};
+// Messages du tour encore affichés (cochés, heure de fin pas passée) : résumé de la liste et repères de l'éditeur.
+const tvMsgFini=m=>m.finOn?!(new Date(m.fin).getTime()>Date.now()):Number(m.fin)>0&&Number(m.fin)<=Date.now();
+const tvMsgActifs=l=>(l||[]).filter(m=>m.on!==false&&!tvMsgFini(m)).length;
+S.tv={d:null,lu:0,err:'',b:null,msg:null,occupe:false,envoi:'',envoiPct:null,envoiQui:'',retirer:false};
+const tvMod=()=>CONSOLE_PC&&droit('teles')==='modif';
+async function tvCharger(force){
+  const T=S.tv;if(T.d&&!force&&Date.now()-T.lu<15000)return;
+  try{T.d=await apiPC('/api/teles');T.lu=Date.now();T.err=''}catch(x){if(x.message==='session')throw x;T.err=x.message}
+}
+// t (télé de la liste) : pour l'écran tournant, le nombre de messages affichés dans son tour.
+function tvResume(c,t){
+  c=c||{type:'aucun'};
+  if(c.type==='ecran'&&c.ecran==='tournant'){const n=t&&t.tournantPropre&&t.tournant?tvMsgActifs(t.tournant.messages):0;return 'Écran tournant'+(n?' · '+n+' message'+(n>1?'s':''):'')}
+  if(c.type==='ecran')return c.ecran==='maintenance'?'Maintenance — '+secNom(c.secteur):c.ecran==='liaison'?'Cahier de liaison — '+secNom(c.secteur):(TV_ECRANS.find(x=>x[0]===c.ecran)||[0,c.ecran])[1];
+  if(c.type==='message')return (c.niveau==='important'?'! Important : ':'Message : ')+'« '+String(c.titre||c.texte||'').slice(0,50)+' »'+(c.fin?' jusqu’à '+heureFr(c.fin)+(new Date(c.fin).toDateString()!==new Date().toDateString()?' le '+dateFr(c.fin):'')+(c.ensuite?', puis '+tvResume(c.ensuite):''):'');
+  if(c.type==='image')return (c.nom?'« '+c.nom+' »':'Images')+' · '+c.images.length+' page'+(c.images.length>1?'s':'')+(c.images.length>1?' (toutes les '+c.duree+' s)':'');
+  if(c.type==='web')return 'Page internet · '+c.adresse;
+  if(c.type==='video'){const l=c.videos||[],son=c.son?' · avec le son':'';
+    return l.length===1?'Vidéo · '+l[0].nom+son:'Vidéos à la suite · '+l.length+' : '+l.map(v=>v.nom).join(', ').slice(0,90)+son}
+  return 'Rien (écran d’attente)';
+}
+// Dernière visite : notée par Google au plus toutes les 5 min (onglet Tablettes) ; en ligne = vue il y a moins de 12 min.
+function tvVu(t){
+  const v=dateVu(t.vu),age=v?Date.now()-v:Infinity;
+  if(!t.vu)return '<span class="tag">• jamais vue</span>';
+  if(age<12*60000)return '<span class="tag ok">✓ en ligne · vue à '+esc(t.vu.slice(-5))+'</span>';
+  return '<span class="tag warn">! pas vue depuis '+esc(age<20*3600000?t.vu.slice(-5):t.vu)+'</span>';
+}
+function tvCss(){
+  if(document.getElementById('tvCss'))return;trCss();
+  const st=document.createElement('style');st.id='tvCss';
+  st.textContent='.tv-l{display:flex;align-items:center;gap:14px;flex-wrap:wrap;border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin-bottom:10px;background:var(--card)}'+
+    '.tv-l.nv{border:2px dashed var(--accent)}.tv-l .tv-n{flex:1 1 240px;min-width:0}.tv-l .tv-n b{font-size:17px}.tv-l .tv-a{flex:2 1 300px;min-width:0;overflow-wrap:anywhere}.tv-l .tv-e{display:flex;flex-direction:column;gap:4px;align-items:flex-start}'+
+    '.tv-ed h3{font-size:16px;margin:18px 0 8px}.tv-ed .tv-imgs{display:flex;flex-wrap:wrap;gap:10px;margin:8px 0}.tv-ed .tv-img{border:1px solid var(--line);border-radius:10px;padding:6px;display:flex;flex-direction:column;gap:6px;align-items:center;max-width:200px}'+
+    '.tv-ed .tv-img img{max-width:186px;max-height:110px}.tv-ed textarea.in{min-height:110px}.tv-ed .tv-pied{display:flex;gap:10px;flex-wrap:wrap;align-items:center;border-top:1px solid var(--line2);margin-top:18px;padding-top:14px}'+
+    '.tv-apercu{border-radius:12px;background:#0D1B21;color:#fff;aspect-ratio:16/9;max-width:420px;display:flex;flex-direction:column;justify-content:center;padding:18px 22px;gap:6px;border-left:10px solid #5fd0da;overflow:hidden}'+
+    '.tv-apercu.imp{background:#4a2a08;border-left-color:#FFB020}.tv-apercu b{font-size:24px;line-height:1.1;overflow-wrap:anywhere}.tv-apercu span{font-size:14px;white-space:pre-line;overflow-wrap:anywhere;opacity:.92}.tv-apercu small{font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;opacity:.85}'+
+    // Messages du tour (2026-11-10) : une carte par message, aperçu à côté (dessous sur un écran étroit).
+    '.tv-ms{margin-top:18px;border-top:1px solid var(--line2);padding-top:6px}.tv-m{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:0 0 12px;background:var(--card)}.tv-m.off{border-style:dashed}'+
+    '.tv-vid{display:flex;gap:10px;align-items:center;flex-wrap:wrap;border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin:0 0 10px;background:var(--card)}.tv-vid .tv-vn{flex:1 1 260px;min-width:0;overflow-wrap:anywhere}.tv-vprog progress{width:100%;max-width:520px;height:18px}'+
+    '.tv-m-t{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.tv-m-c{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start;margin-top:8px}.tv-m-f{flex:1 1 340px;min-width:0}.tv-m .tv-apercu{flex:0 1 360px;width:100%;margin-top:8px}.tv-m textarea.in{min-height:90px}';
+  document.head.appendChild(st);
+}
+PAGES.teles=async()=>{
+  let h=enTete('teles','Ce que montre chaque télé de l’atelier (un Raspberry Pi par télé). Un changement arrive sur la télé en moins d’une minute.');
+  if(!CONSOLE_PC)return h+'<div class="msg info">'+svg('aide')+'<div>Les télés se règlent depuis la console du PC du bureau (logiciel Lynk). La console en ligne ne le fait pas encore (il faudrait une mise à jour du script Google).</div></div>';
+  tvCss();const T=S.tv;
+  if(!T.b)await tvCharger(false);
+  if(T.msg)h+='<div class="msg '+T.msg[0]+'" role="status">'+svg(T.msg[0]==='ok'?'ok':'alerte')+'<div>'+T.msg[1]+'</div></div>';
+  if(!T.d)return h+'<div class="msg err">'+svg('alerte')+'<div><b>'+esc(T.err||'Liste des télés illisible.')+'</b></div></div>';
+  if(T.err)h+='<div class="msg warn">'+svg('alerte')+'<div>Liste lue à '+heureFr(T.lu)+' : '+esc(T.err)+'</div></div>';
+  if(T.d.avisVu)h+='<div class="msg warn">'+svg('alerte')+'<div>'+esc(T.d.avisVu)+'</div></div>';
+  return h+(T.b?tvEditeur():tvListe());
+};
+function tvListe(){
+  const T=S.tv,l=T.d.teles,mod=tvMod();
+  let h='<section class="card"><h2>'+pastille('ecran','s')+'Les télés <span class="tag">'+l.filter(t=>!t.nouvelle).length+'</span></h2>';
+  h+=l.length?l.map(t=>'<div class="tv-l'+(t.nouvelle?' nv':'')+'"><div class="tv-n"><b>'+esc(t.nom||t.id)+'</b>'+(t.nouvelle?' <span class="tag acc">nouvelle télé</span>':'')+'<br><span class="hint">'+esc(t.id)+(t.ip?' · IP <b>'+esc(t.ip)+'</b>':'')+'</span></div>'+
+    '<div class="tv-a">'+(t.nouvelle?'<span class="hint">S’est présentée : donnez-lui un nom et ce qu’elle affiche.</span>':esc(tvResume(t.contenu,t))+(tvVeilleResume(t.veille)?'<br><span class="hint">☾ '+esc(tvVeilleResume(t.veille))+'</span>':'')+(tvMusiqueResume(t.musique)?'<br><span class="hint">♪ '+esc(tvMusiqueResume(t.musique))+'</span>':''))+'</div>'+
+    '<div class="tv-e">'+tvVu(t)+(t.nouvelle?'':t.recu?'<span class="tag ok">✓ réglage reçu</span>':'<span class="tag">• réglage pas encore reçu</span>')+(t.nouvelle?'':tvVeilleTag(t)+tvMusiqueTag(t))+'</div>'+
+    // Droits par secteur (2026-11-12) : une télé d'un autre secteur (ou commune) est montrée, mais pas modifiable.
+    (mod&&t.modifiable!==false?'<button class="btn'+(t.nouvelle?' pri':'')+'" data-tv="ouvrir" data-id="'+esc(t.id)+'">'+(t.nouvelle?'Régler cette télé':'Changer')+'</button>':mod?'<span class="tag" title="Seul l’administrateur peut la changer">• lecture seule (autre secteur ou télé commune)</span>':'')+'</div>').join('')
+    :'<div class="vide">Aucune télé pour le moment. Une télé branchée apparaît ici toute seule (« nouvelle télé »).</div>';
+  h+='<p class="hint" style="margin:6px 0 0">« Réglage reçu » : la télé a lu le dernier changement (vérifié à chaque visite, une fois par minute). La dernière visite est notée par Google au plus toutes les 5 minutes.</p></section>';
+  if(mod)h+='<section class="card" style="margin-top:16px"><h2>Ajouter une télé</h2><div class="row"><label class="lbl" style="margin:0;flex:1;min-width:240px">Nom de la télé (celui de la carte du Raspberry Pi)<input class="in" id="tvNouvId" maxlength="40" placeholder="ex. tele-fours" autocomplete="off"></label><button class="btn pri" data-tv="ajouter">Ajouter</button></div>'+
+    '<p class="hint" style="margin:8px 0 0">Lettres minuscules, chiffres et tirets. Plus simple : préparez la carte avec ce nom, branchez la télé : elle apparaît ici d’elle-même.</p></section>';
+  h+='<section class="card" style="margin-top:16px"><h2>Adresse ouverte par une télé</h2><p class="hint" style="margin:0">Le Raspberry Pi ouvre <b>http://127.0.0.1:8789/tele?id=</b><i>nom-de-la-télé</i> (plus tard : l’adresse du serveur Lynk de l’entreprise suivie de <b>/tele?id=</b>…). Aucun bouton à l’écran : tout se règle ici.</p></section>';
+  return h;
+}
+// --- Mise en veille programmée (2026-11-12, demande : « mettre en veille la vidéo de la télé sur certaines heures » ;
+// choix de l'utilisateur : ÉTEINDRE la télé, avec des heures + le week-end). Réglage : veille = {actif, debut, fin,
+// weekend}, rangé avec la télé (site.teles[id].veille). Le Raspberry Pi calcule lui-même la veille (heure de Paris) et
+// éteint la télé par HDMI-CEC ; si elle ne répond pas, il coupe le signal HDMI, sinon écran noir. Il le dit dans son
+// état (veilleEtat) : on voit ici si l'arrêt marche sur cette télé.
+const TV_JOURS={dim:'dim.',lun:'lun.',mar:'mar.',mer:'mer.',jeu:'jeu.',ven:'ven.',sam:'sam.'};
+const tvQuand=s=>s?(TV_JOURS[s.slice(0,3)]||'')+' '+s.slice(4):'';
+function tvVeilleResume(v){
+  if(!v||!v.actif)return '';
+  return 'Veille '+(v.debut===v.fin?'':v.debut+'–'+v.fin)+(v.plage2&&v.debut2!==v.fin2?' et '+v.debut2+'–'+v.fin2:'')+(v.weekend?(v.debut===v.fin?'samedi et dimanche':' + week-end'):'');
+}
+const TV_VEILLE_MODES={cec:'télé éteinte par HDMI',hdmi:'signal HDMI coupé : la télé ne répond pas à HDMI-CEC',noir:'écran noir : la télé ne répond pas à HDMI-CEC',attente:'écran noir, la télé s’éteint'};
+// Repère de la liste : ce que la télé dit de sa veille (ou pourquoi on ne le sait pas encore).
+function tvVeilleTag(t){
+  const v=t.veille,e=t.veilleEtat;
+  if(!v||!v.actif)return '';
+  // Rien de remonté alors que la télé a lu son réglage (relecture 2026-11-12, c2) : carte ancienne, ou télé en mode
+  // serveur (le Raspberry n'y fait pas tourner Lynk : écran noir seulement, télé pas éteinte).
+  if(!e)return '<span class="tag'+(t.recu?' warn':'')+'">'+(t.recu?'! veille : la télé ne dit rien de sa veille (carte du Raspberry à mettre à jour, ou télé en mode serveur : écran noir seulement)':'• veille : pas encore remontée par la télé')+'</span>';
+  if(e.en)return '<span class="tag '+(e.mode==='cec'?'ok':'warn')+'">'+(e.mode==='cec'?'☾ en veille (':'! en veille (')+esc(TV_VEILLE_MODES[e.mode]||e.mode)+')</span>';
+  const der=e.dernier?(e.dernier==='cec'?' · dernière veille : ✓ télé éteinte par HDMI':' · dernière veille : ! '+esc(TV_VEILLE_MODES[e.dernier]||e.dernier)):'';
+  return '<span class="tag'+(e.dernier&&e.dernier!=='cec'?' warn':'')+'">☾ prochaine mise en veille : '+esc(tvQuand(e.prochaine))+der+'</span>';
+}
+// Bloc de l'éditeur (tous les types de contenu).
+function tvVeille(dis){
+  const v=S.tv.b.veille,t=(S.tv.d.teles||[]).find(x=>x.id===S.tv.b.id),e=t&&t.veilleEtat;
+  let h='<div class="tv-ms" role="group" aria-labelledby="tvvTitre"><h3 id="tvvTitre">Mise en veille</h3>'+
+    '<div class="tr-o"><input type="checkbox" id="tvvActif" data-tvv="actif"'+(v.actif?' checked':'')+dis+'><div><label for="tvvActif">Éteindre la télé la nuit</label>'+
+    '<div class="row" style="margin-top:6px">de <input class="in" type="time" data-tvv="debut" value="'+esc(v.debut)+'" aria-label="Début de la veille"'+(v.actif?'':' disabled')+dis+'> à <input class="in" type="time" data-tvv="fin" value="'+esc(v.fin)+'" aria-label="Fin de la veille"'+(v.actif?'':' disabled')+dis+'></div>'+
+    // 2e plage (2026-11-16, demande « rajoute une plage horaire ») : par ex. la pause de midi, en plus de la nuit.
+    '<label class="chip" style="margin-top:8px"><input type="checkbox" data-tvv="plage2"'+(v.plage2?' checked':'')+(v.actif?'':' disabled')+dis+'>et aussi</label>'+
+    '<div class="row" style="margin-top:6px">de <input class="in" type="time" data-tvv="debut2" value="'+esc(v.debut2)+'" aria-label="Début de la 2e plage de veille"'+(v.actif&&v.plage2?'':' disabled')+dis+'> à <input class="in" type="time" data-tvv="fin2" value="'+esc(v.fin2)+'" aria-label="Fin de la 2e plage de veille"'+(v.actif&&v.plage2?'':' disabled')+dis+'></div>'+
+    '<label class="chip" style="margin-top:8px"><input type="checkbox" data-tvv="weekend"'+(v.weekend?' checked':'')+(v.actif?'':' disabled')+dis+'>et tout le samedi et le dimanche</label></div></div>';
+  if(v.actif){
+    const pb=v.debut===v.fin?'L’heure de début et l’heure de fin sont les mêmes : choisissez par exemple de 20:00 à 06:00.':
+      v.plage2&&v.debut2===v.fin2?'2e plage : l’heure de début et l’heure de fin sont les mêmes : choisissez par exemple de 12:00 à 13:00.':'';
+    h+=pb?'<div class="msg warn">'+svg('alerte')+'<div>'+pb+'</div></div>':
+      '<p class="hint">La télé s’éteint '+(v.fin<v.debut?'chaque soir à <b>'+esc(v.debut)+'</b> et se rallume le lendemain à <b>'+esc(v.fin)+'</b>':'chaque jour de <b>'+esc(v.debut)+'</b> à <b>'+esc(v.fin)+'</b>')+
+      (v.plage2?', et aussi '+(v.fin2<v.debut2?'de <b>'+esc(v.debut2)+'</b> au lendemain <b>'+esc(v.fin2)+'</b>':'de <b>'+esc(v.debut2)+'</b> à <b>'+esc(v.fin2)+'</b>'):'')+
+      (v.weekend?', et reste éteinte <b>tout le samedi et tout le dimanche</b> (elle se rallume le lundi à '+esc(v.fin<v.debut||v.debut==='00:00'?v.fin:'00:00')+')':'')+'. Heure de Paris.</p>';
+  }
+  h+='<p class="hint">La télé est éteinte par le câble HDMI (HDMI-CEC), comme avec sa télécommande, puis rallumée seule à la fin. Si elle ne le permet pas, le Raspberry coupe l’image (« pas de signal ») ou, à défaut, affiche un écran noir. '+
+    'Pendant la veille, si quelqu’un rallume la télé, elle est éteinte de nouveau dans les 30 minutes. Pour la garder allumée, décochez « Éteindre la télé la nuit ».</p>'+
+    // Fours (2026-11-12) et mode serveur (relecture c2) : ce que la veille ne fait pas, dit à l'avance.
+    '<p class="hint">Télé qui montre l’écran des fours : un plateau à sortir pendant la veille rallume la télé et remet l’écran des fours devant (sirène comprise si elle est réglée), le temps de la sortie. '+
+    'Télé en <b>mode serveur</b> (reliée au serveur Lynk de l’entreprise) : la télé n’est pas éteinte, l’écran passe seulement au noir.</p>';
+  if(e)h+='<p class="hint">Sur cette télé : '+(e.en?'<b>en veille</b> ('+esc(TV_VEILLE_MODES[e.mode]||e.mode)+')':'prochaine mise en veille <b>'+esc(tvQuand(e.prochaine))+'</b>'+(e.dernier?' · dernière veille : '+(e.dernier==='cec'?'✓ ':'! ')+esc(TV_VEILLE_MODES[e.dernier]||e.dernier):' · pas encore de veille faite'))+'.</p>';
+  return h+'</div>';
+}
+// --- Musique de fond (2026-11-16, demande : « possible de diffuser de la musique ? » ; choix : musique EN FOND, à partir
+// de vos MP3 envoyés depuis la console, comme les vidéos). Réglage rangé avec la télé (site.teles[id].musique =
+// {actif, morceaux, aleatoire, volume, horaire, debut, fin}) ; les MP3 suivent le chemin des vidéos (vérifiés par le
+// programme de ce PC, envoyés dans Google en morceaux, téléchargés et gardés par chaque télé).
+function tvMusiqueResume(m){
+  if(!m||!m.actif)return '';
+  const n=(m.morceaux||[]).length;
+  return 'Musique de fond · '+n+' morceau'+(n>1?'x':'')+(m.aleatoire&&n>1?' au hasard':'')+' · volume '+m.volume+' %'+(m.horaire?' · de '+m.debut+' à '+m.fin:'');
+}
+// Ce que la télé dit de sa musique (2026-11-17, « pas de son sur la télé ») : état remonté par le Raspberry à chaque
+// visite (musiqueEtat = {code, son}). son : sortie son trouvée par le Raspberry (hdmi, aucune, pactl absent).
+const TV_MUS_ETATS={joue:'✓ musique en lecture',attente:'• musique prête, pas encore lancée',bloque:'! musique : lecture refusée par le navigateur de la télé',
+  illisible:'! musique : morceau illisible (renvoyez le MP3)',err:'! musique : téléchargement en erreur (morceau absent de Google ?)',
+  veille:'• musique en pause (veille)',sirene:'• musique en pause (sirène des fours)',heures:'• musique en pause (hors des heures réglées)',
+  message:'• musique en pause (message important)',video:'• musique en pause (vidéo avec le son)'};
+function tvMusiqueTag(t){
+  const m=t.musique,e=t.musiqueEtat;
+  if(!m||!m.actif)return '';
+  if(!e)return '<span class="tag'+(t.recu?' warn':'')+'">'+(t.recu?'! musique : la télé ne dit rien (carte du Raspberry à mettre à jour)':'• musique : pas encore remontée par la télé')+'</span>';
+  const dl=/^dl(\d+)$/.exec(e.code),txt=dl?'• musique : téléchargement sur la télé '+dl[1]+' %':TV_MUS_ETATS[e.code]||'• musique : '+e.code;
+  const son=e.son==='aucune'?' · ! aucune sortie son HDMI (télé éteinte au démarrage ?)':e.son==='pactl'?' · ! réglage du son impossible sur le Raspberry':e.son==='hdmi'?' · son par HDMI':'';
+  return '<span class="tag'+(txt[0]==='✓'&&e.son!=='aucune'&&e.son!=='pactl'?' ok':txt[0]==='!'||son.includes('!')?' warn':'')+'">'+esc(txt+son)+'</span>';
+}
+function tvMusique(dis){
+  const T=S.tv,m=T.b.musique,l=m.morceaux,ok=m.actif?'':' disabled',tot=l.reduce((s,v)=>s+(v.duree||0),0),connue=l.length&&l.every(v=>v.duree>0);
+  let h='<div class="tv-ms" role="group" aria-labelledby="tvmuTitre"><h3 id="tvmuTitre">Musique de fond</h3>'+
+    '<div class="tr-o"><input type="checkbox" id="tvmuActif" data-tvmu="actif"'+(m.actif?' checked':'')+dis+'><div><label for="tvmuActif">Diffuser de la musique en fond</label>'+
+    '<div class="hint">Elle joue <b>derrière ce que la télé affiche</b> (écran Lynk, images, page internet, vidéo muette…) et continue quand l’affichage change.</div></div></div>';
+  h+=(l.length?'<div class="tv-vids">'+l.map((v,i)=>'<div class="tv-vid"><span class="tr-n">'+(i+1)+'</span><div class="tv-vn"><b>'+esc(v.nom)+'</b><br><span class="hint">'+tvMo(v.taille)+(v.duree?' · '+tvMinSec(v.duree):'')+' · ✓ envoyé dans Google</span></div>'+
+      '<button class="btn tr-f" type="button" data-tv="mus-monte" data-i="'+i+'" aria-label="Monter « '+esc(v.nom)+' »"'+(i===0||dis?' disabled':'')+'>↑</button>'+
+      '<button class="btn tr-f" type="button" data-tv="mus-descend" data-i="'+i+'" aria-label="Descendre « '+esc(v.nom)+' »"'+(i===l.length-1||dis?' disabled':'')+'>↓</button>'+
+      '<button class="btn dan" type="button" data-tv="mus-retirer" data-i="'+i+'" aria-label="Retirer « '+esc(v.nom)+' »"'+dis+'>Retirer</button></div>').join('')+'</div>'+
+      '<p class="hint">'+l.length+' morceau'+(l.length>1?'x':'')+' · '+tvMo(l.reduce((s,v)=>s+v.taille,0))+(connue?' · durée totale '+tvMinSec(tot):'')+'</p>'
+    :'<p class="hint">Aucun morceau pour le moment.</p>');
+  h+=(l.length<TV_MUS_MAX?'<label class="lbl">Ajouter un ou plusieurs MP3<input class="in" type="file" data-tvmu="fichier" accept="audio/mpeg,.mp3" multiple'+dis+'></label>':'<p class="hint">'+TV_MUS_MAX+' morceaux au plus.</p>')+
+    '<div class="tv-vprog"'+(T.envoiPct==null||T.envoiQui!=='musique'?' hidden':'')+'><progress id="tvMusBarre" max="100" value="'+(T.envoiPct||0)+'" aria-label="Avancement de l’envoi du morceau"></progress></div>'+
+    '<p class="hint" id="tvMusEnvoi" role="status">'+esc(T.envoiQui==='musique'?T.envoi:'')+'</p>'+
+    // Résultat du dernier ajout de MP3 répété ici (2026-11-16 : affiché seulement en haut, il passait inaperçu).
+    (T.msgMus&&T.msg===T.msgMus?'<div class="msg '+T.msg[0]+'">'+svg(T.msg[0]==='err'?'alerte':'ok')+'<div>'+T.msg[1]+'</div></div>':'');
+  h+='<div class="row" style="margin-top:8px"><label class="chip"><input type="checkbox" data-tvmu="aleatoire"'+(m.aleatoire?' checked':'')+ok+dis+'>Au hasard</label>'+
+    '<span class="hint">'+(m.aleatoire?'Chaque morceau passe une fois par tour, dans un ordre tiré au hasard.':'Les morceaux passent dans l’ordre de la liste.')+' La liste recommence sans fin.</span></div>'+
+    '<label class="lbl" style="margin-top:10px">Volume : <b id="tvmuVolT">'+m.volume+' %</b><input class="in" type="range" min="5" max="100" step="5" data-tvmu="volume" value="'+m.volume+'" aria-label="Volume de la musique de fond" style="padding:0;max-width:420px"'+ok+dis+'></label>'+
+    '<div class="row" style="margin-top:8px"><label class="chip"><input type="checkbox" data-tvmu="horaire"'+(m.horaire?' checked':'')+ok+dis+'>Seulement</label>'+
+    'de <input class="in" type="time" data-tvmu="debut" value="'+esc(m.debut)+'" aria-label="Début de la musique"'+(m.actif&&m.horaire?'':' disabled')+dis+'> à <input class="in" type="time" data-tvmu="fin" value="'+esc(m.fin)+'" aria-label="Fin de la musique"'+(m.actif&&m.horaire?'':' disabled')+dis+'></div>';
+  if(m.actif&&!l.length)h+='<div class="msg warn">'+svg('alerte')+'<div>Ajoutez au moins un MP3, ou décochez « Diffuser de la musique en fond ».</div></div>';
+  else if(m.actif&&m.horaire&&m.debut===m.fin)h+='<div class="msg warn">'+svg('alerte')+'<div>L’heure de début et l’heure de fin sont les mêmes : choisissez par exemple de 08:00 à 17:00.</div></div>';
+  else if(m.actif)h+='<p class="hint">'+(m.horaire?'Musique '+(m.fin<m.debut?'chaque jour de <b>'+esc(m.debut)+'</b> au lendemain <b>'+esc(m.fin)+'</b>':'chaque jour de <b>'+esc(m.debut)+'</b> à <b>'+esc(m.fin)+'</b>')+' (heure de Paris).':'Musique toute la journée (en dehors de la mise en veille).')+'</p>';
+  return h+'<p class="hint">La musique se met en <b>pause d’elle-même</b> pendant la mise en veille, quand la <b>sirène d’un four</b> sonne (la sirène reste seule audible), sous un message <b>« Important »</b> et pendant une vidéo jouée <b>« Avec le son »</b> ; elle reprend ensuite là où elle était. '+
+    'Le son sort par la télé (câble HDMI) : le volume ci-dessus s’ajoute à celui de la télé.</p>'+
+    '<p class="hint">MP3 seulement, <b>'+TV_MUS_MO+' Mo au plus</b> par morceau, '+TV_MUS_MAX+' morceaux au plus. Chaque morceau est <b>vérifié</b> sur ce PC, envoyé dans Google (barre d’avancement ; si l’envoi est coupé, ajoutez de nouveau le même fichier : il reprend où il s’était arrêté), puis <b>chaque télé le télécharge</b> et le garde (il joue ensuite même sans réseau). Rien ne change sur la télé avant « Enregistrer ».</p></div>';
+}
+// Brouillon de la télé ouverte : tous les champs de tous les types sont gardés (changer de type ne perd rien).
+function tvOuvrir(t){
+  // Message terminé (développeur 2026-11-12, B3) : la télé montre déjà ce qui suit ; l'éditeur s'ouvre dessus (sinon
+  // « Enregistrer » renvoyait l'ancienne heure de fin, refusée par le serveur, même pour un simple changement de nom).
+  let c=t.contenu||{type:'aucun'},fini=false;
+  if(c.type==='message'&&Number(c.fin)>0&&Number(c.fin)<=Date.now()){c=c.ensuite||{type:'aucun'};fini=true}
+  const base=c.type==='message'?(c.ensuite||{type:'aucun'}):c,ec=base.type==='ecran'?base:{},im=base.type==='image'?base:{},w=base.type==='web'?base:{},m=c.type==='message'?c:{},vd=base.type==='video'?base:{};
+  const sec=(T=>T.length?T[0].id:'')(S.tv.d.secteurs||[]);
+  const loc=tvLoc,tour=JSON.parse(JSON.stringify(t.tournant));
+  // Messages du tour : forme de l'éditeur (case « Jusqu’à » + date locale) ; renvoyés au serveur par tvEnregistrer.
+  tour.messages=(Array.isArray(tour.messages)?tour.messages:[]).map(x=>({titre:x.titre||'',texte:x.texte||'',niveau:x.niveau==='important'?'important':'info',
+    duree:Number(x.duree)||20,on:x.on!==false,finOn:Number(x.fin)>0,fin:loc(Number(x.fin)>0?Number(x.fin):Date.now()+8*3600000)}));
+  S.tv.b={id:t.id,ip:t.ip||'',nom:t.nom||'',nouvelle:!!t.nouvelle,depuis:t.maj||0,avant:base,
+    c:{type:c.type||'aucun',ecran:ec.ecran||'tournant',secteur:ec.secteur||sec,theme:ec.theme||'sombre',titre:m.titre||'',texte:m.texte||'',niveau:m.niveau||'info',
+      finOn:!!m.fin,fin:loc(m.fin||Date.now()+2*3600000),images:(im.images||[]).slice(),docNom:im.nom||'',duree:im.duree||15,adresse:w.adresse||'',recharger:w.recharger||0,
+      videos:(vd.videos||[]).map(v=>({id:v.id,nom:v.nom,taille:v.taille,empreinte:v.empreinte,duree:v.duree||0})),son:vd.son===true,remplir:(im.remplir||vd.remplir)===true},
+    tournant:tour,
+    // Mise en veille : proposée de 20:00 à 06:00 (exemple donné par l'utilisateur), décochée tant qu'elle n'est pas réglée.
+    veille:Object.assign({actif:false,debut:'20:00',fin:'06:00',weekend:false,plage2:false,debut2:'12:00',fin2:'13:00'},t.veille||{}),
+    // Musique de fond (2026-11-16) : décochée tant qu'elle n'est pas réglée ; volume proposé 50 %, heures 08:00–17:00.
+    musique:(m=>({actif:m.actif===true,aleatoire:m.aleatoire===true,volume:Number(m.volume)||50,horaire:m.horaire===true,debut:m.debut||'08:00',fin:m.fin||'17:00',
+      morceaux:(m.morceaux||[]).map(v=>({id:v.id,nom:v.nom,taille:v.taille,empreinte:v.empreinte,duree:v.duree||0}))}))(t.musique||{})};
+  S.tv.retirer=false;S.tv.msg=fini?['info','Le message de cette télé est terminé : elle montre ce qui suit (ci-dessous).']:null;
+}
+function tvEditeur(){
+  const T=S.tv,b=T.b,c=b.c,d=T.d,dis=tvMod()&&!T.occupe?'':' disabled';
+  const radio=(f,v,t,on)=>'<label class="chip"><input type="radio" name="tv-'+f+'" data-tvf="'+f+'" value="'+esc(v)+'"'+(on?' checked':'')+dis+'>'+t+'</label>';
+  let h='<section class="card tv-ed" aria-labelledby="tvTitre"><h2 id="tvTitre">'+pastille('ecran','s')+(b.nouvelle?'Nouvelle télé':'Télé')+' « '+esc(b.nom||b.id)+' »</h2>'+
+    '<label class="lbl">Nom affiché dans la console<input class="in" data-tvf="nom" maxlength="60" value="'+esc(b.nom)+'" placeholder="ex. Télé des fours"'+dis+'></label>'+
+    '<p class="hint" style="margin:4px 0 0">Identifiant : <b>'+esc(b.id)+'</b>'+(b.ip?' · adresse IP : <b>'+esc(b.ip)+'</b> (vue à sa dernière visite)':'')+' (celui de la carte du Raspberry Pi ; il ne change pas).</p>'+
+    '<h3>Ce qu’elle affiche</h3><div class="row" role="radiogroup" aria-label="Ce qu’elle affiche">'+TV_TYPES.map(([k,t])=>radio('type',k,t,c.type===k)).join('')+'</div>';
+  if(c.type==='ecran'){
+    h+='<h3>Écran Lynk</h3><div class="row" role="radiogroup" aria-label="Écran">'+TV_ECRANS.map(([k,t])=>radio('ecran',k,t,c.ecran===k)).join('')+'</div>';
+    if(c.ecran==='maintenance'||c.ecran==='liaison')h+='<label class="lbl">Secteur<select class="in" data-tvf="secteur"'+dis+'>'+(d.secteurs||[]).map(s=>'<option value="'+esc(s.id)+'"'+(s.id===c.secteur?' selected':'')+'>'+esc(s.nom)+'</option>').join('')+'</select></label>';
+    if(c.ecran==='tournant')h+=tvTournant(dis);
+    else h+='<div role="radiogroup" aria-label="Couleurs" style="margin-top:12px"><b>Couleurs</b><div class="row" style="margin-top:6px">'+radio('theme','sombre','Sombre',c.theme!=='clair')+radio('theme','clair','Clair',c.theme==='clair')+'</div></div>'+
+      '<p class="hint">Un seul écran : affiché seul, ses pages défilent toutes seules.</p>';
+  }
+  if(c.type==='message'){
+    const ap=b.avant&&b.avant.type!=='aucun'?tvResume(b.avant):'';
+    h+='<h3>Message en grand</h3><label class="lbl">Titre (80 caractères au plus)<input class="in" data-tvf="titre" maxlength="80" value="'+esc(c.titre)+'"'+dis+'></label>'+
+      '<label class="lbl">Texte (600 caractères au plus)<textarea class="in" data-tvf="texte" maxlength="600"'+dis+'>'+esc(c.texte)+'</textarea></label>'+
+      '<div role="radiogroup" aria-label="Couleur du message"><b>Couleur</b><div class="row" style="margin-top:6px">'+radio('niveau','info','i Information (bleu-vert)',c.niveau!=='important')+radio('niveau','important','! Important (orange)',c.niveau==='important')+'</div></div>'+
+      '<div class="row" style="margin-top:12px"><label class="chip"><input type="checkbox" data-tvf="finOn"'+(c.finOn?' checked':'')+dis+'>Jusqu’à</label><input class="in" type="datetime-local" data-tvf="fin" value="'+esc(c.fin)+'" aria-label="Date et heure de fin du message" style="width:auto"'+(c.finOn?'':' disabled')+dis+'></div>'+
+      '<p class="hint">'+(c.finOn?'À la fin, la télé reprend : <b>'+esc(ap||'l’écran d’attente')+'</b>.':'Sans heure de fin : le message reste jusqu’au prochain changement.')+'</p>'+
+      '<div class="tv-apercu'+(c.niveau==='important'?' imp':'')+'" aria-label="Aperçu du message"><small>'+(c.niveau==='important'?'! Important':'i Information')+'</small><b>'+esc(c.titre||'Titre du message')+'</b><span>'+esc(c.texte)+'</span></div>';
+  }
+  if(c.type==='image'){
+    h+='<h3>Images, PDF ou PowerPoint</h3><label class="lbl">Nom (pour vous y retrouver)<input class="in" data-tvf="docNom" maxlength="80" value="'+esc(c.docNom)+'" placeholder="ex. Consignes de la semaine"'+dis+'></label>'+
+      '<div class="tv-imgs">'+(c.images.length?c.images.map((id,i)=>'<div class="tv-img">'+(S.photos[id]?'<img alt="Page '+(i+1)+'" src="'+S.photos[id]+'">':'<span class="hint">Page '+(i+1)+'</span>'+vignette(id))+'<span class="hint">Page '+(i+1)+'</span>'+
+        (dis?'':'<button class="btn" data-tv="img-suppr" data-i="'+i+'" aria-label="Retirer la page '+(i+1)+'">Retirer</button>')+'</div>').join(''):'<span class="hint">Aucune image pour le moment.</span>')+'</div>'+
+      '<label class="lbl">Ajouter des images, un PDF ou un PowerPoint<input class="in" type="file" data-tvf="fichier" accept="image/jpeg,image/png,image/webp,application/pdf,.pdf,.pptx,.ppsx,.ppt,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.openxmlformats-officedocument.presentationml.slideshow,application/vnd.ms-powerpoint" multiple'+dis+'></label>'+
+      '<p class="hint" id="tvEnvoi" role="status">'+esc(T.envoiQui==='musique'?'':T.envoi)+'</p>'+
+      '<p class="hint">Image : JPG, PNG ou WebP, <b>'+TV_IMG_MO+' Mo au plus</b>. PDF : <b>'+TV_PDF_MO+' Mo et '+TV_PDF_PAGES+' pages au plus</b> (chaque page devient une image). '+
+        'PowerPoint (.pptx, .ppsx, .ppt) : <b>'+TV_PPTX_MO+' Mo au plus</b>, converti par le PowerPoint de ce PC (jusqu’à 1 minute) ; chaque diapo devient une image fixe : <b>les animations, vidéos et sons ne sont pas gardés</b>, les diapos masquées sont sautées. '+
+        TV_IMAGES_MAX+' pages en tout au plus. Une page à la fois, en entier.</p>'+
+      '<label class="chip"><input type="checkbox" data-tvf="remplir"'+(c.remplir?' checked':'')+dis+'>Remplir tout l’écran</label><p class="hint">Coché : plus de bandes noires, mais les bords peuvent être un peu coupés si le format n’est pas celui de la télé. Décoché : tout est visible, avec des bandes noires si besoin.</p>'+
+      '<label class="lbl">Chaque page reste<select class="in" data-tvf="duree" style="width:auto"'+dis+'>'+(d.dureesImages||[]).map(s=>'<option value="'+s+'"'+(s===Number(c.duree)?' selected':'')+'>'+trDuree(s)+'</option>').join('')+'</select></label>';
+  }
+  if(c.type==='video'){
+    const l=c.videos,tot=l.reduce((s,v)=>s+(v.duree||0),0),connue=l.length&&l.every(v=>v.duree>0);
+    h+='<h3>Vidéo en boucle</h3><p class="hint" style="margin-top:0">'+(l.length>1?'Les vidéos passent <b>l’une après l’autre, dans cet ordre</b>, puis la liste recommence sans fin.':'Une seule vidéo : elle tourne <b>en boucle</b>. Ajoutez-en d’autres pour qu’elles passent l’une après l’autre.')+'</p>'+
+      (l.length?'<div class="tv-vids">'+l.map((v,i)=>'<div class="tv-vid"><span class="tr-n">'+(i+1)+'</span><div class="tv-vn"><b>'+esc(v.nom)+'</b><br><span class="hint">'+tvMo(v.taille)+(v.duree?' · '+tvMinSec(v.duree):'')+' · ✓ envoyée dans Google</span></div>'+
+        '<button class="btn tr-f" type="button" data-tv="vid-monte" data-i="'+i+'" aria-label="Monter « '+esc(v.nom)+' »"'+(i===0||dis?' disabled':'')+'>↑</button>'+
+        '<button class="btn tr-f" type="button" data-tv="vid-descend" data-i="'+i+'" aria-label="Descendre « '+esc(v.nom)+' »"'+(i===l.length-1||dis?' disabled':'')+'>↓</button>'+
+        '<button class="btn dan" type="button" data-tv="vid-retirer" data-i="'+i+'" aria-label="Retirer « '+esc(v.nom)+' »"'+dis+'>Retirer</button></div>').join('')+'</div>'+
+        '<p class="hint">'+l.length+' vidéo'+(l.length>1?'s':'')+' · '+tvMo(l.reduce((s,v)=>s+v.taille,0))+(connue?' · durée totale '+tvMinSec(tot):'')+'</p>'
+      :'<p class="hint">Aucune vidéo pour le moment.</p>')+
+      (l.length<TV_VID_MAX?'<label class="lbl">Ajouter une ou plusieurs vidéos<input class="in" type="file" data-tvf="video" accept="video/mp4,video/webm,video/quicktime,video/x-matroska,.mp4,.webm,.m4v,.mov,.mkv" multiple'+dis+'></label>':'<p class="hint">'+TV_VID_MAX+' vidéos au plus.</p>')+
+      // Envoi d'un MP3 en cours (musique de fond) : son avancement s'affiche dans le bloc de la musique, pas ici.
+      '<div class="tv-vprog"'+(T.envoiPct==null||T.envoiQui==='musique'?' hidden':'')+'><progress id="tvVidBarre" max="100" value="'+(T.envoiPct||0)+'" aria-label="Avancement de l’envoi"></progress></div>'+
+      '<p class="hint" id="tvEnvoi" role="status">'+esc(T.envoiQui==='musique'?'':T.envoi)+'</p>'+
+      '<label class="chip"><input type="checkbox" data-tvf="son"'+(c.son?' checked':'')+dis+'>Avec le son</label> '+
+      '<label class="chip"><input type="checkbox" data-tvf="remplir"'+(c.remplir?' checked':'')+dis+'>Remplir tout l’écran</label><p class="hint">Coché : plus de bandes noires, mais les bords peuvent être un peu coupés si le format n’est pas celui de la télé. Décoché : tout est visible, avec des bandes noires si besoin.</p>'+
+      '<p class="hint">Format conseillé : <b>MP4 (H.264), 1080p</b>. Chaque vidéo est d’abord <b>vérifiée</b> sur ce PC ; si la télé ne saurait pas bien la lire (vidéo de YouTube en AV1 ou VP9, WebM, MKV, 4K, débit trop fort…), elle est <b>convertie par Windows</b> en MP4 H.264 (quelques minutes pour une longue vidéo). '+
+        '<b>'+TV_VID_MO+' Mo au plus</b> par vidéo une fois prête, '+TV_VID_MAX+' vidéos au plus. '+
+        'Elle est ensuite envoyée dans Google (barre d’avancement ; si l’envoi est coupé, ajoutez de nouveau la même vidéo : il reprend où il s’était arrêté), puis <b>chaque télé la télécharge</b> et la garde (elle passe ensuite même sans réseau). '+
+        'La télé affiche l’avancement. Sans « Avec le son », la vidéo est muette.</p>';
+  }
+  if(c.type==='web'){
+    h+='<h3>Page internet</h3><label class="lbl">Adresse de la page<input class="in" type="url" data-tvf="adresse" maxlength="500" value="'+esc(c.adresse)+'" placeholder="https://…"'+dis+'></label>'+
+      '<label class="lbl">Recharger la page<select class="in" data-tvf="recharger" style="width:auto"'+dis+'>'+[[0,'Jamais'],[5,'Toutes les 5 min'],[15,'Toutes les 15 min'],[60,'Toutes les heures']].map(([k,t])=>'<option value="'+k+'"'+(k===Number(c.recharger)?' selected':'')+'>'+t+'</option>').join('')+'</select></label>'+
+      '<div class="msg warn">'+svg('alerte')+'<div><b>À savoir :</b> après la bascule, le Wi-Fi des télés n’aura pas internet : seules les pages internes de l’entreprise s’afficheront. Beaucoup de sites refusent d’être affichés dans un cadre : la télé l’écrira clairement (« Cette page refuse d’être affichée sur une télé »). Dans ce cas, envoyez une capture de la page en image.</div></div>';
+  }
+  if(c.type==='aucun')h+='<p class="hint">La télé affiche l’écran d’attente Lynk (nom de la télé et heure).</p>';
+  h+=tvVeille(dis);
+  h+=tvMusique(dis);
+  h+='<div class="tv-pied">'+(tvMod()?'<button class="btn pri" data-tv="enregistrer"'+(T.occupe?' disabled':'')+'>'+svg('ok')+'Enregistrer — la télé change en moins de 30 s</button>':'')+
+    '<button class="btn" data-tv="annuler">'+(tvMod()?'Annuler':'Retour à la liste')+'</button>'+
+    (!b.nouvelle?'<a class="btn" href="/tele?id='+encodeURIComponent(b.id)+'&apercu=1" target="_blank" rel="noopener">'+svg('ecran')+'Voir comme la télé (réglage enregistré)</a>':'')+
+    '<span class="grow"></span>'+(tvMod()&&!b.nouvelle?(T.retirer?'<span class="hint">Retirer cette télé de la liste ?</span><button class="btn dan plein" data-tv="retirer-ok">Oui, retirer</button><button class="btn" data-tv="retirer-non">Non</button>':'<button class="btn dan" data-tv="retirer">Retirer cette télé</button>'):'')+'</div></section>';
+  return h;
+}
+// Tour propre à la télé : mêmes écrans et durées que l'écran tournant du PC (catalogue du serveur).
+function tvTournant(dis){
+  const t=S.tv.b.tournant;let rang=0;
+  return '<div class="tr" style="border:0;margin-top:8px"><p class="hint">Les écrans cochés passent l’un après l’autre, dans cet ordre.</p>'+t.ecrans.map((e,i)=>'<div class="tr-l'+(e.on?'':' off')+'"><span class="tr-n">'+(e.on?++rang:'—')+'</span>'+
+    '<label class="tr-c"><input type="checkbox" data-tvt="on" data-i="'+i+'"'+(e.on?' checked':'')+dis+'><span>'+esc(e.nom)+'</span></label>'+
+    '<span class="tr-r"><label class="tr-d"><span class="tr-dt">'+(e.pages?'Durée par page':'Durée')+'</span><select class="in" data-tvt="duree" data-i="'+i+'" aria-label="Durée — '+esc(e.court)+'"'+dis+'>'+S.tv.d.durees.map(s=>'<option value="'+s+'"'+(s===e.duree?' selected':'')+'>'+trDuree(s)+'</option>').join('')+'</select></label>'+
+    '<button class="btn tr-f" type="button" data-tv="monte" data-i="'+i+'" aria-label="Monter « '+esc(e.court)+' »"'+(i===0||dis?' disabled':'')+'>↑</button>'+
+    '<button class="btn tr-f" type="button" data-tv="descend" data-i="'+i+'" aria-label="Descendre « '+esc(e.court)+' »"'+(i===t.ecrans.length-1||dis?' disabled':'')+'>↓</button></span></div>').join('')+
+    '<div class="tr-o"><span style="width:22px;flex:none"></span><div role="radiogroup" aria-label="Couleurs des écrans"><b>Couleurs des écrans</b><div class="row" style="margin-top:6px">'+[['sombre','Sombre'],['clair','Clair']].map(([k,l])=>'<label class="chip"><input type="radio" name="tvtTheme" data-tvt="theme" value="'+k+'"'+(t.theme===k?' checked':'')+dis+'>'+l+'</label>').join('')+'</div></div></div>'+
+    '<div class="tr-o"><input type="checkbox" id="tvtPrio" data-tvt="priorite"'+(t.priorite?' checked':'')+dis+'><div><label for="tvtPrio">Priorité aux retards</label><div class="hint">Une maintenance « ✕ En retard » : son écran reste 2 fois plus longtemps.</div></div></div>'+
+    '<div class="tr-o"><input type="checkbox" id="tvtNuit" data-tvt="nuit"'+(t.nuit.on?' checked':'')+dis+'><div><label for="tvtNuit">En dehors des horaires de travail : écran sombre avec l’heure</label>'+
+    '<div class="row" style="margin-top:6px">de <input class="in" type="time" data-tvt="debut" value="'+esc(t.nuit.debut)+'" aria-label="Début des horaires"'+dis+'> à <input class="in" type="time" data-tvt="fin" value="'+esc(t.nuit.fin)+'" aria-label="Fin des horaires"'+dis+'></div></div></div></div>'+
+    tvMessages(dis);
+}
+// Messages dans le tour (2026-11-10) : intercalés entre les écrans (un message après chaque écran, à tour de rôle).
+// Seulement pour les télés (l'écran tournant du PC ne les a pas) ; 10 au plus ; titre/texte/couleur/durée/heure de fin.
+function tvMessages(dis){
+  const l=S.tv.b.tournant.messages,max=TV_MSG_MAX,durees=S.tv.d.durees||[10,15,20,30,45,60,90,120];
+  let h='<div class="tv-ms" role="group" aria-labelledby="tvmTitre"><h3 id="tvmTitre">Messages dans le tour <span class="tag">'+l.length+' / '+max+'</span></h3>'+
+    '<p class="hint" style="margin-top:0">Un message passe <b>après chaque écran coché</b>, à tour de rôle (écran, message, écran, message suivant…). Sans écran coché : les messages se suivent. '+
+    'Un four à sortir passe toujours devant ; en dehors des horaires de travail, l’écran reste sombre (pas de message).</p>';
+  h+=l.map((m,i)=>{
+    const fini=tvMsgFini(m),etat=!m.on?'<span class="tag">• décoché : pas affiché</span>':fini?'<span class="tag warn">! heure de fin passée : plus affiché</span>':'<span class="tag ok">✓ dans le tour</span>';
+    const nm='Message n° '+(i+1);
+    return '<div class="tv-m'+(m.on&&!fini?'':' off')+'" role="group" aria-label="'+nm+'"><div class="tv-m-t"><span class="tr-n">'+(i+1)+'</span>'+
+      '<label class="chip"><input type="checkbox" data-tvm="on" data-i="'+i+'"'+(m.on?' checked':'')+dis+'>Afficher ce message</label>'+etat+'<span class="grow"></span>'+
+      '<button class="btn tr-f" type="button" data-tv="msg-monte" data-i="'+i+'" aria-label="Monter le '+nm+'"'+(i===0||dis?' disabled':'')+'>↑</button>'+
+      '<button class="btn tr-f" type="button" data-tv="msg-descend" data-i="'+i+'" aria-label="Descendre le '+nm+'"'+(i===l.length-1||dis?' disabled':'')+'>↓</button>'+
+      '<button class="btn dan" type="button" data-tv="msg-retirer" data-i="'+i+'" aria-label="Retirer le '+nm+'"'+dis+'>Retirer</button></div>'+
+      '<div class="tv-m-c"><div class="tv-m-f">'+
+      '<label class="lbl">Titre (80 caractères au plus)<input class="in" data-tvm="titre" data-i="'+i+'" maxlength="80" value="'+esc(m.titre)+'"'+dis+'></label>'+
+      '<label class="lbl">Texte (600 caractères au plus)<textarea class="in" data-tvm="texte" data-i="'+i+'" maxlength="600"'+dis+'>'+esc(m.texte)+'</textarea></label>'+
+      '<div role="radiogroup" aria-label="Couleur du '+nm+'"><b>Couleur</b><div class="row" style="margin-top:6px">'+
+        [['info','i Information (bleu-vert)'],['important','! Important (orange)']].map(([k,t])=>'<label class="chip"><input type="radio" name="tvm-niveau-'+i+'" data-tvm="niveau" data-i="'+i+'" value="'+k+'"'+(m.niveau===k?' checked':'')+dis+'>'+t+'</label>').join('')+'</div></div>'+
+      '<div class="row" style="margin-top:12px"><label class="tr-d"><span class="tr-dt">Durée à l’écran</span><select class="in" data-tvm="duree" data-i="'+i+'" aria-label="Durée du '+nm+'"'+dis+'>'+
+        durees.map(s=>'<option value="'+s+'"'+(s===Number(m.duree)?' selected':'')+'>'+trDuree(s)+'</option>').join('')+'</select></label>'+
+      '<label class="chip"><input type="checkbox" data-tvm="finOn" data-i="'+i+'"'+(m.finOn?' checked':'')+dis+'>Jusqu’à</label>'+
+      '<input class="in" type="datetime-local" data-tvm="fin" data-i="'+i+'" value="'+esc(m.fin)+'" aria-label="Date et heure de fin du '+nm+'" style="width:auto"'+(m.finOn?'':' disabled')+dis+'></div>'+
+      '<p class="hint">'+(m.finOn?'Après cette heure, le message n’est plus affiché (il reste ici : décochez-le ou retirez-le).':'Sans heure de fin : il reste dans le tour jusqu’à ce que vous le décochiez.')+'</p></div>'+
+      '<div class="tv-apercu'+(m.niveau==='important'?' imp':'')+'" data-tvma="'+i+'" aria-label="Aperçu du '+nm+'"><small>'+(m.niveau==='important'?'! Important':'i Information')+'</small><b>'+esc(m.titre||'Titre du message')+'</b><span>'+esc(m.texte)+'</span></div>'+
+      '</div></div>';
+  }).join('');
+  if(!l.length)h+='<p class="hint">Aucun message pour le moment.</p>';
+  h+=dis?'':'<button class="btn" type="button" data-tv="msg-ajouter"'+(l.length>=max?' disabled':'')+'>'+svg('plus')+'Ajouter un message</button>'+(l.length>=max?' <span class="hint">'+max+' messages au plus.</span>':'');
+  return h+'</div>';
+}
+// Messages envoyés au serveur (il vérifie tout de nouveau) ; une erreur claire avant l'envoi si un champ manque.
+function tvMessagesCorps(l){
+  return l.map((m,i)=>{
+    if(!String(m.titre).trim()&&!String(m.texte).trim())throw new Error('Message n° '+(i+1)+' du tour : écrivez son titre ou son texte (ou retirez-le).');
+    const fin=m.finOn?new Date(m.fin).getTime():0;
+    if(m.finOn&&!(fin>0))throw new Error('Message n° '+(i+1)+' du tour : heure de fin invalide.');
+    return {titre:m.titre,texte:m.texte,niveau:m.niveau,duree:Number(m.duree),on:!!m.on,fin};
+  });
+}
+// Contenu envoyé au serveur : seulement les champs du type choisi (le serveur vérifie tout).
+function tvContenu(b){
+  const c=b.c;
+  if(c.type==='ecran')return {type:'ecran',ecran:c.ecran,secteur:c.secteur,theme:c.theme};
+  if(c.type==='message'){const fin=c.finOn?new Date(c.fin).getTime():0;if(c.finOn&&!(fin>0))throw new Error('Heure de fin du message invalide.');
+    return {type:'message',titre:c.titre,texte:c.texte,niveau:c.niveau,fin,ensuite:b.avant&&!['message','aucun'].includes(b.avant.type)?b.avant:null}}
+  if(c.type==='image')return {type:'image',nom:c.docNom,images:c.images,duree:Number(c.duree),remplir:!!c.remplir};
+  if(c.type==='web')return {type:'web',adresse:c.adresse.trim(),recharger:Number(c.recharger)};
+  if(c.type==='video'){if(!c.videos.length)throw new Error('Ajoutez au moins une vidéo.');
+    return {type:'video',videos:c.videos.map(v=>({id:v.id,nom:v.nom,taille:v.taille,empreinte:v.empreinte,duree:v.duree||0})),son:!!c.son,remplir:!!c.remplir}}
+  return {type:'aucun'};
+}
+async function tvEnregistrer(){
+  const T=S.tv,b=T.b;if(!b||T.occupe)return;
+  let corps;try{corps={id:b.id,nom:b.nom,contenu:tvContenu(b),depuis:b.depuis,par:S.moi&&S.moi.nom||''};
+    // Mise en veille : toujours envoyée (le serveur la vérifie de nouveau) ; heures identiques refusées tout de suite.
+    const v=b.veille;if(v.actif&&v.debut===v.fin)throw new Error('Mise en veille : l’heure de début et l’heure de fin sont les mêmes. Choisissez par exemple de 20:00 à 06:00.');
+    if(v.actif&&v.plage2&&v.debut2===v.fin2)throw new Error('Mise en veille, 2e plage : l’heure de début et l’heure de fin sont les mêmes. Choisissez par exemple de 12:00 à 13:00.');
+    corps.veille={actif:!!v.actif,debut:v.debut,fin:v.fin,weekend:!!v.weekend,plage2:!!v.plage2,debut2:v.debut2,fin2:v.fin2};
+    // Musique de fond (2026-11-16) : toujours envoyée, morceaux compris même décochée (rien n'est perdu) ; le serveur revérifie.
+    const mu=b.musique;
+    if(mu.actif&&!mu.morceaux.length)throw new Error('Musique de fond : ajoutez au moins un MP3 (ou décochez « Diffuser de la musique en fond »).');
+    if(mu.actif&&mu.horaire&&mu.debut===mu.fin)throw new Error('Musique de fond : l’heure de début et l’heure de fin sont les mêmes. Choisissez par exemple de 08:00 à 17:00.');
+    // Ni cochée ni morceau : null (rien n'est rangé avec la télé).
+    corps.musique=!mu.actif&&!mu.morceaux.length?null:{actif:!!mu.actif,aleatoire:!!mu.aleatoire,volume:Number(mu.volume),horaire:!!mu.horaire,debut:mu.debut,fin:mu.fin,
+      morceaux:mu.morceaux.map(v=>({id:v.id,nom:v.nom,taille:v.taille,empreinte:v.empreinte,duree:v.duree||0}))};
+    if(b.c.type==='ecran'&&b.c.ecran==='tournant'){const t=b.tournant;corps.tournant={ecrans:t.ecrans.map(e=>({id:e.id,on:e.on,duree:e.duree})),priorite:t.priorite,theme:t.theme,nuit:t.nuit,messages:tvMessagesCorps(t.messages||[])}}}
+  catch(x){T.msg=['err','✕ '+esc(x.message)];return chargerPage()}
+  T.occupe=true;T.msg=null;chargerPage();
+  try{T.d=await apiPC('/api/teles',corps);T.lu=Date.now();T.b=null;T.msg=['ok','✓ Enregistré : la télé « '+esc(b.nom||b.id)+' » change en moins d’une minute. « Réglage reçu » s’affiche quand elle l’a lu.']}
+  catch(x){if(x.message==='session'){T.occupe=false;return}
+    T.msg=['err','✕ '+esc(x.message)];if(/changé entre-temps/.test(x.message)){T.b=null;await tvCharger(true)}}
+  T.occupe=false;chargerPage();
+}
+async function tvRetirer(){
+  const T=S.tv,b=T.b;if(!b||T.occupe)return;T.occupe=true;
+  try{T.d=await apiPC('/api/teles',{id:b.id,supprimer:true,depuis:b.depuis});T.lu=Date.now();T.b=null;T.msg=['ok','✓ Télé « '+esc(b.nom||b.id)+' » retirée. Si elle est encore branchée, elle réapparaît en « nouvelle télé ».']}
+  catch(x){if(x.message!=='session')T.msg=['err','✕ '+esc(x.message)]}
+  T.occupe=false;T.retirer=false;chargerPage();
+}
+// Images et PDF : réduits ici (1920 px au plus, JPEG), envoyés par le serveur du PC (photos de Google) ; un PDF est
+// d'abord converti en images par Windows (serveur du PC).
+const tvLireData=f=>new Promise((ok,ko)=>{const r=new FileReader();r.onload=()=>ok(String(r.result));r.onerror=()=>ko(new Error('« '+f.name+' » illisible.'));r.readAsDataURL(f)});
+const tvJpeg=data=>new Promise((ok,ko)=>{const im=new Image();im.onload=()=>{const k=Math.min(1,1920/im.width,1920/im.height),cv=document.createElement('canvas');cv.width=Math.max(1,Math.round(im.width*k));cv.height=Math.max(1,Math.round(im.height*k));
+  const g=cv.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,cv.width,cv.height);g.drawImage(im,0,0,cv.width,cv.height);let d=cv.toDataURL('image/jpeg',.85);if(d.length>2900000)d=cv.toDataURL('image/jpeg',.6);ok(d)};im.onerror=()=>ko(new Error('Image illisible.'));im.src=data});
+function tvEnvoi(t){S.tv.envoi=t;const e=document.getElementById('tvEnvoi');if(e)e.textContent=t}
+async function tvAjouterImage(b,data){
+  if(b.c.images.length>=TV_IMAGES_MAX)throw new Error(TV_IMAGES_MAX+' pages au plus : retirez-en avant d’en ajouter.');
+  const r=await apiPC('/api/tele-image',{data});S.photos[r.id]=data;b.c.images.push(r.id);
+}
+async function tvFichiers(liste){
+  const T=S.tv,b=T.b;if(!b||T.occupe||!liste.length)return;
+  T.occupe=true;T.msg=null;chargerPage();
+  try{
+    for(const f of liste){
+      const nom=f.name.replace(/\.[a-z0-9]{2,5}$/i,'').slice(0,80);
+      if(f.type==='application/pdf'||/\.pdf$/i.test(f.name)){
+        if(f.size>TV_PDF_MO*1e6)throw new Error('« '+f.name+' » : PDF trop lourd ('+TV_PDF_MO+' Mo au plus).');
+        tvEnvoi('Conversion de « '+f.name+' » en images (quelques secondes)…');
+        const r=await apiPC('/api/tele-pdf',{data:(await tvLireData(f)).replace(/^data:[^;,]*;base64,/,'data:application/pdf;base64,')});
+        for(let i=0;i<r.pages.length;i++){tvEnvoi('Envoi de la page '+(i+1)+' / '+r.pages.length+'…');await tvAjouterImage(b,await tvJpeg(r.pages[i]))}
+        if(r.coupe)T.msg=['warn','Le PDF « '+esc(f.name)+' » a '+r.total+' pages : seules les '+r.pages.length+' premières sont gardées.'];
+      }else if(tvPptx(f)){
+        // PowerPoint : chaque diapo (sauf les masquées) devient une image, comme les pages d'un PDF.
+        if(f.size>TV_PPTX_MO*1e6)throw new Error('« '+f.name+' » : présentation trop lourde ('+TV_PPTX_MO+' Mo au plus). Enregistrez-la en PDF, puis envoyez le PDF.');
+        if(b.c.images.length>=TV_IMAGES_MAX)throw new Error(TV_IMAGES_MAX+' pages au plus : retirez-en avant d’en ajouter.');
+        tvEnvoi('Conversion de « '+f.name+' » par PowerPoint (jusqu’à 1 minute)…');
+        const r=await apiPC('/api/tele-pptx',{data:(await tvLireData(f)).replace(/^data:[^,]*,/,'data:application/octet-stream;base64,'),ext:f.name.split('.').pop().toLowerCase()});
+        const place=TV_IMAGES_MAX-b.c.images.length,n=Math.min(place,r.pages.length);
+        for(let i=0;i<n;i++){tvEnvoi('Envoi de la diapo '+(i+1)+' / '+n+'…');await tvAjouterImage(b,await tvJpeg(r.pages[i]))}
+        if(r.coupe||n<r.total)T.msg=['warn','La présentation « '+esc(f.name)+' » a '+r.total+' diapos à montrer : seules les '+n+' premières sont gardées ('+TV_IMAGES_MAX+' pages en tout au plus).'];
+      }else if(/^image\/(jpeg|png|webp)$/.test(f.type)){
+        if(f.size>TV_IMG_MO*1e6)throw new Error('« '+f.name+' » : image trop lourde ('+TV_IMG_MO+' Mo au plus).');
+        tvEnvoi('Envoi de « '+f.name+' »…');await tvAjouterImage(b,await tvJpeg(await tvLireData(f)));
+      }else throw new Error('« '+f.name+' » : ni une image (JPG, PNG, WebP), ni un PDF, ni un PowerPoint (.pptx, .ppsx, .ppt).');
+      if(!b.c.docNom)b.c.docNom=nom;
+    }
+    if(!T.msg)T.msg=['ok','✓ Envoyé. Touchez « Enregistrer » pour l’afficher sur la télé.'];
+  }catch(x){if(x.message!=='session')T.msg=['err','✕ '+esc(x.message)]}
+  T.occupe=false;T.envoi='';chargerPage();
+}
+// Vidéos (2026-11-12) : le fichier choisi est donné au programme de ce PC (/api/tele-video-fichier), qui le VÉRIFIE
+// (codec, taille d'image, débit), le CONVERTIT s'il le faut en MP4 H.264 par Windows (vidéos de YouTube souvent en AV1,
+// VP9 ou WebM), puis l'ENVOIE à Google en morceaux (un envoi coupé reprend où il s'était arrêté). La console suit
+// l'avancement (/api/tele-video-etat). Rien n'est affiché sur la télé avant « Enregistrer ».
+const TV_VID_SOURCE_GO=4;
+// Musique de fond (2026-11-16) : un MP3 en cours d'envoi s'affiche dans son propre bloc (envoiQui = 'musique').
+function tvAvance(t,pct){const mu=S.tv.envoiQui==='musique';S.tv.envoi=t;S.tv.envoiPct=pct;const e=document.getElementById(mu?'tvMusEnvoi':'tvEnvoi');if(e)e.textContent=t;const p=document.getElementById(mu?'tvMusBarre':'tvVidBarre');if(p){p.value=pct||0;p.parentNode.hidden=pct==null}}
+// Envoi du fichier tel quel (pas de JSON : il peut faire plusieurs centaines de Mo) au programme de ce PC.
+// genre 'musique' (2026-11-16) : un MP3 de la musique de fond, même chemin (vérifié sans conversion).
+async function tvFichierPC(f,genre,nom){
+  let r;
+  try{r=await fetch('/api/tele-video-fichier?nom='+encodeURIComponent(nom||f.name.trim())+(genre==='musique'?'&genre=musique':''),{method:'POST',headers:{'X-Console':'1','X-Console-Nouvelle':'1','X-Jeton':S.jeton||'','Content-Type':'application/octet-stream'},body:f,cache:'no-store'})}
+  catch(e){throw new Error('La console du PC ne répond plus : relancez le logiciel « Console Pack Tablettes ».')}
+  const j=await r.json().catch(()=>({erreur:'Réponse illisible'}));
+  if(r.status===401){finSession(j.erreur||'Session terminée : reconnectez-vous.');throw new Error('session')}
+  if(!r.ok)throw new Error(j.erreur||('Erreur '+r.status));
+  return j;
+}
+async function tvVideoEnvoyer(b,f){
+  const nom=f.name.trim();
+  if(!tvVidOk(f))throw new Error('« '+nom+' » : format refusé. MP4 (conseillé), M4V, MOV, WebM ou MKV seulement.');
+  if(nom.length>100||nom.startsWith('.'))throw new Error('« '+nom.slice(0,60)+' » : nom trop long ou invalide. Renommez le fichier.');
+  if(!f.size)throw new Error('« '+nom+' » : fichier vide.');
+  if(f.size>TV_VID_SOURCE_GO*1073741824)throw new Error('« '+nom+' » : fichier trop lourd ('+tvMo(f.size)+', '+TV_VID_SOURCE_GO+' Go au plus).');
+  if(b.c.videos.length>=TV_VID_MAX)throw new Error(TV_VID_MAX+' vidéos au plus : retirez-en une avant d’en ajouter.');
+  tvAvance('Copie de « '+nom+' » sur le PC du bureau…',null);
+  const {job}=await tvFichierPC(f);
+  const e=await tvSuivre(job,nom);
+  // Même vidéo déjà dans la liste (B6) : pas ajoutée deux fois (la télé la rejouerait du début).
+  if(b.c.videos.some(v=>v.id===e.video.id))return '• « '+nom+' » est déjà dans la liste : pas ajoutée une deuxième fois.';
+  b.c.videos.push(e.video);
+  return (e.analyseConvertie?'⚠ « '+nom+' » : '+e.verdict.replace(/^⚠ À convertir : /,'à convertir (')+') → convertie par Windows en « '+e.video.nom+' » ('+e.analyseConvertie+')':'✓ « '+nom+' » : prête pour la télé ('+e.analyse+')')+', envoyée dans Google.';
+}
+// Suivi d'une préparation du PC jusqu'à la fin (vidéo ou musique, 2026-11-16 : sorti de tvVideoEnvoyer, inchangé).
+// Suivi tolérant (développeur 2026-11-12, B4) : une conversion peut durer 2 h ; une erreur passagère (Google qui ne
+// répond pas pour vérifier la session, réponse illisible) ne doit pas arrêter le suivi alors que le PC continue.
+// 10 erreurs de suite au plus (environ 2 minutes), sauf fin de session.
+async function tvSuivre(job,nom){
+  let rates=0;
+  for(;;){
+    await new Promise(r=>setTimeout(r,rates?Math.min(15000,1500*rates):700));
+    let e;
+    try{e=await apiPC('/api/tele-video-etat?job='+encodeURIComponent(job));rates=0}
+    catch(x){if(x.message==='session'||++rates>10)throw x;tvAvance('Suivi interrompu un instant ('+x.message+') : nouvel essai…',S.tv.envoiPct);continue}
+    const tete=e.verdict?e.verdict+(e.analyse?' ('+e.analyse+')':'')+' — ':e.analyse?e.analyse+' — ':'';
+    if(e.etape==='erreur')throw new Error('« '+nom+' »'+(e.analyse?' ('+e.analyse+')':'')+' : '+e.erreur);
+    if(e.etape==='fini')return e;
+    tvAvance(tete+e.texte,e.pct);
+  }
+}
+// Musique de fond : un MP3 vérifié par le programme de ce PC (sans conversion), envoyé dans Google, mis dans la liste.
+async function tvMusiqueEnvoyer(b,f){
+  // Nom trop long (2026-11-16, MP3 d'album au nom de plus de 100 caractères refusé) : raccourci tout seul, « .mp3 » gardé.
+  let nom=f.name.trim().replace(/[\/\\\u0000-\u001f]/g,' ').replace(/^\.+/,'').trim();const l=b.musique.morceaux;
+  if(!tvMusOk(f))throw new Error('« '+nom+' » : format refusé. MP3 seulement.');
+  if(nom.length>100)nom=nom.slice(0,-4).slice(0,92).trim()+'….mp3';
+  if(!nom||nom.length<5)throw new Error('« '+f.name.slice(0,60)+' » : nom invalide. Renommez le fichier.');
+  if(!f.size)throw new Error('« '+nom+' » : fichier vide.');
+  if(f.size>TV_MUS_MO*1048576)throw new Error('« '+nom+' » : morceau trop lourd ('+tvMo(f.size)+', '+TV_MUS_MO+' Mo au plus).');
+  if(l.length>=TV_MUS_MAX)throw new Error(TV_MUS_MAX+' morceaux au plus : retirez-en un avant d’en ajouter.');
+  tvAvance('Copie de « '+nom+' » sur le PC du bureau…',null);
+  const {job}=await tvFichierPC(f,'musique',nom);
+  const e=await tvSuivre(job,nom);
+  if(l.some(v=>v.id===e.video.id))return '• « '+nom+' » est déjà dans la liste : pas ajouté une deuxième fois.';
+  l.push(e.video);
+  return '✓ « '+nom+' » : '+(e.analyse||'MP3 lisible')+', envoyé dans Google.';
+}
+async function tvMusiques(liste){
+  const T=S.tv,b=T.b;if(!b||T.occupe||!liste.length)return;
+  T.occupe=true;T.msg=null;T.envoiQui='musique';chargerPage();
+  const bilans=[],vide=!b.musique.morceaux.length;
+  try{for(const f of liste)bilans.push(await tvMusiqueEnvoyer(b,f));
+    T.msg=['ok',bilans.map(esc).join('<br>')+'<br>Touchez « Enregistrer » : la télé télécharge les morceaux, puis les joue en fond.']}
+  catch(x){if(x.message!=='session')T.msg=['err',(bilans.length?bilans.map(esc).join('<br>')+'<br>':'')+'✕ '+esc(x.message)]}
+  // Premiers morceaux d'une liste vide : la musique est cochée d'elle-même (c'est ce qu'on veut en ajoutant un MP3).
+  if(vide&&b.musique.morceaux.length)b.musique.actif=true;
+  T.msgMus=T.msg;
+  T.occupe=false;T.envoi='';T.envoiPct=null;T.envoiQui='';chargerPage();
+}
+async function tvVideos(liste){
+  const T=S.tv,b=T.b;if(!b||T.occupe||!liste.length)return;
+  T.occupe=true;T.msg=null;chargerPage();
+  const bilans=[];
+  try{for(const f of liste)bilans.push(await tvVideoEnvoyer(b,f));
+    T.msg=['ok',bilans.map(esc).join('<br>')+'<br>Touchez « Enregistrer » : la télé la télécharge, puis la joue.']}
+  catch(x){if(x.message!=='session')T.msg=['err',(bilans.length?bilans.map(esc).join('<br>')+'<br>':'')+'✕ '+esc(x.message)]}
+  T.occupe=false;T.envoi='';T.envoiPct=null;chargerPage();
+}
+document.addEventListener('input',e=>{
+  const el=e.target,b=S.tv&&S.tv.b;if(!b||S.page!=='teles'||!el.dataset)return;
+  const f=el.dataset.tvf,mk=el.dataset.tvm;
+  // Volume de la musique : chiffre affiché pendant le glissement, sans redessiner (le curseur reste en main).
+  if(el.dataset.tvmu==='volume'){b.musique.volume=Number(el.value)||50;const v=document.getElementById('tvmuVolT');if(v)v.textContent=b.musique.volume+' %';return}
+  // Message du tour : titre/texte gardés à la frappe, aperçu tenu à jour sans redessiner.
+  if((mk==='titre'||mk==='texte')&&b.tournant&&b.tournant.messages){const m=b.tournant.messages[+el.dataset.i];if(!m)return;m[mk]=el.value;
+    const a=document.querySelector('[data-tvma="'+el.dataset.i+'"] '+(mk==='titre'?'b':'span'));if(a)a.textContent=el.value||(mk==='titre'?'Titre du message':'');return}
+  if(f==='nom')b.nom=el.value;
+  else if(['titre','texte','adresse','docNom'].includes(f)){b.c[f]=el.value;
+    // Aperçu du message tenu à jour sans redessiner (le curseur reste dans le champ).
+    if(f==='titre'||f==='texte'){const a=document.querySelector('.tv-apercu '+(f==='titre'?'b':'span'));if(a)a.textContent=el.value||(f==='titre'?'Titre du message':'')}}
+});
+document.addEventListener('change',e=>{
+  const el=e.target,b=S.tv&&S.tv.b;if(!b||S.page!=='teles'||!el.dataset)return;
+  const f=el.dataset.tvf,k=el.dataset.tvt,mk=el.dataset.tvm,vk=el.dataset.tvv;
+  // Mise en veille : cases et heures (une heure effacée n'est pas prise).
+  if(vk){const v=b.veille;if(vk==='actif'||vk==='weekend'||vk==='plage2')v[vk]=el.checked;else if(['debut','fin','debut2','fin2'].includes(vk)&&/^\d\d:\d\d$/.test(el.value))v[vk]=el.value;else return;return chargerPage()}
+  // Musique de fond (2026-11-16) : fichiers MP3 (envoi qui suit), cases, volume et heures (une heure effacée n'est pas prise).
+  const mu=el.dataset.tvmu;
+  if(mu){const m=b.musique;
+    if(mu==='fichier'){const l=[...(el.files||[])];el.value='';tvMusiques(l);return}
+    if(mu==='actif'||mu==='aleatoire'||mu==='horaire')m[mu]=el.checked;
+    else if(mu==='volume'){m.volume=Number(el.value)||50;return}
+    else if((mu==='debut'||mu==='fin')&&/^\d\d:\d\d$/.test(el.value))m[mu]=el.value;else return;
+    return chargerPage()}
+  if(f==='fichier'){const l=[...(el.files||[])];el.value='';tvFichiers(l);return}
+  // Vidéos : seul le choix du fichier ici ; l'envoi en morceaux suit (tvVideos).
+  if(f==='video'){const l=[...(el.files||[])];el.value='';tvVideos(l);return}
+  if(f==='son'){b.c.son=el.checked;return}
+  if(f==='remplir'){b.c.remplir=el.checked;return}
+  if(mk){const m=b.tournant&&b.tournant.messages&&b.tournant.messages[+el.dataset.i];if(!m)return;
+    if(mk==='titre'||mk==='texte')return; // déjà pris à la frappe
+    if(mk==='on'||mk==='finOn')m[mk]=el.checked;else if(mk==='niveau'){if(!el.checked)return;m.niveau=el.value}
+    else if(mk==='duree')m.duree=Number(el.value);else if(mk==='fin'){if(!el.value)return;m.fin=el.value}else return;
+    return chargerPage()}
+  if(['type','ecran','theme','niveau'].includes(f)){if(!el.checked)return;b.c[f]=el.value}
+  else if(f==='secteur'||f==='fin')b.c[f]=el.value;
+  else if(f==='finOn')b.c.finOn=el.checked;
+  else if(f==='duree'||f==='recharger')b.c[f]=Number(el.value);
+  else if(k){const t=b.tournant,x=t.ecrans[+el.dataset.i];
+    if(k==='on'&&x)x.on=el.checked;else if(k==='duree'&&x)x.duree=Number(el.value);else if(k==='theme'&&el.checked)t.theme=el.value;
+    else if(k==='priorite')t.priorite=el.checked;else if(k==='nuit')t.nuit.on=el.checked;else if((k==='debut'||k==='fin')&&/^\d\d:\d\d$/.test(el.value))t.nuit[k]=el.value;else return}
+  else return;
+  chargerPage();
+});
+document.addEventListener('click',e=>{
+  const el=e.target.closest&&e.target.closest('[data-tv]');if(!el||S.page!=='teles'||el.disabled)return;
+  const T=S.tv,a=el.dataset.tv;
+  if(a==='ouvrir'){const t=T.d&&T.d.teles.find(x=>x.id===el.dataset.id);if(t){tvOuvrir(t);chargerPage().then(()=>{const n=document.querySelector('[data-tvf="nom"]');if(n)n.focus()})}return}
+  if(a==='ajouter'){const v=String((document.getElementById('tvNouvId')||{}).value||'').trim().toLowerCase();
+    // Pas de tiret double ni de tiret à la fin (console 2026-11-12, B15 : « tele--x » était accepté).
+    if(!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(v)||v.length>40){T.msg=['err','✕ Nom de télé invalide : lettres minuscules, chiffres et tirets simples, sans tiret à la fin (ex. tele-fours).'];return chargerPage()}
+    const t=T.d.teles.find(x=>x.id===v);
+    // Nouvelle télé : le tour proposé au départ est celui de l'écran tournant (l'atelier, le frittage et le fraisage cochés).
+    tvOuvrir(t||{id:v,nom:'',nouvelle:true,contenu:{type:'aucun'},maj:0,tournant:{ecrans:T.d.catalogue.map(c=>Object.assign({},c,{on:['lancements','maintenance:frittage','maintenance:fraisage'].includes(c.id)})),priorite:true,theme:'sombre',nuit:{on:false,debut:'06:00',fin:'21:00'},messages:[]}});
+    return chargerPage()}
+  if(!T.b)return;
+  if(a==='annuler'){T.b=null;T.msg=null;tvCharger(true).then(chargerPage);return}
+  if(a==='enregistrer')return tvEnregistrer();
+  if(a==='retirer'){T.retirer=true;return chargerPage()}
+  if(a==='retirer-non'){T.retirer=false;return chargerPage()}
+  if(a==='retirer-ok')return tvRetirer();
+  if(a==='img-suppr'){T.b.c.images.splice(+el.dataset.i,1);return chargerPage()}
+  // Vidéos : ordre et retrait (rien n'est envoyé avant « Enregistrer » ; une vidéo retirée de toutes les télés est effacée de Google).
+  if(a==='vid-monte'||a==='vid-descend'){const l=T.b.c.videos,i=+el.dataset.i,j=a==='vid-monte'?i-1:i+1;if(j<0||j>=l.length)return;[l[i],l[j]]=[l[j],l[i]];return chargerPage()}
+  if(a==='vid-retirer'){T.b.c.videos.splice(+el.dataset.i,1);return chargerPage()}
+  // Musique de fond : ordre et retrait, comme les vidéos (un morceau retiré de toutes les télés est effacé de Google).
+  if(a==='mus-monte'||a==='mus-descend'){const l=T.b.musique.morceaux,i=+el.dataset.i,j=a==='mus-monte'?i-1:i+1;if(j<0||j>=l.length)return;[l[i],l[j]]=[l[j],l[i]];return chargerPage()}
+  if(a==='mus-retirer'){T.b.musique.morceaux.splice(+el.dataset.i,1);return chargerPage()}
+  if(a==='monte'||a==='descend'){const l=T.b.tournant.ecrans,i=+el.dataset.i,j=a==='monte'?i-1:i+1;if(j<0||j>=l.length)return;[l[i],l[j]]=[l[j],l[i]];return chargerPage()}
+  // Messages du tour : ajouter (10 au plus, 20 s, Information, sans fin), monter, descendre, retirer (rien n'est envoyé
+  // avant « Enregistrer »).
+  const ml=T.b.tournant&&(T.b.tournant.messages=T.b.tournant.messages||[]);
+  if(a==='msg-ajouter'){if(ml.length>=TV_MSG_MAX)return;ml.push({titre:'',texte:'',niveau:'info',duree:20,on:true,finOn:false,fin:tvLoc(Date.now()+8*3600000)});
+    return chargerPage().then(()=>{const n=document.querySelector('[data-tvm="titre"][data-i="'+(ml.length-1)+'"]');if(n){n.scrollIntoView({block:'center'});n.focus()}})}
+  if(a==='msg-monte'||a==='msg-descend'){const i=+el.dataset.i,j=a==='msg-monte'?i-1:i+1;if(j<0||j>=ml.length)return;[ml[i],ml[j]]=[ml[j],ml[i]];return chargerPage()}
+  if(a==='msg-retirer'){ml.splice(+el.dataset.i,1);T.msg=['info','Message retiré. Touchez « Enregistrer » pour l’enlever de la télé (« Annuler » le garde).'];return chargerPage()}
+});
+// Liste relue toutes les 20 s (dernière visite, réglage reçu) tant qu'aucune télé n'est ouverte.
+setInterval(()=>{if(CONSOLE_PC&&S.moi&&S.page==='teles'&&S.tv&&!S.tv.b&&!S.tv.occupe&&document.visibilityState==='visible')tvCharger(true).then(()=>{if(S.page==='teles'&&!S.tv.b)chargerPage()}).catch(()=>{})},20000);
+// </teles-console>
 // Apparence & administration : le pack intégré (code administrateur des tablettes) reste dans l'ancienne console.
 // Administration et apparence (lot 7c, 2026-10-15) : mêmes réglages que l'Administration des tablettes (Apparence,
 // Site et secteurs, Secteurs et zones), administrateur seulement, enregistrés par le script (administration-ecrire).
@@ -5465,7 +6196,10 @@ PAGES.apparence=async()=>{
         (A.supprZ===z.id?'<button class="btn dan plein" data-ad="zone-moins-ok" data-i="'+i+'">Oui, retirer</button><button class="btn" data-ad="zone-moins-non">Non</button>':'<button class="btn dan" data-ad="zone-moins" data-id="'+esc(z.id)+'">Retirer</button>')+'</div>'+
         (A.supprZ===z.id?(()=>{const seules=(r.data.seuleZone||{})[z.id]||[];return '<p class="hint" style="color:var(--warn)">Les tablettes installées sur cette zone devront être réinstallées'+(pers?' ; '+pers+' personne(s) y sont rattachées (elles perdent cette zone)':'')+'.'+
           (seules.length?' <b>'+esc(seules.join(', '))+(seules.length>1?' seront rattachées':' sera rattachée')+' à tout le secteur '+esc(secNom(z.secteur))+'</b> (c’était leur seule zone).':'')+' Effectif à l’enregistrement.</p>'})():'')+
-        '<div class="row" style="margin-top:6px">'+D_APPLIS.map(([id,n])=>{const off=id==='releve'&&!releve;return '<button class="chip" data-ad="zone-appli" data-i="'+i+'" data-a="'+id+'" aria-pressed="'+(!off&&z.applis.includes(id))+'"'+(off?' disabled title="Réservée aux secteurs qui ont une relève (frittage)"':'')+'>'+esc(n)+'</button>'}).join('')+'</div>'+
+        '<div class="row" style="margin-top:6px">'+D_APPLIS.map(([id,n])=>{
+          // Fours (2026-11-13, même règle que l'Administration de la tablette, lot B) : réservée aux zones du frittage.
+          const offF=id==='fours'&&z.secteur!=='frittage',off=(id==='releve'&&!releve)||offF;
+          return '<button class="chip" data-ad="zone-appli" data-i="'+i+'" data-a="'+id+'" aria-pressed="'+(!off&&z.applis.includes(id))+'"'+(off?' disabled title="'+(offF?'Réservée aux zones du frittage':'Réservée aux secteurs qui ont une relève (frittage)')+'"':'')+'>'+esc(n)+'</button>'}).join('')+'</div>'+
         (releve&&z.applis.includes('releve')?'<div class="row" style="margin-top:6px"><button class="chip" data-ad="zone-lien" data-i="'+i+'" aria-pressed="'+!!z.lienReleve+'">Les machines de la Relève sont dans cette zone</button></div>':'')+
         (z.googlePropre?'<p class="hint" style="margin:6px 0 0">Cette zone a sa propre Google Sheet (réglée sur une tablette ou dans l’ancienne console ; gardée telle quelle).</p>':'')+'</div>'}).join('')+
       '<div class="row" style="margin-top:8px"><input class="in" id="admNewZ-'+esc(sec)+'" placeholder="Nouvelle zone (ex. '+esc(secNom(sec))+' 2)" maxlength="40" style="flex:1;min-width:180px"><button class="btn" data-ad="zone-plus" data-s="'+esc(sec)+'">'+svg('plus')+'Ajouter la zone</button></div></section>'}).join('');
@@ -5496,7 +6230,9 @@ async function actionAdmin(b){
     const sauve=clone(A);
     const lireAdm=x=>{x=x||{};const ap=x.apparence||{},p={nom:x.nom||'',inactivite:Number(x.inactivite)||0,couleur:ap.couleur||'',logo:ap.logo||'',tuiles:clone(ap.tuiles||{}),secteurs:clone(x.secteurs||[])};
       (x.zones||[]).forEach(z=>{p[z.id&&!/^tmp-/.test(z.id)?'z:'+z.id:'+'+alea(8)]={nom:z.nom,secteur:z.secteur,applis:clone(z.applis||[]),lienReleve:!!z.lienReleve}});return p};
-    const zonesDe=p=>Object.keys(p).filter(k=>/^(z:|\+)/.test(k)).map(k=>Object.assign({},k.slice(0,2)==='z:'?{id:k.slice(2)}:{},{nom:p[k].nom,secteur:p[k].secteur,applis:p[k].applis,lienReleve:!!p[k].lienReleve}));
+    const zonesDe=p=>Object.keys(p).filter(k=>/^(z:|\+)/.test(k)).map(k=>Object.assign({},k.slice(0,2)==='z:'?{id:k.slice(2)}:{},{nom:p[k].nom,secteur:p[k].secteur,
+      // Fours réservée au frittage (2026-11-13) : retirée d'une zone passée dans un autre secteur.
+      applis:p[k].secteur==='frittage'?p[k].applis:(p[k].applis||[]).filter(a=>a!=='fours'),lienReleve:!!p[k].lienReleve}));
     const f={lire:d=>lireAdm(d),
       ecrire:(d,p)=>Object.assign(d,{nom:p.nom,inactivite:p.inactivite,apparence:Object.assign({},d.apparence,{couleur:p.couleur,logo:p.logo,tuiles:p.tuiles}),secteurs:p.secteurs,
         zones:zonesDe(p).map(z=>Object.assign({googlePropre:false},(d.zones||[]).find(x=>x.id===z.id)||{},z,{id:z.id||'tmp-'+alea(6)}))}),
@@ -5980,7 +6716,7 @@ function essaiReglages(){
     '</div>';
   // Preuve « rien ne part » en tête de la colonne (toujours visible).
   const nb=e.nbRefus||0;
-  h='<div class="essai-garde'+(nb?' ko':'')+'" role="status" style="margin:0 0 14px">'+svg(nb?'alerte':'ok')+'<div><b>'+(nb?nb+' envoi'+(nb>1?'s':'')+' vers l’extérieur BLOQUÉ'+(nb>1?'S':''):'✓ 0 envoi vers l’extérieur')+'</b>'+
+  h='<div class="essai-garde'+(nb?' ko':'')+'" role="status" style="margin:0 0 14px">'+svg(nb?'alerte':'ok')+'<div><b>'+(nb?nb+' envoi'+(nb>1?'s':'')+' vers l’extérieur BLOQUÉ'+(nb>1?'S':''):'Aucun envoi vers l’extérieur')+'</b>'+ // l'icône ✓ est déjà là (B11 : « ✓ ✓ 0 envoi »)
     '<small>'+e.appels+' échange'+(e.appels>1?'s':'')+' avec l’imitation de Google (dans ce navigateur). Rien ne part vers Google, les tablettes, la télé, la console ni la Sheet.'+
     (nb?' Dernier refus : '+esc(e.refus[e.refus.length-1].type+' → '+e.refus[e.refus.length-1].adresse):'')+'</small></div></div>'+h;
   h+='<div class="essai-actions"><button class="btn" data-essai="recharger">'+svg('accueil')+'Revenir à l’accueil de la tablette</button>'+
@@ -7272,7 +8008,8 @@ function outilsDessin(){
     '<button class="btn" data-fx="multi" aria-pressed="'+F.multi+'">'+svg('fx-multi')+(F.multi?'Sélection multiple : oui':'Sélection multiple')+'</button>'+
     (F.presse?'<button class="btn" data-fx="coller">'+svg('fx-copie')+'Coller ('+F.presse.etapes.length+')</button>':'');
   h+='<details class="fx-menu"><summary class="btn">'+svg('version')+'Exporter (image, PDF, Excel)</summary><div>'+
-    '<button class="btn" data-fx="export" data-v="png">'+svg('image')+'Image (.png)</button><button class="btn" data-fx="export" data-v="pdf">'+svg('imprim')+'PDF (.pdf)</button>'+
+    // Noms accessibles (console 2026-11-12, B8) : lus même quand le menu Exporter est fermé.
+    '<button class="btn" data-fx="export" data-v="png" aria-label="Exporter le dessin en image (.png)">'+svg('image')+'Image (.png)</button><button class="btn" data-fx="export" data-v="pdf" aria-label="Exporter le dessin en PDF (.pdf)">'+svg('imprim')+'PDF (.pdf)</button>'+
     '<button class="btn" data-fx="export" data-v="xlsx">'+svg('fx-grille')+'Excel (.xlsx)</button><button class="btn" data-fx="export" data-v="json">'+svg('fx-fichier')+'Fichier de flux (.json, ancien logiciel)</button></div></details>';
   if(mod)h+='<label class="btn" tabindex="0" role="button" data-fx-label-import="1">'+svg('fx-import')+'Importer un fichier .json<input type="file" accept=".json,application/json" hidden data-fx-import="1"></label>';
   return h+'</div>';
