@@ -241,7 +241,7 @@ th{font-size:15px;color:var(--muted);text-transform:uppercase;letter-spacing:.05
 .lan{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line2);font-size:15px}
 .lan:last-child{border-bottom:0}
 .st{font-weight:700;border-radius:999px;padding:2px 10px;font-size:15px;color:#fff;white-space:nowrap}
-.st-fonctionnement{background:var(--ok)}.st-prete{background:var(--warn)}.st-preparation{background:#41545C}.st-libre{background:#55666c}
+.st-fonctionnement{background:var(--ok)}.st-prete{background:#6B3FA0}.st-preparation{background:#41545C}.st-libre{background:#55666c}
 .quick{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
 .quick button{display:flex;align-items:center;gap:10px;border:1px solid var(--line);background:#fff;border-radius:12px;padding:10px 12px;min-height:60px;font-weight:600;cursor:pointer;text-align:left;font-size:15px}
 .quick button:hover{border-color:var(--accent);background:var(--accent-soft)}
@@ -630,7 +630,7 @@ button.sync{min-width:44px;justify-content:center}
 :where(.ds-sombre) .etape{border:1px dashed var(--line);background:#414C52}
 /* Nouvelle console, thème sombre : compléments aux règles fabriquées (états des lancements sur fond clair → texte foncé ;
    jours hors du mois du calendrier, dont le fond est écrit dans la page). */
-:where(.ds-sombre) .st-fonctionnement,:where(.ds-sombre) .st-prete{color:var(--ds-sur)}
+:where(.ds-sombre) .st-fonctionnement,:where(.ds-sombre) .st-prete{color:var(--ds-sur)}:where(.ds-sombre) .st-prete{background:#B48CFF}
 :where(.ds-sombre) .cal>div[style*="#f7f9fa"]{background:var(--ds-gris)!important}
 /* Choix du thème en bas du menu des consoles (fond du menu toujours foncé). */
 .ds-theme-menu{display:grid;gap:6px;margin-top:12px;font-size:15px;font-weight:700;color:#cfdbe0}
