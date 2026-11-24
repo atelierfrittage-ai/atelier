@@ -359,6 +359,25 @@ ol.file{margin:8px 0 0;padding-left:22px}
 .lanv table{font-size:16px}.lanv table th{color:var(--ink)}
 /* Plateau à lancer (machine pas en fonctionnement, au moins un fichier) : écriture en ORANGE (2026-11-18). */
 .lanv .lgo h3{color:var(--warn)!important}.lanv .lgo ol b{color:var(--warn)}ol.file li{margin:0 0 8px}
+/* Journal des scans (2026-11-19) : lignes refusées sur fond orange clair (sombre : orange foncé), texte orange foncé
+   (sombre : orange clair) — lisibles dans les deux thèmes ; retour en arrière et scans rapprochés en repères. */
+.ljs-filtres{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:10px 0}
+.ljs-filtres label{display:flex;gap:8px;align-items:center;font-weight:600;min-height:44px}
+.ljs-filtres input[type=checkbox]{width:22px;height:22px}
+.ljs-table td{vertical-align:top}
+.ljs-table tr.ljs-refus td{background:var(--warn-bg)}
+.ljs-table tr.ljs-refus td:first-child{box-shadow:inset 5px 0 0 var(--warn-line)}
+.ljs-res{font-weight:700;white-space:nowrap}.ljs-res.ok{color:var(--ok)}.ljs-res.non{color:#7A3E00}:root.ds-sombre .ljs-res.non{color:var(--warn)}
+.ljs-raison{display:block;color:var(--ink);font-size:14px;margin-top:2px}
+.ljs-rep{display:inline-block;margin:3px 4px 0 0;padding:2px 9px;border-radius:999px;font-size:13px;font-weight:700;border:1.5px solid var(--err);color:var(--err);background:var(--card)}
+.ljs-rep.proche{border-color:var(--warn-line);color:var(--warn)}
+.ljs-heure{white-space:nowrap;font-variant-numeric:tabular-nums}
+/* Alerte « fichier en attente » (2026-11-19) : encadré rouge en haut, carte de la machine bordée de rouge. */
+.card.lretards{border:3px solid var(--err);background:var(--err-bg);margin:0 0 14px}
+.card.lretards h2{color:var(--err);display:flex;gap:8px;align-items:center}.card.lretards td,.card.lretards th{color:var(--ink)}
+.card.lretards td b{color:var(--err)}
+.lanv .card.lretard{outline:4px solid var(--err);outline-offset:-4px}
+.tag.lretard-tag{background:var(--err-bg);color:var(--err);border:1.5px solid var(--err);font-weight:800}
 .det .row .btn,.etape .btn,.row .btn[aria-label]{min-width:44px}
 /* Campagne 2026-10-17 : barre du haut fine, tableaux qui défilent dans leur carte, menu repliable sur téléphone. */
 #sync *,.btn *,.nav button *{pointer-events:none}
@@ -2973,22 +2992,90 @@ PAGES.lancements=async()=>{
   // Machines : la règle unique (liste du script ou de ce PC), sans dépendre du droit « Parc machines » (2026-10-21).
   const st=r.data.state||{},liste=listeLanc(r.data),mod=peutModif('lancements');
   if(S.msgLanc)h+='<div class="msg '+S.msgLanc[0]+'" role="status">'+svg(S.msgLanc[0]==='ok'?'ok':'alerte')+'<div>'+S.msgLanc[1]+'</div></div>';
+  // Alerte « fichier en attente » (2026-11-19) : fichiers en retard en haut (calculés par le script, heure de Google),
+  // réglages du délai et du rappel sonore de la télé (droit Modification).
+  S.lanNow=r.data.heure||Date.now();
+  const retards=Array.isArray(r.data.retards)?r.data.retards:[],enRetard=new Set(retards.map(x=>x.cle));
+  h+=vueRetardsLanc(retards,st)+(st.reglages?vueReglagesLanc(st.reglages,mod):'');
   if(!liste.length)return h+'<div class="card vide">Aucune machine : elles viennent du parc (machines rangées dans la zone de la Relève).</div>';
   h+='<div class="lanv"><div class="mgrid'+(mod?' lanc':'')+'">'+liste.map(x=>{const c=x.cle,m=(st.machines||{})[c]||{etat:'libre'},f=(st.files||{})[c]||[];
     // « Remettre libre » (bureau, droit Modification) : la machine est notée libre dans l'historique ; Google refuse si elle
     // a changé entre-temps (état et fichier vus).
     const libre=mod&&m.etat!=='libre'?(S.remettre===c?'<div class="row" style="margin:6px 0"><button class="btn dan plein" data-lan="libre-ok" data-m="'+esc(c)+'" data-etat="'+esc(m.etat)+'" data-fid="'+esc(m.fichier?m.fichier.id:'')+'">Oui, remettre '+esc(x.nom)+' libre</button><button class="btn" data-lan="libre-non">Annuler</button></div><p class="hint" style="margin:0 0 6px">À faire seulement si l’atelier a oublié « Fin de production » : la machine redevient libre et c’est noté dans l’historique.</p>':
       '<button class="btn" data-lan="libre" data-m="'+esc(c)+'" style="margin:6px 0">Remettre libre</button>'):'';
-    return '<section class="card'+(f.length&&m.etat!=='fonctionnement'&&!x.hs?' lgo':'')+'"><h2 style="display:block;overflow-wrap:anywhere">'+esc(x.nom)+'</h2><p style="margin:-4px 0 8px"><span class="st st-'+esc(m.etat)+'">'+ETATS_LANC[m.etat]+'</span>'+(m._attente?repereLanc(m):'')+'</p>'+
+    return '<section class="card'+(f.length&&m.etat!=='fonctionnement'&&!x.hs?' lgo':'')+(enRetard.has(c)?' lretard':'')+'"><h2 style="display:block;overflow-wrap:anywhere">'+esc(x.nom)+'</h2><p style="margin:-4px 0 8px"><span class="st st-'+esc(m.etat)+'">'+ETATS_LANC[m.etat]+'</span>'+(m._attente?repereLanc(m):'')+(enRetard.has(c)?' <span class="tag lretard-tag">⚠ En retard</span>':'')+'</p>'+
       (x.hs?'<div class="msg err" style="margin:0 0 8px">'+svg('alerte')+'<div><b>Hors service : '+f.length+' fichier(s) à reprendre.</b> Retirez-les ou remettez-les sur une autre machine.</div></div>':'')+
       (x.autre?'<p class="hint" style="margin:0 0 6px">Machine qui n’est plus dans la liste du parc (encore occupée).</p>':'')+
       (m.fichier?'<p style="margin:0 0 6px"><b>Fichier en cours : '+esc(m.fichier.num)+'</b>'+(m.fichier.note?' <span class="hint">· '+esc(m.fichier.note)+'</span>':'')+'</p>'+boutonPhoto(m.fichier.photo):m.etat==='fonctionnement'?'<p class="hint" style="margin:0 0 6px">Fichier en cours : aucun (lancé sans fichier)</p>':'')+
       (m.depuis&&m.etat!=='libre'?'<p class="hint" style="margin:0 0 6px">Depuis '+heureFr(m.depuis)+(m.par?' · '+esc(m.par):'')+'</p>':'')+libre+
-      '<h3 style="font-size:15px;margin:10px 0 4px">À lancer ('+f.length+')</h3>'+(mod&&!x.hs?vueLancEdition(c,f):mod&&x.hs&&f.length?vueLancEdition(c,f,true):f.length?'<ol style="margin:0;padding-left:22px">'+f.map(y=>'<li><b>'+esc(y.num)+'</b>'+(y.note?' · '+esc(y.note):'')+(y.photo?' '+boutonPhoto(y.photo):'')+'</li>').join('')+'</ol>':'<p class="hint" style="margin:0">Rien à lancer.</p>')+'</section>'}).join('')+'</div>';
+      '<h3 style="font-size:15px;margin:10px 0 4px">À lancer ('+f.length+')</h3>'+(mod&&!x.hs?vueLancEdition(c,f):mod&&x.hs&&f.length?vueLancEdition(c,f,true):f.length?'<ol style="margin:0;padding-left:22px">'+f.map(y=>'<li><b>'+esc(y.num)+'</b>'+(y.note?' · '+esc(y.note):'')+attendLanc(y)+(y.photo?' '+boutonPhoto(y.photo):'')+'</li>').join('')+'</ol>':'<p class="hint" style="margin:0">Rien à lancer.</p>')+'</section>'}).join('')+'</div>';
   const hi=(st.histo||[]).slice(-15).reverse();h+='<div class="lanv">';
   if(hi.length)h+='<section class="card" style="margin-top:16px"><h2>Derniers fichiers fabriqués'+(mod?'<span class="grow"></span>'+(S.viderHisto?'<button class="btn dan plein" data-lan="vider-ok">Oui, effacer l’historique</button><button class="btn" data-lan="vider-non">Annuler</button>':'<button class="btn dan" data-lan="vider">Effacer l’historique</button>'):'')+'</h2><table><thead><tr><th>Machine</th><th>Fichier</th><th>Fin de production</th><th>Par</th></tr></thead><tbody>'+hi.map(x=>'<tr><td>'+esc(x.machine)+'</td><td>'+esc(x.num||'—')+'</td><td>'+(x.fin?dateFr(x.fin)+' '+heureFr(x.fin):'')+(x.motif==='bureau'?' <span class="hint">· remise libre par le bureau</span>':'')+'</td><td>'+esc(x.par||'')+'</td></tr>').join('')+'</tbody></table></section>';
-  return h+'</div></div>';
+  return h+vueJournalScans(st,mod)+'</div></div>';
 };
+// --- Alerte « fichier en attente » (2026-11-19) ---------------------------------------------------------------------
+const dureeLanc=ms=>{const m=Math.max(0,Math.round(ms/60000));return m<60?m+' min':Math.floor(m/60)+' h '+String(m%60).padStart(2,'0')};
+// Temps d'attente d'un fichier à lancer (depuis son ajout par le bureau, heure de Google de la lecture).
+const attendLanc=y=>y&&y.at&&!y._attente?' <span class="hint">· attend depuis '+dureeLanc((S.lanNow||Date.now())-y.at)+'</span>':'';
+function vueRetardsLanc(l,st){
+  if(!l.length)return '';
+  const reg=st.reglages||{alerte:15};
+  return '<section class="card lretards" role="alert"><h2>'+svg('alerte')+'Fichiers en retard ('+l.length+')</h2><p class="hint" style="margin:0 0 8px">Fichiers à lancer qui attendent depuis plus de '+esc(reg.alerte)+' min sur une machine prête à les recevoir.</p>'+
+    '<table><thead><tr><th>Machine</th><th>Fichier</th><th>Attend depuis</th></tr></thead><tbody>'+l.map(x=>'<tr><td><b>'+esc(x.nom)+'</b></td><td>'+esc(x.num)+'</td><td><b>⚠ '+dureeLanc(x.attente)+'</b> <span class="hint">(ajouté à '+heureFr(x.at)+')</span></td></tr>').join('')+'</tbody></table></section>';
+}
+// Réglages (responsable : droit Modification sur Lancements) : délai d'alerte et rappel sonore de la télé, en minutes.
+function vueReglagesLanc(rg,mod){
+  const txt='Alerte quand un fichier attend plus de <b>'+esc(rg.alerte)+' min</b> · rappel sonore de la télé toutes les <b>'+esc(rg.rappel)+' min</b> (si « Son : oui »).';
+  // Champs montrés seulement après « Modifier » (une case remplie arrête l'actualisation automatique de la page).
+  if(!mod||!S.regLanc)return '<div class="row" style="margin:0 0 12px;align-items:center"><span class="hint">'+txt+'</span>'+(mod?'<button class="btn" data-lan="reglages-ouvrir">Modifier</button>':'')+'</div>';
+  return '<section class="card lreg" style="margin:0 0 12px"><h2>Réglages de l’alerte « fichier en attente »</h2>'+
+    '<div class="row" style="align-items:flex-end"><label class="lbl" style="margin:0">Délai d’alerte (minutes, 1 à 600)<input class="in" type="number" min="1" max="600" id="lanAlerte" value="'+esc(rg.alerte)+'" style="max-width:160px"></label>'+
+    '<label class="lbl" style="margin:0">Rappel sonore de la télé toutes les (minutes, 1 à 120)<input class="in" type="number" min="1" max="120" id="lanRappel" value="'+esc(rg.rappel)+'" style="max-width:160px"></label>'+
+    '<button class="btn pri" data-lan="reglages" data-depuis="'+esc(rg.maj||0)+'">Enregistrer</button><button class="btn" data-lan="reglages-annuler">Annuler</button></div>'+
+    '<p class="hint" style="margin:8px 0 0">Les tablettes, la télé du PC et les télés des Raspberry Pi reçoivent ces réglages à leur prochaine lecture.</p></section>';
+}
+// --- Journal des scans (2026-11-19) : chaque scan d'étiquette des machines, réussi ou refusé, le plus récent en haut.
+// Repères : « retour en arrière » (ex. Prête → En préparation) et deux machines différentes scannées à moins de 60 s
+// d'intervalle sur la même tablette (mauvaise étiquette ?). Même présentation que l'ancienne console du PC.
+const LJ_ETQ={PREP:'◐ En préparation',PRETE:'■ Prête',LANCE:'▶ Lancé',FIN:'✓ Fin de fabrication'};
+const LJ_ORDRE=['libre','preparation','prete','fonctionnement'];
+function reperesScans(l){
+  const r={};
+  l.forEach((x,i)=>{
+    const o={recul:!!(x.ok&&x.apres&&x.apres!=='libre'&&LJ_ORDRE.indexOf(x.apres)<LJ_ORDRE.indexOf(x.avant)),proche:null};
+    // Scan rapproché d'une autre machine : montré seulement sur une ligne déjà suspecte (retour en arrière, refus),
+    // sinon chaque série de scans normale serait marquée.
+    if(o.recul||!x.ok)for(let j=i-1;j>=0&&x.at-l[j].at<60000;j--)if(l[j].machine!==x.machine&&(l[j].tablette||'')===(x.tablette||'')){o.proche={m:l[j].machine,s:Math.round((x.at-l[j].at)/1000)};break}
+    r[x.id]=o;
+  });
+  return r;
+}
+function vueJournalScans(st,mod){
+  const f=S.ljs=S.ljs||{m:'',refus:false,n:100};
+  let h='<section class="card ljs" style="margin-top:16px"><h2>Journal des scans';
+  if(!Array.isArray(st.scans))return h+'</h2><p class="hint" style="margin:0">Le journal des scans s’affichera quand le nouveau script Google sera en ligne.</p></section>';
+  const tout=st.scans.slice().sort((a,b)=>a.at-b.at),rep=reperesScans(tout);
+  if(mod&&tout.length)h+='<span class="grow"></span>'+(S.viderScans?'<button class="btn dan plein" data-lan="vider-scans-ok">Oui, vider le journal</button><button class="btn" data-lan="vider-scans-non">Annuler</button>':'<button class="btn dan" data-lan="vider-scans">Vider le journal</button>');
+  h+='</h2><p class="hint" style="margin:0">Chaque étiquette scannée sur une tablette, faite ou refusée (500 dernières, 30 jours au plus). Le plus récent en haut.</p>';
+  const machines=[...new Set(tout.map(x=>x.machine).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'fr',{numeric:true})),nbRefus=tout.filter(x=>!x.ok).length;
+  h+='<div class="ljs-filtres"><label>Machine <select class="in" style="width:auto" id="ljsM" data-ljs="m"><option value="">Toutes</option>'+machines.map(n=>'<option'+(n===f.m?' selected':'')+'>'+esc(n)+'</option>').join('')+'</select></label>'+
+    '<label><input type="checkbox" id="ljsR" data-ljs="refus"'+(f.refus?' checked':'')+'> Refusés seulement ('+nbRefus+')</label></div>';
+  const l=tout.filter(x=>(!f.m||x.machine===f.m)&&(!f.refus||!x.ok)).reverse();
+  if(!l.length)return h+'<p class="hint" style="margin:0">'+(tout.length?'Aucun scan pour ce choix.':'Aucun scan enregistré pour l’instant.')+'</p></section>';
+  const dh=t=>new Date(t).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const nomE=e=>e?ETATS_LANC[e]:'—';
+  h+='<div style="overflow-x:auto"><table class="ljs-table"><thead><tr><th>Heure</th><th>Machine</th><th>Étiquette</th><th>Avant → après</th><th>Par</th><th>Tablette</th><th>Résultat</th></tr></thead><tbody>'+
+    l.slice(0,f.n).map(x=>{const r=rep[x.id]||{};
+      return '<tr class="'+(x.ok?'':'ljs-refus')+'"><td class="ljs-heure">'+dh(x.at)+(x.hl?'<br><small class="hint">hors ligne'+(x.envoi?', envoyé à '+heureFr(x.envoi):'')+'</small>':'')+'</td>'+
+        '<td><b>'+esc(x.machine||'Machine inconnue')+'</b>'+(x.ref&&!x.machine?'<br><small class="hint">étiquette '+esc(x.ref)+'</small>':'')+'</td>'+
+        '<td>'+esc(LJ_ETQ[x.etiquette]||'—')+'</td>'+
+        '<td>'+(x.ok?nomE(x.avant)+' → '+nomE(x.apres):nomE(x.avant)+' (inchangé)')+
+          (r.recul?'<br><span class="ljs-rep">↩ Retour en arrière</span>':'')+(r.proche?'<br><span class="ljs-rep proche">⚠ '+r.proche.s+' s après un scan de '+esc(r.proche.m)+' : mauvaise étiquette ?</span>':'')+'</td>'+
+        '<td>'+esc(x.par||'—')+'</td><td>'+esc(x.nomTablette||x.tablette||'—')+(x.nomTablette&&x.tablette?'<br><small class="hint">'+esc(x.tablette)+'</small>':'')+'</td>'+
+        '<td><span class="ljs-res '+(x.ok?'ok">✓ Fait':'non">✕ Refusé'+(x.refusPar==='tablette'?' (tablette)':' (Google)'))+'</span>'+(x.ok?'':'<span class="ljs-raison">'+esc(x.raison||'')+'</span>')+'</td></tr>'}).join('')+'</tbody></table></div>'+
+    (l.length>f.n?'<div class="row" style="margin-top:10px"><span class="hint">'+(l.length-f.n)+' plus ancien'+(l.length-f.n>1?'s':'')+' non affiché'+(l.length-f.n>1?'s':'')+'.</span><button class="btn" data-lan="scans-plus">Afficher plus</button></div>':'');
+  return h+'</section>';
+}
 
 
 // Tablettes & alertes (lot 7b, 2026-10-15). Suppression d'un appareil : par le script (session, zones du manager).
@@ -3818,6 +3905,8 @@ async function envoyerLancements(actions,msgOk){
         else if(a.type==='deplacer'&&i>=0){const [x]=q.splice(i,1);q.splice(Math.min(a.pos,q.length),0,x)}
         else if(a.type==='modifier'&&i>=0)q[i]=Object.assign({},q[i],a.photo!=null?{photo:a.photo}:{},a.note!=null?{note:a.note}:{},{_attente:true});
         else if(a.type==='vider-histo')st.histo=[];
+        else if(a.type==='vider-scans'&&Array.isArray(st.scans))st.scans=[];
+        else if(a.type==='reglages'&&st.reglages)st.reglages=Object.assign({},st.reglages,{alerte:a.alerte,rappel:a.rappel});
         else if(a.type==='etat'&&a.etat==='libre'){st.machines=Object.assign({},st.machines);st.machines[a.machine]={etat:'libre',fichier:null,_attente:true}}});
       return d},
     apres:(j,base)=>Object.assign(base,{rev:j.data.rev,state:j.data.state}),
@@ -3846,13 +3935,27 @@ async function actionLancements(b){
   if(act==='vider'){S.viderHisto=true;return chargerPage()}
   if(act==='vider-non'){S.viderHisto=false;return chargerPage()}
   if(act==='vider-ok'){S.viderHisto=false;return envoyerLancements([{type:'vider-histo',avant:Date.now()}],'Historique effacé.')}
+  // Journal des scans (2026-11-19) : afficher plus de lignes, vider (même droit que l'historique).
+  if(act==='scans-plus'){S.ljs.n+=200;return chargerPage()}
+  // Réglages de l'alerte « fichier en attente » (2026-11-19) : contrôlés ici puis par le script (version « depuis »).
+  if(act==='reglages-ouvrir'){S.regLanc=true;return chargerPage()}
+  if(act==='reglages-annuler'){S.regLanc=false;return chargerPage()}
+  if(act==='reglages'){
+    const a=Math.round(Number(document.getElementById('lanAlerte').value)),p=Math.round(Number(document.getElementById('lanRappel').value));
+    if(!(a>=1&&a<=600&&p>=1&&p<=120)){S.msgLanc=['err','<b>Délai d’alerte de 1 à 600 minutes, rappel de 1 à 120 minutes.</b>'];S.regLanc=true;return chargerPage()}
+    S.regLanc=false;
+    return envoyerLancements([{type:'reglages',alerte:a,rappel:p,depuis:Number(b.dataset.depuis)||0}],'Réglages enregistrés.');
+  }
+  if(act==='vider-scans'){S.viderScans=true;return chargerPage()}
+  if(act==='vider-scans-non'){S.viderScans=false;return chargerPage()}
+  if(act==='vider-scans-ok'){S.viderScans=false;return envoyerLancements([{type:'vider-scans',avant:Date.now()}],'Journal des scans vidé.')}
 }
 // « ↻ Envoi… » (2026-10-21) : ajout pas encore enregistré chez Google (plus le symbole ◐, réservé à « En préparation »).
 const repereLanc=o=>o&&o._attente?' <span class="tag attente" title="Envoi vers Google en cours">↻ Envoi…</span>':'';
 // hs : machine hors service — pas d'ajout, seulement retirer / reprendre ses fichiers.
 function vueLancEdition(n,f,hs){
   return (hs?'':'<div class="row" style="margin-top:10px"><input class="in" data-lan-num placeholder="N° de fichier (plusieurs : séparés par des virgules)" style="flex:2;min-width:160px"><input class="in" data-lan-note placeholder="Note (facultatif)" style="flex:1;min-width:110px"><button class="btn pri" data-lan="ajouter" data-m="'+esc(n)+'">'+svg('plus')+'Ajouter</button></div>')+
-    (f.length?'<ol class="file">'+f.map((x,i)=>'<li><div class="row" style="gap:6px"><b>'+esc(x.num)+'</b>'+repereLanc(x)+(x.note?'<span class="hint">· '+esc(x.note)+'</span>':'')+'<span class="grow"></span>'+
+    (f.length?'<ol class="file">'+f.map((x,i)=>'<li><div class="row" style="gap:6px"><b>'+esc(x.num)+'</b>'+repereLanc(x)+(x.note?'<span class="hint">· '+esc(x.note)+'</span>':'')+attendLanc(x)+'<span class="grow"></span>'+
       '<button class="btn" data-lan="haut" data-m="'+esc(n)+'" data-fid="'+esc(x.id)+'" data-pos="'+i+'"'+(i?'':' disabled')+' aria-label="Monter">↑</button><button class="btn" data-lan="bas" data-m="'+esc(n)+'" data-fid="'+esc(x.id)+'" data-pos="'+i+'"'+(i<f.length-1?'':' disabled')+' aria-label="Descendre">↓</button>'+
       '<button class="btn" data-lan="retirer" data-m="'+esc(n)+'" data-fid="'+esc(x.id)+'" aria-label="Retirer">✕</button></div>'+
       '<div class="row" style="gap:6px;margin-top:4px">'+(x.photo?vignette(x.photo)+'<button class="btn" data-lan="plan-retirer" data-m="'+esc(n)+'" data-fid="'+esc(x.id)+'">Retirer la photo</button>':'')+
@@ -5651,7 +5754,7 @@ PAGES.teles=async()=>{
 function tvListe(){
   const T=S.tv,l=T.d.teles,mod=tvMod();
   let h='<section class="card"><h2>'+pastille('ecran','s')+'Les télés <span class="tag">'+l.filter(t=>!t.nouvelle).length+'</span></h2>';
-  h+=l.length?l.map(t=>'<div class="tv-l'+(t.nouvelle?' nv':'')+'"><div class="tv-n"><b>'+esc(t.nom||t.id)+'</b>'+(t.nouvelle?' <span class="tag acc">nouvelle télé</span>':'')+'<br><span class="hint">'+esc(t.id)+(t.ip?' · IP <b>'+esc(t.ip)+'</b>':'')+'</span></div>'+
+  h+=l.length?l.map(t=>'<div class="tv-l'+(t.nouvelle?' nv':'')+'"><div class="tv-n"><b>'+esc(t.nom||t.id)+'</b>'+(t.nouvelle?' <span class="tag acc">nouvelle télé</span>':'')+'<br><span class="hint">'+esc(t.id)+(t.ip?' · IP <b>'+esc(t.ip)+'</b>':'')+(t.demarre?' · Raspberry démarré le <b>'+esc(t.demarre)+'</b>':'')+'</span></div>'+
     '<div class="tv-a">'+(t.nouvelle?'<span class="hint">S’est présentée : donnez-lui un nom et ce qu’elle affiche.</span>':esc(tvResume(t.contenu,t))+(tvVeilleResume(t.veille)?'<br><span class="hint">☾ '+esc(tvVeilleResume(t.veille))+'</span>':'')+(tvMusiqueResume(t.musique)?'<br><span class="hint">♪ '+esc(tvMusiqueResume(t.musique))+'</span>':''))+'</div>'+
     '<div class="tv-e">'+tvVu(t)+(t.nouvelle?'':t.recu?'<span class="tag ok">✓ réglage reçu</span>':'<span class="tag">• réglage pas encore reçu</span>')+(t.nouvelle?'':tvVeilleTag(t)+tvMusiqueTag(t))+'</div>'+
     // Droits par secteur (2026-11-12) : une télé d'un autre secteur (ou commune) est montrée, mais pas modifiable.
@@ -6882,6 +6985,8 @@ document.addEventListener('click',async e=>{
   }
 });
 document.addEventListener('change',async e=>{const el=e.target;
+  // Journal des scans (Lancements, 2026-11-19) : filtres machine et « refusés seulement ».
+  if(el.dataset&&el.dataset.ljs){const f=S.ljs=S.ljs||{m:'',refus:false,n:100};if(el.dataset.ljs==='m')f.m=el.value;else f.refus=el.checked;f.n=100;return chargerPage()}
   // Étiquettes QR : case de départ, machines hors service (affichage seulement).
   if((el.id==='qrDepart'||el.id==='qrHs')&&S.qr){if(el.id==='qrDepart')S.qr.depart=Math.max(1,Math.min(QR_CASES,Number(el.value)||1));else S.qr.hs=el.checked;return chargerPage()}
   // Section R&D : champs du brouillon, filtre par type, correspondance des machines, fichiers (photo, import).
