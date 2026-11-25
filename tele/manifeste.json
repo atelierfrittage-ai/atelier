@@ -1,0 +1,92 @@
+{
+ "format": 1,
+ "id": "20261125-0742",
+ "date": 1795588955678,
+ "empreinte": "234a0f9f45abd66c5d20c255e03809b54cb98517e85594c3723f8c56dc2ac991",
+ "fichiers": {
+  "Fours/Fours.html": {
+   "sha256": "ee19576c84bd967cce83d91b24e93b1f3d718d6a2a4051bee710c01e9446efa1",
+   "taille": 109243
+  },
+  "Lancements/Lancements.html": {
+   "sha256": "cb507706423981820c739dc575d01b100ac46ed190149de451fcc621f5dcdc5e",
+   "taille": 112190
+  },
+  "Liaison/Liaison.html": {
+   "sha256": "350960a21370fcfd7080f772ce434f79fbcd46c8742519ea65b0c1a9834c6199",
+   "taille": 112457
+  },
+  "Maintenance niveau 1/Maintenance-niveau-1.html": {
+   "sha256": "b86346aa199aa831ae0b3b41dbb55c0ede0469dfc051f484e13c534bb90e33cd",
+   "taille": 381978
+  },
+  "Pack-Tablettes/Que-faire-si.html": {
+   "sha256": "a6f049d0f83e8b337d380d6992a6dae5ea95f78413d04dc3c5458ab6876af399",
+   "taille": 7537
+  },
+  "Pack-Tablettes/commun/logo-lynk.png": {
+   "sha256": "b67b67348082095385d5b6ce4d18f30a0fc22f960c5df10c8adf40dfe0bd23f8",
+   "taille": 41938
+  },
+  "Pack-Tablettes/commun/logo-premium.js": {
+   "sha256": "39bc6e43b9e88912e3a29b996474b430a7c850d67ec8830c7b476e0e00f292b1",
+   "taille": 48038
+  },
+  "Pack-Tablettes/commun/pack.js": {
+   "sha256": "8b8fb72741a588769f6e1ab4dd90127007f10505eccde9381fa010162d5575f8",
+   "taille": 92229
+  },
+  "Pack-Tablettes/console/ecran-fours.html": {
+   "sha256": "84a155f3e2155ae65165889b5384e0bc7001e56fb26c26322471177f1832b394",
+   "taille": 8702
+  },
+  "Pack-Tablettes/console/ecran-liaison.html": {
+   "sha256": "94ca46867e339e4ef95c0e159273b71def46f8fca09aeabe62d390a5d7496b16",
+   "taille": 14374
+  },
+  "Pack-Tablettes/console/ecran-maintenance.html": {
+   "sha256": "3b12586c3cd2535ff6c36e2bb776c6497efdb052b7c073c4362240637c812710",
+   "taille": 32694
+  },
+  "Pack-Tablettes/console/ecran-tournant.html": {
+   "sha256": "c24b2669e8b93015d7039230cb832ccbffa8191c54f43a60e0a84250de78309d",
+   "taille": 28130
+  },
+  "Pack-Tablettes/console/ecran.html": {
+   "sha256": "2813911d009f29c52d0a3e588630e571fef12c20c91464b6a58772d5b98eec0d",
+   "taille": 12215
+  },
+  "Pack-Tablettes/console/serveur.mjs": {
+   "sha256": "05a6c82282d36c9df979a1dcac38959cd0715c6a1696adc3b8245f275b7af46a",
+   "taille": 252933
+  },
+  "Pack-Tablettes/console/tele.html": {
+   "sha256": "88a8dbf926b73864bf71143c5c4f52581eee951462eca8068d2143c4480fce60",
+   "taille": 31588
+  },
+  "Pack-Tablettes/construire-unique.mjs": {
+   "sha256": "c679e872e53e40f411405f5001209c909d42ee0cf89b102b51c1f46142e52999",
+   "taille": 50920
+  },
+  "Pack-Tablettes/secteurs/fraisage.js": {
+   "sha256": "aecb5ae98aab6abaa2a65d2733a5481337666936fb997371bb6e5bfcc97da52a",
+   "taille": 690
+  },
+  "Pack-Tablettes/secteurs/frittage.js": {
+   "sha256": "141ceab070556b11776126524d976a3e3d11ac07ec29646ba9345aa2fa827589",
+   "taille": 1096
+  },
+  "Pack-Tablettes/secteurs/grattage.js": {
+   "sha256": "443df94595c85d9623ef82639617e1917d93ef7f73b527fb6b810329fff32557",
+   "taille": 690
+  },
+  "Pack-Tablettes/secteurs/resine.js": {
+   "sha256": "68483da9796f705116e09ba5a901a4fe1dfe4da218181769178da7800ff1826b",
+   "taille": 684
+  }
+ },
+ "paquet": {
+  "taille": 1381968,
+  "sha256": "60662489e7ddd7c3e9313c491c0f157c9c5efb8a02c24fbc27091e770b10fb85"
+ }
+}

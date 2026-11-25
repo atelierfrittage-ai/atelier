@@ -236,6 +236,7 @@ th{font-size:15px;color:var(--muted);text-transform:uppercase;letter-spacing:.05
 .al.err{background:#fff4f4;border-color:#f0c2c4}
 .al .sy{flex:none;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:800;font-size:15px;background:var(--warn)}
 .al.err .sy{background:var(--err)}
+.al.info{background:#f2f6f7;border-color:#cfdde0}.al.info .sy{background:#5d6f78} /* « à vérifier » (À surveiller, 2026-11-24) : ton neutre */
 .al .tx{flex:1;font-size:15px}.al .tx b{display:block}
 .als{display:grid;gap:8px}
 .lan{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line2);font-size:15px}
@@ -625,6 +626,7 @@ button.sync{min-width:44px;justify-content:center}
 :where(.ds-sombre) .sec{background:var(--card)}
 :where(.ds-sombre) .al{background:#424B4F;border:1px solid #706C5D}
 :where(.ds-sombre) .al.err{background:#424A51;border-color:#6E6469}
+:where(.ds-sombre) .al.info{background:#3E474B;border-color:#5A666B}
 :where(.ds-sombre) .al .sy{color:var(--ds-sur)}
 :where(.ds-sombre) .quick button{background:var(--card)}
 :where(.ds-sombre) .mac{background:var(--card)}
@@ -2354,6 +2356,10 @@ function vueAujourdhui(t){if(!t)return false;const m=/^(\d\d)\/(\d\d)\/(\d{4})/.
 const PAGES={};
 PAGES.accueil=async()=>{
   const secs=secteursAffiches(),adm=S.moi.admin,frit=secs.includes('frittage');
+  // État du site du pack (versions publiées, PC + administrateur, comme la partie Tablettes) : pour la pastille
+  // « À surveiller » (2026-11-24). Illisible : la règle « pas à jour » est seulement sautée.
+  const pSite=CONSOLE_PC&&adm&&droit('tablettes')?lireEtatPC().then(e=>e&&e.site||null,()=>null):Promise.resolve(null);
+  const pIgn=CONSOLE_PC&&droit('tablettes')?apiPC('/api/alertes-ignorees').catch(()=>null):Promise.resolve(null);
   const [cals,lanc,tabs,parc,rel]=await Promise.all([
     droit('calendrier')?Promise.all(secs.map(s=>calendrierDe(s).catch(()=>null))):Promise.resolve([]),
     droit('lancements')&&frit?lire('lancements-lire'):null,
@@ -2382,6 +2388,10 @@ PAGES.accueil=async()=>{
   if(lm)h+=k('k-ok','▶',nb('fonctionnement')+' / '+Object.keys(lm).length,'Machines en fonctionnement',lancables.length+' machine(s) avec un fichier à lancer maintenant · '+Object.values(lanc.data.state.files||{}).reduce((a,l)=>a+l.length,0)+' fichier(s) à lancer','lancements');
   if(relJour!==null)h+=k(relJour?'k-ok':'k-warn',relJour?'✓':'!',relJour,'Relèves du jour',relJour?'enregistrée(s) aujourd’hui':'pas encore de relève aujourd’hui','tableau');
   if(tl)h+=k(tVues<tl.length?'k-warn':'k-ok',tVues<tl.length?'!':'✓',tVues+' / '+tl.length,'Tablettes vues aujourd’hui',tVues<tl.length?(tl.length-tVues)+' sans nouvelles aujourd’hui':'toutes vues','tablettes');
+  // Pastille « À surveiller » (2026-11-24) : tablettes et télés (bloc <surveillance>) ; détail : partie Tablettes.
+  // Lignes ignorées sur le PC (« Ignorer » de l'encadré) : pas comptées, comme dans l'encadré.
+  if(tl){const tout=Surveillance.liste(tl,await pSite),ign=await pIgn,sv=Surveillance.resume(Surveillance.visibles(tout,ign)),ni=Surveillance.ignorees(tout,ign).length;
+    h+=k(sv.err?'k-err':sv.att?'k-warn':'k-ok',sv.err?'✕':sv.att?'!':sv.info?'•':'✓',sv.total,'Appareils à surveiller',(sv.total?sv.err+' à corriger · '+sv.att+' à surveiller · '+sv.info+' à vérifier':'tablettes et télés')+(ni?' · '+ni+' ignorée(s)':''),'tablettes')}
   if(parc&&parc.ok&&parc.data.parc)h+=k('k-acc','⚙',machinesParc.filter(m=>m.actif!==false).length,'Machines en service',machinesParc.filter(m=>m.actif===false).length+' hors service','parc');
   h+='</div>';
   if(S.secteur==='tous'&&secteursVisibles().length>1){
@@ -3078,9 +3088,100 @@ function vueJournalScans(st,mod){
 }
 
 
+// <surveillance> Appareils à surveiller (2026-11-24, demande : voir d'un coup d'œil les tablettes et télés qui posent
+// problème). Bloc recopié À L'IDENTIQUE dans console/console.html et console-en-ligne/index.html : les deux consoles
+// disent la même chose (Pack-Tablettes\essais\surveillance\tester-surveillance.mjs vérifie qu'ils sont identiques).
+// Entrée : la liste de l'onglet « Tablettes » de la Sheet ({id, vu, version, zone, etat, nom}) ; site = version.json du
+// site du pack ({id, num, date, publie, test, tablettes:{id:{canal}}}) ou null (règle « pas à jour » alors sautée).
+// Sortie : [{cle, id, appareil, genre, regle, niv, probleme, depuis, faire}] ; niv 'err' (à corriger), 'att' (à
+// surveiller), 'info' (à vérifier, ton neutre). Rien n'est écrit nulle part : simple lecture de l'état envoyé.
+// Seuils : ici (pas de réglage dans la console). nuit = heure du redémarrage de nuit des Raspberry (HEURE_REDEMARRAGE
+// de lynk.conf, 04:30 par défaut).
+const SURV_SEUILS={envoiH:2,vuH:24,majH:1,oubliJ:30,nuit:'04:30'};
+const Surveillance=(()=>{
+  const H=3600000;
+  const n2=x=>String(x).padStart(2,'0');
+  // « Vu » de la Sheet (jj/mm/aaaa hh:mm, heure de l'atelier) → date (ms).
+  const dateVu=v=>{const m=/(\d\d)\/(\d\d)\/(\d{4}) (\d\d):(\d\d)/.exec(v||'');return m?new Date(+m[3],m[2]-1,+m[1],+m[4],+m[5]).getTime():0};
+  const quand=ms=>{const d=new Date(ms);return n2(d.getDate())+'/'+n2(d.getMonth()+1)+' à '+n2(d.getHours())+':'+n2(d.getMinutes())};
+  const duree=ms=>ms<H?Math.max(1,Math.round(ms/60000))+' min':ms<48*H?Math.round(ms/H)+' h':Math.round(ms/24/H)+' jours';
+  // Version « 20261124-1235 » → « du 24/11 12:35 » (le numéro « n° 12 » quand le site le donne).
+  const nomV=(id,num)=>{const m=/^(\d{4})(\d\d)(\d\d)-(\d\d)(\d\d)$/.exec(id||'');return (num?'n° '+num+' ':'')+(m?'du '+m[3]+'/'+m[2]+' '+m[4]+':'+m[5]:'« '+(id||'?')+' »')};
+  // « démarré jj/mm hh:mm » d'une télé (sans année) : l'année est celle qui met la date dans le passé.
+  const dateDemarre=(etat,now)=>{const m=/ · démarré (\d\d)\/(\d\d) (\d\d):(\d\d)(?= · |$)/.exec(etat);if(!m)return null;
+    const an=new Date(now).getFullYear();let t=new Date(an,m[2]-1,+m[1],+m[3],+m[4]).getTime();if(t>now+H)t=new Date(an-1,m[2]-1,+m[1],+m[3],+m[4]).getTime();
+    return {t,h:+m[3]*60+(+m[4]),txt:m[1]+'/'+m[2]+' à '+m[3]+':'+m[4]}};
+  // Appareils jamais suivis : aperçu de la console sur un PC, tablette pas encore installée dans une zone.
+  const ignore=z=>/PC \(aperçu de la console\)/.test(z)||/^Pas encore installée/.test(z);
+  function liste(tabs,site,o){
+    o=o||{};const S=Object.assign({},SURV_SEUILS,o.seuils||{}),now=o.maintenant||Date.now(),l=[];
+    const nh=/^(\d\d):(\d\d)$/.exec(S.nuit)||[0,4,30],nuit=+nh[1]*60+(+nh[2]);
+    for(const t of tabs||[]){
+      const zone=String(t.zone||'').trim(),e=String(t.etat||''),vu=dateVu(t.vu),age=vu?now-vu:Infinity;
+      if(!vu||age>S.oubliJ*24*H||ignore(zone))continue;
+      const tele=/^Télé · /.test(zone)||/^Télé · /.test(e);
+      // Tablette : seulement le pack en ligne (version envoyée) ; « fichier » = ancienne copie, essai.
+      if(!tele&&(!t.version||t.version==='fichier'))continue;
+      const appareil=tele?'Télé « '+(zone.replace(/^Télé · /,'')||t.id)+' »':(zone.split(' · ').slice(0,2).join(' · ')||t.nom||t.id);
+      const vuTxt='dernier contact il y a '+duree(age)+' ('+t.vu+')';
+      // cle : « s|appareil|règle|détail » (s = À surveiller ; les clés de l'ancien encadré « Alertes » n'ont pas ce début).
+      const add=(regle,niv,probleme,depuis,faire,cle)=>l.push({cle:'s|'+t.id+'|'+regle+'|'+cle,id:t.id,appareil,genre:tele?'tele':'tablette',regle,niv,probleme,depuis,faire,age});
+      // 1. Données pas envoyées et tablette muette depuis plus de 2 h : elles risquent de rester bloquées dessus.
+      const env=/^à envoyer : ([^·]+)/.exec(e),bloquees=!tele&&env&&age>S.envoiH*H;
+      if(bloquees)add('bloquees','err','Données bloquées sur la tablette : '+env[1].trim(),vuTxt,'Allumer la tablette avec le Wi-Fi et ouvrir ces applications : les données partent à l’ouverture.',env[1].trim());
+      // 2. Pas vu depuis plus de 24 h (sauf si la règle 1 le dit déjà).
+      else if(age>S.vuH*H)add('absent',age>72*H?'err':'att',(tele?'Télé':'Tablette')+' pas vue depuis '+duree(age),'vue le '+t.vu,
+        tele?'Vérifier que le Raspberry de la télé est alimenté et relié au réseau.':'Vérifier qu’elle est allumée, chargée et sur le Wi-Fi, puis ouvrir le pack.',t.vu);
+      // 3. Pas à jour : version différente de celle qu'elle doit avoir, alors qu'elle s'est connectée plus d'1 h après
+      //    la publication. publie = heure de la publication (version.json, 2026-11-24) ; avant : heure de construction.
+      if(!tele&&site&&site.id){
+        const cn=(site.tablettes||{})[t.id],canal=cn&&cn.canal||'normale';
+        const c=canal==='bloquee'?null:canal==='test'&&site.test?site.test:site,pub=c&&(Number(c.publie)||Number(c.date)||0);
+        if(c&&t.version!==c.id&&pub&&vu>pub+S.majH*H)
+          add('version','att','Tablette pas à jour : version '+nomV(t.version)+' au lieu de '+nomV(c.id,c.num)+(canal==='test'?' (tablette test)':''),
+            'publiée le '+quand(pub)+', tablette vue le '+t.vu,'Revenir à l’écran « Qui êtes-vous ? » avec le Wi-Fi : la mise à jour s’installe toute seule.',c.id);
+      }
+      // Repris de l'ancien encadré « Alertes » (retiré le 2026-11-24), mêmes conditions et mêmes consignes :
+      // copie hors ligne absente, mémoire de la tablette remplie à plus de 80 %.
+      if(!tele&&/hors ligne NON prêt/.test(e))
+        add('horsligne','err','Tablette pas prête à fonctionner sans internet (copie hors ligne absente)','vue le '+t.vu,'Rouvrir le pack une fois avec internet.','');
+      const pl=!tele&&/· (\d+(?:,\d)?) (Ko|Mo|Go) \/ (\d+(?:,\d)?) (Ko|Mo|Go)/.exec(e),oc=(n,u)=>parseFloat(n.replace(',','.'))*{Ko:1e3,Mo:1e6,Go:1e9}[u];
+      if(pl&&oc(pl[1],pl[2])/oc(pl[3],pl[4])>.8)
+        add('place','err','Mémoire de la tablette presque pleine ('+pl[1]+' '+pl[2]+' sur '+pl[3]+' '+pl[4]+')','vue le '+t.vu,'Libérer de la place sur la tablette.','');
+      if(!tele)continue;
+      // 4a. Télé sans son : le Raspberry ne trouve aucune sortie son HDMI (musique de fond réglée). Normal en veille
+      //     (télé éteinte) : pas signalé.
+      const enVeille=/ · veille (cec|hdmi|noir|attente)(?=[ \/]|$)/.test(e);
+      if(/ · musique [a-z0-9]+\/aucune(?= · |$)/.test(e)&&!enVeille)
+        add('son','att','Télé sans son : aucune sortie son HDMI trouvée','vue le '+t.vu,'Vérifier que la télé est allumée et que le câble HDMI est branché : le Raspberry réessaie seul toutes les 30 s.','aucune');
+      // 4b. Redémarrage hors de celui de la nuit (fenêtre de 15 min avant à 45 min après) : à vérifier seulement, une
+      //     mise à jour par carte SD redémarre aussi le Raspberry (normal).
+      const d=dateDemarre(e,now);
+      if(d&&!(d.h>=nuit-15&&d.h<=nuit+45))
+        add('redemarrage','info','Télé redémarrée le '+d.txt+', en dehors du redémarrage de nuit ('+S.nuit+')','il y a '+duree(Math.max(0,now-d.t)),
+          'À vérifier : normal après une mise à jour par carte SD ; sinon, vérifier l’alimentation du Raspberry.',d.txt);
+    }
+    const rang={err:0,att:1,info:2};
+    return l.sort((a,b)=>rang[a.niv]-rang[b.niv]||b.age-a.age);
+  }
+  // Compte par niveau, pour la pastille de l'accueil.
+  const resume=l=>({total:l.length,err:l.filter(a=>a.niv==='err').length,att:l.filter(a=>a.niv==='att').length,info:l.filter(a=>a.niv==='info').length});
+  // « Ignorer » (2026-11-24, repris de l'ancien encadré « Alertes ») : clés gardées sur le PC (/api/alertes-ignorees,
+  // {clé: heure}). Une ligne ignorée revient si le problème change (autre clé). Quand le problème a disparu, sa clé est
+  // oubliée (aOublier) : la même panne qui revient plus tard s'affiche de nouveau. On n'oublie que ce qu'on a pu
+  // vérifier : appareil présent dans la liste lue, et règle « pas à jour » seulement si le site du pack est connu.
+  const visibles=(l,ign)=>l.filter(a=>!(ign&&ign[a.cle]));
+  const ignorees=(l,ign)=>l.filter(a=>!!(ign&&ign[a.cle]));
+  function aOublier(l,tabs,ign,site){
+    const ids=new Set((tabs||[]).map(t=>t.id)),cles=new Set(l.map(a=>a.cle));
+    return Object.keys(ign||{}).filter(k=>{const m=/^s\|([^|]+)\|([a-z]+)\|/.exec(k);return !!m&&ids.has(m[1])&&!cles.has(k)&&!(m[2]==='version'&&!(site&&site.id))});
+  }
+  return {liste,resume,visibles,ignorees,aOublier,SEUILS:SURV_SEUILS};
+})();
+// </surveillance>
 // Tablettes & alertes (lot 7b, 2026-10-15). Suppression d'un appareil : par le script (session, zones du manager).
 // Mises à jour normale / test / bloquée : réglage du site (GitHub), donc sur le PC seulement et pour l'administrateur.
-// Alertes (mêmes règles que l'ancienne console) ; « Ignorer » est gardé sur ce PC (/api/alertes-ignorees).
+// Encadré « À surveiller » (2026-11-24, remplace « Alertes ») ; « Ignorer » est gardé sur ce PC (/api/alertes-ignorees).
 const dateVu=v=>{const m=/(\d\d)\/(\d\d)\/(\d{4}) (\d\d):(\d\d)/.exec(v||'');return m?new Date(+m[3],m[2]-1,+m[1],+m[4],+m[5]).getTime():0};
 // Tablette du secteur choisi (même règle pour la partie Tablettes et la carte de la Vue d'ensemble, console 2026-11-12, B3) :
 // zone envoyée par la tablette (« Zone · Tablette ») ; zone inconnue = montrée partout.
@@ -3097,22 +3198,29 @@ function tablettesAnciennes(l){
   }
   return old;
 }
-function alertesTablettes(l,site){
-  const a=[],H=3600000,now=Date.now();
-  for(const t of l.filter(t=>!!t.version&&t.version!=='fichier')){
-    const vu=dateVu(t.vu),age=vu?now-vu:Infinity,e=t.etat||'';
-    if(age>30*24*H)continue;
-    if(age>24*H)a.push({cle:t.id+'|vu|'+t.vu,niv:age>72*H?'err':'att',t,texte:'pas connectée depuis '+(age>48*H?Math.round(age/24/H)+' jours':Math.round(age/H)+' h')+' (vue le '+t.vu+')'});
-    if(/^à envoyer/.test(e))a.push({cle:t.id+'|attente|'+e.split(' · ')[0],niv:age>2*H?'err':'att',t,texte:'données pas encore envoyées à Google : '+e.split(' · ')[0].replace(/^à envoyer : /,'')+(age>2*H?' — et la tablette ne se connecte plus':'')});
-    if(/hors ligne NON prêt/.test(e))a.push({cle:t.id+'|hl',niv:'err',t,texte:'ne fonctionnera pas sans internet (copie hors ligne absente) : rouvrir le pack une fois avec internet'});
-    if(site&&site.id){const cn=(site.tablettes||{})[t.id],c=cn&&cn.canal==='bloquee'?null:cn&&cn.canal==='test'&&site.test?site.test.id:site.id;
-      if(c&&t.version!==c&&age<24*H)a.push({cle:t.id+'|version|'+c,niv:'att',t,texte:'pas encore sur la version '+c+' (a la '+t.version+')'})}
-    const pl=/· (\d+(?:,\d)?) (Ko|Mo|Go) \/ (\d+(?:,\d)?) (Ko|Mo|Go)/.exec(e);
-    if(pl){const o=(n,u)=>parseFloat(n.replace(',','.'))*{Ko:1e3,Mo:1e6,Go:1e9}[u];if(o(pl[1],pl[2])/o(pl[3],pl[4])>.8)a.push({cle:t.id+'|place',niv:'err',t,texte:'mémoire presque pleine ('+pl[1]+' '+pl[2]+' sur '+pl[3]+' '+pl[4]+')'})}
-  }
-  return a.sort((x,y)=>(x.niv==='err'?0:1)-(y.niv==='err'?0:1));
+// Encadré « À surveiller » (2026-11-24) : tablettes et télés d'après le bloc <surveillance> (même texte que la console
+// du PC). Il remplace l'ancien encadré « Alertes » (décision de l'utilisateur, 2026-11-24 ; ses règles « hors ligne » et
+// « mémoire » sont reprises dans le bloc). « Ignorer » : gardé sur le PC comme avant (/api/alertes-ignorees), donc
+// seulement dans la console du PC, avec le droit de modifier « Tablettes ». o : {site, ign, peutIgn, titre}.
+// tabs = la liste analysée (seuls ses appareils peuvent voir leurs clés ignorées oubliées quand le problème a disparu).
+// Sans site du pack (hors du PC, ou pas administrateur), la règle « pas à jour » n'est pas vérifiée : on le dit.
+const SURV_SY={err:'✕',att:'!',info:'•'};
+function carteSurveiller(tabs,o){
+  o=o||{};const S=Surveillance.SEUILS,tout=Surveillance.liste(tabs,o.site),ign=o.ign||null;
+  if(ign&&CONSOLE_PC&&o.peutIgn){const x=Surveillance.aOublier(tout,tabs,ign,o.site);if(x.length)apiPC('/api/alertes-ignorees',{retirer:x}).catch(()=>{})}
+  const l=Surveillance.visibles(tout,ign),ig=Surveillance.ignorees(tout,ign),r=Surveillance.resume(l),pi=o.peutIgn;
+  const ligne=(a,ignoree)=>'<div class="al'+(a.niv==='att'?'':' '+a.niv)+'"><span class="sy" aria-hidden="true">'+SURV_SY[a.niv]+'</span><div class="tx"><b>'+esc(a.appareil)+' <span class="hint">'+esc(a.id)+'</span></b>'+esc(a.probleme)+' <span class="hint">— '+esc(a.depuis)+'</span><br><span class="hint">Que faire : '+esc(a.faire)+'</span></div>'+
+    (!pi?'':ignoree?'<button class="btn" data-tab="sv-retablir" data-cle="'+esc(a.cle)+'">Rétablir</button>':'<button class="btn" data-tab="ign" data-cle="'+esc(a.cle)+'" title="Ne plus afficher cette ligne (elle revient si le problème change)">Ignorer</button>')+'</div>';
+  let h='<section class="card" id="surveiller" style="margin-bottom:16px"><h2>'+svg('alerte')+(o.titre||'À surveiller')+' <span class="tag '+(r.err?'err':r.att?'warn':'ok')+'">'+l.length+'</span>'+(pi&&l.length>1?'<span class="grow"></span><button class="btn" data-tab="ign-tout">Tout ignorer</button>':'')+'</h2>'+
+    (l.length?'<div class="als">'+l.map(a=>ligne(a,false)).join('')+'</div>'
+      :'<div class="msg ok" style="margin:0">'+svg('ok')+'<b>'+(ig.length?'Rien d’autre à surveiller.':o.titre?'Rien à surveiller sur les télés.':'Rien à surveiller : les appareils se connectent'+(o.site?', sont à jour':'')+' et ont tout envoyé.')+'</b></div>');
+  if(ig.length)h+='<p class="hint" style="margin:10px 0 0"><button class="btn" data-tab="sv-voir">'+(S_SV.voir?'Cacher':'Voir')+' les lignes ignorées ('+ig.length+')</button></p>'+
+    (S_SV.voir?'<div class="als" style="margin-top:8px">'+ig.map(a=>ligne(a,true)).join('')+'</div>'+(pi&&ig.length>1?'<p style="margin:8px 0 0"><button class="btn" data-tab="sv-tout-retablir" data-cles="'+esc(ig.map(a=>a.cle).join('\n'))+'">Tout rétablir</button></p>':''):'');
+  return h+'<p class="hint" style="margin:10px 0 0">✕ à corriger · ! à surveiller · • à vérifier. Signalé : données pas envoyées et tablette muette depuis plus de '+S.envoiH+' h, appareil pas vu depuis plus de '+S.vuH+' h (parmi ceux vus ces '+S.oubliJ+' derniers jours), tablette pas à jour '+S.majH+' h après la publication, pas prête sans internet, mémoire presque pleine, télé sans son ou redémarrée hors de la nuit. Une ligne ignorée revient si le problème change, ou s’il disparaît puis revient.'+
+    (CONSOLE_PC?'':' « Ignorer » se fait sur le PC de l’atelier.')+(o.site||o.titre?'':' Les versions des tablettes ne sont vérifiées que dans la console du PC, pour un administrateur.')+'</p></section>';
 }
-// État du site (GitHub) lu par le serveur du PC : gardé comme les lectures Google (affiché tout de suite, relu derrière).
+// « Voir les lignes ignorées » ouvert ou fermé (pour cette page seulement).
+const S_SV={voir:false};// État du site (GitHub) lu par le serveur du PC : gardé comme les lectures Google (affiché tout de suite, relu derrière).
 async function lireEtatPC(){
   const cle='PC|/api/etat',g=S.charge[cle],base=S.charge;
   const lit=()=>apiPC('/api/etat').then(e=>{if(S.charge===base)S.charge[cle]={t:Date.now(),r:e};return e});
@@ -3136,12 +3244,8 @@ PAGES.tablettes=async()=>{
   }
   if(S.msgTab)h+='<div class="msg '+S.msgTab[0]+'" role="status">'+svg(S.msgTab[0]==='ok'?'ok':'alerte')+'<div>'+S.msgTab[1]+'</div></div>';
   if(avis)h+='<div class="msg warn">'+svg('alerte')+'<div>'+esc(avis)+'</div></div>';
-  const tout=alertesTablettes(l.filter(t=>!anciennes.has(t.id)),site),vis=tout.filter(a=>!ign[a.cle]),nIgn=tout.length-vis.length,peutIgn=CONSOLE_PC&&mod;
-  h+='<section class="card" style="margin-bottom:16px"><h2>'+svg('alerte')+'Alertes <span class="tag '+(vis.length?'warn':'ok')+'">'+vis.length+'</span>'+(peutIgn&&vis.length>1?'<span class="grow"></span><button class="btn" data-tab="ign-tout">Tout ignorer</button>':'')+'</h2>'+
-    (vis.length?'<div class="als">'+vis.map(a=>'<div class="al"><span class="sy">'+(a.niv==='err'?'!':'·')+'</span><div class="tx"><b>'+esc(a.t.zone||a.t.id)+(a.t.nom?' ('+esc(a.t.nom)+')':'')+'</b>'+esc(a.texte)+'</div>'+(peutIgn?'<button class="btn" data-tab="ign" data-cle="'+esc(a.cle)+'">Ignorer</button>':'')+'</div>').join('')+'</div>'
-      :'<div class="msg ok" style="margin:0">'+svg('ok')+'<b>'+(nIgn?'Aucune alerte en cours.':'Aucune alerte : les tablettes se connectent et ont tout envoyé.')+'</b></div>')+
-    (nIgn?'<p class="hint" style="margin:10px 0 0">'+nIgn+' alerte(s) ignorée(s) sur ce PC. '+(peutIgn?'<button class="btn" data-tab="reaff">Les réafficher</button>':'')+'</p>':'')+
-    '<p class="hint" style="margin:10px 0 0">Une alerte ignorée revient si la situation change.'+(CONSOLE_PC?'':' « Ignorer » se fait sur le PC de l’atelier.')+'</p></section>';
+  // À surveiller (remplace l'ancien encadré « Alertes », 2026-11-24) : sans les anciens identifiants d'une tablette réinstallée.
+  h+=carteSurveiller(l.filter(t=>!anciennes.has(t.id)),{site,ign,peutIgn:CONSOLE_PC&&mod});
   const canal=t=>{const c=site&&site.tablettes&&site.tablettes[t.id];return c?c.canal:'normale'};
   const regCanal=CONSOLE_PC&&S.moi.admin&&site&&site.id;
   h+='<section class="card">'+(l.length?'<table><thead><tr><th>Tablette</th><th>Zone</th><th>Dernière connexion</th><th>Version</th><th>État</th>'+(regCanal?'<th>Mises à jour</th>':'')+(mod?'<th></th>':'')+'</tr></thead><tbody>'+
@@ -3210,11 +3314,16 @@ async function actionTablettes(b){
       if(CONSOLE_PC&&S.moi.admin){try{const e=await apiPC('/api/etat');if(e.site&&e.site.tablettes&&e.site.tablettes[id])await apiPC('/api/canal',{appareil:id,canal:'normale'})}catch(x){if(x.message==='session')throw x;S.msgTab=['warn','Appareil retiré ; son réglage de mises à jour n’a pas pu être remis à « Normale » : '+esc(x.message)]}}}
     return chargerPage();
   }
-  if(act==='ign'||act==='ign-tout'||act==='reaff'){
-    let corps={tout:true};
+  // Encadré « À surveiller » (2026-11-24) : ignorer, voir les lignes ignorées, rétablir (une ou toutes ; seulement
+  // les lignes de l'encadré, les autres clés gardées sur le PC ne sont pas touchées).
+  if(act==='sv-voir'){S_SV.voir=!S_SV.voir;return chargerPage()}
+  if(act==='ign'||act==='ign-tout'||act==='sv-retablir'||act==='sv-tout-retablir'){
+    let corps;
     if(act==='ign')corps={ajouter:[b.dataset.cle]};
-    if(act==='ign-tout'){const cles=[...document.querySelectorAll('[data-tab="ign"]')].map(x=>x.dataset.cle);corps={ajouter:cles}}
-    await apiPC('/api/alertes-ignorees',corps);return chargerPage();
+    if(act==='ign-tout'){if(!confirm('Ignorer toutes les lignes affichées ? Chacune reviendra si son problème change.'))return;corps={ajouter:[...document.querySelectorAll('[data-tab="ign"]')].map(x=>x.dataset.cle)}}
+    if(act==='sv-retablir')corps={retirer:[b.dataset.cle]};
+    if(act==='sv-tout-retablir')corps={retirer:String(b.dataset.cles||'').split('\n').filter(Boolean)};
+    b.disabled=true;await apiPC('/api/alertes-ignorees',corps);return chargerPage();
   }
 }
 async function changerCanalTablette(el){
@@ -4600,6 +4709,438 @@ async function foAction(b){
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-fo]');if(!b||b.disabled||!FoursCommun)return;
   foAction(b).catch(x=>{if(x&&x.message!=='session'){FO.msg=['err','<b>'+esc(x.message)+'</b>'];chargerPage()}})});
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target&&e.target.id==='foNum'){e.preventDefault();const b=document.querySelector('[data-fo="etq-ajouter"]');if(b)b.click()}});
+// <statistiques-console> Statistiques (2026-11-24, maquette validée par l'utilisateur, décisions du 24/11) ---------------
+// Partie « Statistiques » (groupe Planification), LECTURE SEULE : onglets Lancements / Maintenance, filtres Secteur (ceux du
+// manager : même choix que la barre du haut, data-sec) et Période (4 semaines / 3 mois / 12 mois), tuiles comparées à la
+// période d'avant, graphiques SVG faits main, « Voir les chiffres », export CSV (un fichier par onglet, « ; », BOM UTF-8).
+// Données : opération « stats-lire » du script Google (console-google.js), partie « stats », secteur contrôlé par le script.
+//  - Lancements : totaux par jour et par machine calculés par le script (jamais de numéro de fichier ni de patient) ;
+//  - Maintenance : ce que lit le calendrier (+ blocages, journal archivé 12 mois) ; retards et oublis calculés ICI avec le
+//    moteur du calendrier (CalMaint, recopié de l'appli Maintenance) EXACTEMENT comme Maintenance › Suivi (hCalendrier).
+// « En retard » : ORANGE HACHURÉ (pas rouge), toujours avec « ! » et le mot (décision du 24/11).
+Object.assign(ICO,{stats:'<path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/>','stx-dl':'<path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/>'});
+TEINTE.stats=['#E08A17','#9a5c0c'];
+// La partie est rangée ici (et non dans la liste PARTIES) pour que le bloc reste d'un seul tenant : après « Calendrier ».
+PARTIES.splice(PARTIES.findIndex(p=>p.id==='calendrier')+1,0,{id:'stats',g:'plan',nom:'Statistiques',ico:'stats',lect:1});
+// Modèle « Manager de secteur » d'Accès des managers : les statistiques en lecture.
+(function(){const f=MODELES.secteur.f;MODELES.secteur.f=p=>p.id==='stats'?'lecture':f(p)})();
+const STX={onglet:'lan',per:28,d:{}};
+const STX_PER={28:'4 semaines',91:'3 mois',365:'12 mois'},STX_AVANT={28:'les 4 semaines d’avant',91:'les 3 mois d’avant',365:'les 12 mois d’avant'};
+const STX_MOIS=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+const STX_MOISC=['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
+const STX_JOURS=['dim.','lun.','mar.','mer.','jeu.','ven.','sam.'];
+(function stxCss(){
+  if(document.getElementById('stxCss'))return;
+  const st=document.createElement('style');st.id='stxCss';
+  // Séries : états (vert / orange hachuré / rouge) ; Lancements : Préparation gris, Prête violet, En fonctionnement vert
+  // (mêmes teintes que la console) ; personnes : identités, pas des états. Sombre : classe ds-sombre de la console.
+  st.textContent=
+  '.stx{--s-ok:#1F7A3A;--s-warn:#E08A00;--s-warn2:#F7CF8A;--s-err:#C0262D;--c-prep:#41545C;--c-prete:#6B3FA0;--c-fct:#1F7A3A;--p-seul:#0B8A96;--p-acc:#6FC3CB;--p-aide:#8A6BD9;--grid:#e6ecee;--tip:#15242b;--tip-txt:#fff;--seg:#e3eaed;--seg-on:#fff}'+
+  ':root.ds-sombre .stx{--s-ok:#2A8F6E;--s-warn:#D08A2A;--s-warn2:#7A5218;--s-err:#E2464E;--c-prep:#8FA3AD;--c-prete:#B08AE8;--c-fct:#2A8F6E;--p-seul:#4FC7D2;--p-acc:#1E7F88;--p-aide:#B59CF0;--grid:#26363f;--tip:#e6eef1;--tip-txt:#0f1a20;--seg:#3D4850;--seg-on:var(--card)}'+
+  // Étiquette « nouveau » du menu (maquette) : posée en CSS, sans toucher au code du menu. À retirer dans quelques semaines.
+  '.nav .pt[data-go="stats"]{flex-wrap:wrap;row-gap:2px}.nav .pt[data-go="stats"] .t::after{content:"nouveau";margin-left:8px;font-size:15px;font-weight:800;background:#fff;color:#132229;border-radius:999px;padding:0 8px;white-space:nowrap}.nav.reduit .pt[data-go="stats"] .t::after{content:none}'+
+  '.stx .ro{margin-left:8px}'+
+  '.stx-tabs{display:flex;gap:8px;margin:0 0 14px;border-bottom:1px solid var(--line);flex-wrap:wrap}'+
+  '.stx-tab{display:flex;align-items:center;gap:10px;border:0;background:transparent;padding:10px 14px 12px;min-height:56px;font-weight:700;font-size:17px;color:var(--muted);cursor:pointer;border-bottom:4px solid transparent;margin-bottom:-1px}'+
+  '.stx-tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}.stx-tab:hover{color:var(--ink)}.stx-tab:focus-visible,.stx [data-stip]:focus-visible{outline:3px solid #9ED6DC;outline-offset:2px}'+
+  '.stx-filtres{display:flex;gap:12px 16px;align-items:center;flex-wrap:wrap;margin:0 0 16px}.stx-filtres .lib{font-size:15px;font-weight:700;color:var(--muted)}'+
+  '.stx-fg{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}.stx .secsel{max-width:100%}'+
+  '.stx .kpis{grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}.stx .kpi{cursor:default;min-width:0;background:var(--card)}.stx .kpi:hover{border-color:var(--line)}'+
+  '.stx .kpi b .sy{flex:none}.stx .kpi .ev{font-weight:600}.stx .k-warn{--k:var(--s-warn)}.stx .k-err{--k:var(--s-err)}.stx .k-ok{--k:var(--s-ok)}.stx .k-vio{--k:var(--c-prete)}.stx .k-acc{--k:var(--accent)}'+
+  '.stx .card{min-width:0}.stx .card .sous{margin:-6px 0 12px;color:var(--muted);font-size:15px}'+
+  '.stx-g2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;margin-top:16px}'+
+  '.stx-ch{width:100%;min-height:120px;position:relative}.stx-ch svg{display:block;width:100%;overflow:visible}'+
+  '.stx .ax{font-size:15px;fill:var(--muted);font-variant-numeric:tabular-nums}.stx .val{font-size:15px;fill:var(--ink);font-weight:700;font-variant-numeric:tabular-nums}'+
+  '.stx .gr{stroke:var(--grid);stroke-width:1}.stx .base{stroke:var(--line);stroke-width:1.5}.stx .col{fill:transparent;cursor:crosshair}'+
+  '.stx .col:hover,.stx .col.on{fill:color-mix(in srgb,var(--ink) 6%,transparent)}.stx .seuil{stroke:var(--err);stroke-width:1.5;stroke-dasharray:6 5}.stx .seuil-t{font-size:15px;fill:var(--err);font-weight:700}'+
+  '.stx .ligne{fill:none;stroke:var(--accent);stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round}.stx .aire{fill:color-mix(in srgb,var(--accent) 12%,transparent)}.stx .pnt{fill:var(--accent);stroke:var(--card);stroke-width:2}'+
+  '.stx .xh{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 3;pointer-events:none}'+
+  '.stx-leg{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:10px;font-size:15px;color:var(--ink)}.stx-leg span{display:inline-flex;align-items:center;gap:7px}'+
+  '.stx-leg i{font-style:normal;width:20px;height:20px;border-radius:5px;display:inline-grid;place-items:center;color:#fff;font-size:13px;font-weight:800;flex:none}'+
+  '.stx-leg i.lg-l{height:4px;border-radius:2px;background:var(--accent)}.stx-leg i.lg-s{height:0;border-top:2px dashed var(--err);border-radius:0}'+
+  '.stx .hatch{background:repeating-linear-gradient(45deg,var(--s-warn) 0 5px,var(--s-warn2) 5px 9px)!important}'+
+  '.stx-hb{display:grid;gap:8px}.stx-hb .r{display:grid;grid-template-columns:minmax(90px,30%) minmax(0,1fr) auto;gap:10px;align-items:center;font-size:15px;border-radius:8px;padding:2px 4px;cursor:default}'+
+  '.stx-hb .r:hover,.stx-hb .r:focus-visible{background:color-mix(in srgb,var(--ink) 5%,transparent)}.stx-hb.long .r{grid-template-columns:minmax(0,1fr) auto;row-gap:2px}.stx-hb.long .n{grid-column:1/-1;white-space:normal}'+
+  '.stx-hb .n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.stx-hb .n small{color:var(--muted);font-size:15px}'+
+  '.stx-hb .tr{display:flex;height:22px;align-items:stretch;min-width:0}.stx-hb .tr i{display:block;height:100%;margin-right:2px;flex:none}'+
+  '.stx-hb .tr i:first-child{border-radius:4px 0 0 4px}.stx-hb .tr i:last-child{border-radius:0 4px 4px 0;margin-right:0}.stx-hb .tr i:only-child{border-radius:4px}'+
+  '.stx-hb .t{font-weight:700;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}.stx-hb .t small{font-weight:600;color:var(--muted)}'+
+  '.stx .tagb{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:0 8px;font-size:15px;font-weight:700;background:var(--err-bg);color:var(--err);white-space:nowrap;margin-left:6px}'+
+  '.stx details.chiffres{margin-top:12px;border-top:1px solid var(--line2);padding-top:8px}.stx details.chiffres summary{cursor:pointer;font-weight:600;color:var(--accent-dark);min-height:44px;display:flex;align-items:center;font-size:15px}'+
+  '.stx .tw{overflow-x:auto;max-width:100%}.stx table th{text-transform:none;letter-spacing:0}.stx td.nb,.stx th.nb{text-align:right;font-variant-numeric:tabular-nums}'+
+  '.stx .ex{font-size:15px;color:var(--muted);font-style:italic}.stx .stack>*+*{margin-top:16px}'+
+  '.stx-bl{list-style:none;margin:0;padding:0;display:grid;gap:8px}.stx-bl li{border-left:4px solid var(--s-err);padding:4px 10px;font-size:15px}.stx-bl small{display:block;color:var(--muted);font-size:15px}'+
+  '.stx-attente{padding:18px;text-align:center;color:var(--muted);font-size:15px;border:1px dashed var(--line);border-radius:12px}'+
+  '#stxTip{position:fixed;z-index:80;pointer-events:none;background:var(--tip,#15242b);color:var(--tip-txt,#fff);border-radius:10px;padding:8px 12px;font-size:15px;line-height:1.4;max-width:min(320px,calc(100vw - 24px));box-shadow:0 10px 28px rgba(8,20,26,.3)}'+
+  '#stxTip b{display:block}:root.ds-sombre #stxTip{background:#e6eef1;color:#0f1a20}'+
+  '@media (max-width:1100px){.stx-g2{grid-template-columns:minmax(0,1fr)}}'+
+  '@media (max-width:520px){.stx .kpis{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}.stx .kpi{padding:12px}.stx .kpi b{font-size:26px}.stx .card{padding:14px}'+
+  '.stx-tab{flex:1;justify-content:center;padding:10px 6px 12px}.stx-hb .r{grid-template-columns:minmax(0,1fr) auto;row-gap:2px}.stx-hb .n{grid-column:1/-1}.stx-hb .tr{grid-column:1}}'+
+  '@media (prefers-reduced-motion:no-preference){.stx-hb .tr i{transition:width .25s}}';
+  document.head.appendChild(st);
+})();
+
+// --- Dates et nombres ------------------------------------------------------------------------------------------------
+const stxJour=d=>new Date(d.getFullYear(),d.getMonth(),d.getDate());
+const stxAj=(d,n)=>new Date(d.getFullYear(),d.getMonth(),d.getDate()+n);
+const stxLundi=d=>{d=stxJour(d);return stxAj(d,-((d.getDay()+6)%7))};
+const stxIso=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const stxDeIso=s=>{const m=/^(\d{4})-(\d\d)-(\d\d)$/.exec(String(s||''));return m?new Date(+m[1],+m[2]-1,+m[3]):null};
+const stxDateFr=s=>{const d=stxDeIso(s);return d?d.getDate()+' '+STX_MOIS[d.getMonth()]+' '+d.getFullYear():''};
+function stxNumSem(d){const t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const j=t.getUTCDay()||7;t.setUTCDate(t.getUTCDate()+4-j);const a=new Date(Date.UTC(t.getUTCFullYear(),0,1));return Math.ceil(((t-a)/864e5+1)/7)}
+const stxFr=new Intl.NumberFormat('fr-FR');
+const stxNb=n=>stxFr.format(Math.round(n));
+const stxPct=(a,b)=>b?Math.round(100*a/b):0;
+function stxDuree(min){min=Math.round(min);if(min<60)return min+' min';const h=Math.floor(min/60),m=min%60;return h+' h '+String(m).padStart(2,'0')}
+// Période (reprise de la maquette validée) : maintenance = semaines TERMINÉES (jusqu'à dimanche dernier), unité = lundi ;
+// lancements = jours terminés (jusqu'à hier), unité = jour. 4 semaines : par semaine (maintenance) / par jour (lancements) ;
+// 3 mois : par semaine ; 12 mois : par mois (le mois en cours, pas terminé, est dit). « avant » : autant d'unités juste avant.
+function stxPeriode(type,per){
+  const AUJ=stxJour(new Date()),pas=type==='w'?7:1,fin=type==='w'?stxLundi(AUJ):AUJ,seaux=[];
+  const unites=(du,au)=>{const l=[];for(let d=du;d<au;d=stxAj(d,pas))l.push(d);return l};
+  if(per===365){
+    for(let i=11;i>=0;i--){const d=new Date(AUJ.getFullYear(),AUJ.getMonth()-i,1),f=new Date(d.getFullYear(),d.getMonth()+1,1);
+      const du=type==='w'?stxLundi(stxAj(d,6)):d; // une semaine est rangée dans le mois de son lundi
+      seaux.push({nom:STX_MOISC[d.getMonth()],long:STX_MOIS[d.getMonth()]+' '+d.getFullYear()+(i?'':' (mois en cours, pas terminé)'),u:unites(du,f<fin?f:fin).filter(x=>x.getMonth()===d.getMonth()&&x<fin)})}
+  }else if(type==='d'&&per===28){
+    for(let i=28;i>=1;i--){const d=stxAj(fin,-i);seaux.push({nom:String(d.getDate()),long:STX_JOURS[d.getDay()]+' '+d.getDate()+' '+STX_MOIS[d.getMonth()],u:[d],dow:d.getDay()})}
+  }else{
+    const n=Math.round(per/7),l0=stxLundi(AUJ);
+    for(let i=n;i>=1;i--){const d=stxAj(l0,-7*i),f=stxAj(d,7),z=stxAj(f,-1);
+      seaux.push({nom:'S'+stxNumSem(d),long:'semaine '+stxNumSem(d)+' (du '+d.getDate()+' '+STX_MOISC[d.getMonth()]+' au '+z.getDate()+' '+STX_MOISC[z.getMonth()]+')',u:unites(d,f)})}
+  }
+  const toutes=seaux.flatMap(s=>s.u),avant=[];
+  for(let i=toutes.length;i>=1;i--)avant.push(stxAj(toutes[0],-pas*i));
+  const ou={};seaux.forEach((s,i)=>s.u.forEach(x=>ou[stxIso(x)]=i));
+  const dansAvant={};avant.forEach(x=>dansAvant[stxIso(x)]=1);
+  return {seaux,toutes,avant,ou,dansAvant,par:per===365?'mois':(type==='d'&&per===28?'jour':'semaine'),
+    du:stxIso(toutes[0]),au:stxIso(stxAj(toutes[toutes.length-1],pas)),avantDu:stxIso(avant[0]),ouvres:toutes.filter(d=>d.getDay()!==0).length};
+}
+
+// --- Petits morceaux d'interface (repris de la maquette) -----------------------------------------------------------------
+const stxKpi=(cl,lib,big,sous,sym,ev)=>'<div class="kpi '+cl+'"><small>'+lib+'</small><b>'+(sym?'<span class="sy" aria-hidden="true">'+sym+'</span>':'')+big+'</b>'+(sous?'<span>'+sous+'</span>':'')+(ev?'<span class="ev">'+ev+'</span>':'')+'</div>';
+// Évolution par rapport à la période d'avant : flèche + mot (jamais la couleur seule) ; b = null : pas de comparaison.
+function stxEvol(a,b,unite,plusEstMieux){
+  if(b==null||!isFinite(b)||a==null||!isFinite(a))return '';
+  const d=Math.round(a-b);if(!d)return '= pareil qu’avant';
+  return (d>0?'▲ +':'▼ −')+stxNb(Math.abs(d))+(unite||'')+(plusEstMieux==null?'':' · '+((d>0)===plusEstMieux?'mieux':'moins bien'));
+}
+const stxLeg=series=>'<div class="stx-leg">'+series.map(s=>'<span><i'+(s.hatch?' class="hatch"':' style="background:var('+s.c+')"')+' aria-hidden="true">'+(s.sym||'')+'</i>'+esc(s.lib)+'</span>').join('')+'</div>';
+function stxTableau(tetes,lignes,ouvert){
+  return '<details class="chiffres"'+(ouvert?' open':'')+'><summary>Voir les chiffres (tableau)</summary><div class="tw"><table><thead><tr>'+tetes.map((t,i)=>'<th'+(i?' class="nb"':'')+'>'+esc(t)+'</th>').join('')+'</tr></thead><tbody>'+
+    (lignes.length?lignes.map(l=>'<tr>'+l.map((c,i)=>'<td'+(i?' class="nb"':'')+'>'+esc(c)+'</td>').join('')+'</tr>').join(''):'<tr><td colspan="'+tetes.length+'">Rien sur cette période.</td></tr>')+'</tbody></table></div></details>'}
+const stxCarte=(titre,sous,corps)=>'<section class="card"><h2>'+titre+'</h2>'+(sous?'<p class="sous">'+sous+'</p>':'')+corps+'</section>';
+// Barres horizontales empilées : lignes [{nom, sous, v:{k:n}, extra}], series [{k, lib, c, hatch, sym}].
+function stxHb(lignes,series,o){
+  o=o||{};if(!lignes.length)return '<p class="vide">Rien sur cette période.</p>';
+  const fmt=o.fmt||stxNb,tot=x=>series.reduce((t,s)=>t+(x.v[s.k]||0),0),max=o.max||Math.max(1,...lignes.map(tot));
+  return '<div class="stx-hb'+(o.long?' long':'')+'">'+lignes.map(x=>{const T=tot(x);
+    const tip='<b>'+esc(x.nom)+(x.sous?' · '+esc(x.sous):'')+'</b>'+series.filter(s=>x.v[s.k]).map(s=>(s.sym?s.sym+' ':'')+esc(s.lib)+' : '+fmt(x.v[s.k])).join('<br>')+(series.length>1?'<br>Total : '+fmt(T):'')+(x.extraTip?'<br>'+x.extraTip:'');
+    return '<div class="r" tabindex="0" data-stip="'+esc(tip)+'"><span class="n">'+esc(x.nom)+(x.sous?' <small>· '+esc(x.sous)+'</small>':'')+'</span><span class="tr">'+
+      series.map(s=>x.v[s.k]?'<i'+(s.hatch?' class="hatch"':'')+' style="width:calc('+(100*x.v[s.k]/max)+'% - 2px);'+(s.hatch?'':'background:var('+s.c+')')+'"></i>':'').join('')+'</span><span class="t">'+(o.total?o.total(x,T):fmt(T))+(x.extra||'')+'</span></div>'}).join('')+'</div>'}
+// Graphiques SVG dessinés à la largeur réelle du cadre (texte toujours à 15 px, même au téléphone), après l'affichage.
+const STX_CH={};
+// Les graphiques et l'export d'un calcul sont d'abord rangés à part (STX.ch, STX.csvT) : seul le DERNIER chargement les
+// publie (relecture du 24/11 : deux chargements rapprochés mélangeaient graphiques et export).
+const stxGraph=(id,sp)=>{STX.ch[id]=sp;return '<div class="stx-ch" data-stx-ch="'+id+'"></div>'};
+const stxNice=x=>{if(x<=1)return 1;const p=Math.pow(10,Math.floor(Math.log10(x))),f=x/p;return (f<=1?1:f<=2?2:f<=2.5?2.5:f<=5?5:10)*p};
+const stxRond=(x,y,w,h,r)=>'M'+x+' '+(y+h)+'V'+(y+r)+'Q'+x+' '+y+' '+(x+r)+' '+y+'H'+(x+w-r)+'Q'+(x+w)+' '+y+' '+(x+w)+' '+(y+r)+'V'+(y+h)+'Z';
+function stxBarres(el,sp){
+  const W=Math.max(260,el.clientWidth),H=W<500?210:250,g=44,b=30,top=24,hp=H-top-b,n=sp.seaux.length;
+  const tot=x=>sp.series.reduce((t,s)=>t+(x.v[s.k]||0),0),max=Math.max(1,...sp.seaux.map(tot));
+  const pas=Math.max(1,Math.round(stxNice(max/4))),haut=pas*Math.ceil(max/pas),lw=(W-g)/n,bw=Math.max(3,Math.min(40,lw*.64)),fmt=sp.fmt||stxNb,every=Math.max(1,Math.ceil(46/lw));
+  let s='<svg viewBox="0 0 '+W+' '+H+'" height="'+H+'" role="img" aria-label="'+esc(sp.titre||'')+'">';
+  for(let v=0;v<=haut;v+=pas){const y=top+hp-hp*v/haut;s+='<line x1="'+g+'" x2="'+W+'" y1="'+y+'" y2="'+y+'" class="'+(v?'gr':'base')+'"/><text x="'+(g-8)+'" y="'+(y+5)+'" class="ax" text-anchor="end">'+fmt(v)+'</text>'}
+  sp.seaux.forEach((x,i)=>{
+    const cx=g+lw*i+lw/2;let y=top+hp;const T=tot(x),segs=sp.series.filter(se=>x.v[se.k]);
+    segs.forEach((se,j)=>{const h=hp*x.v[se.k]/haut;y-=h;const hh=Math.max(1,h-(j?2:0)),fill=se.hatch?'url(#stxRetard)':'var('+se.c+')';
+      s+=j===segs.length-1?'<path d="'+stxRond(cx-bw/2,y,bw,hh,Math.min(4,bw/2,hh))+'" style="fill:'+fill+'"/>':'<rect x="'+(cx-bw/2)+'" y="'+y+'" width="'+bw+'" height="'+hh+'" style="fill:'+fill+'"/>'});
+    if(T&&n<=16&&bw>=16)s+='<text x="'+cx+'" y="'+(y-6)+'" class="val" text-anchor="middle">'+fmt(T)+'</text>';
+    if(i%every===0||n<=16)s+='<text x="'+cx+'" y="'+(H-8)+'" class="ax" text-anchor="middle"'+(x.dow===0||x.dow===6?' style="opacity:.7"':'')+'>'+esc(x.nom)+'</text>';
+    const tip='<b>'+esc(x.long)+'</b>'+(sp.series.length>1?sp.series.map(se=>(se.sym?se.sym+' ':'')+esc(se.lib)+' : '+fmt(x.v[se.k]||0)).join('<br>')+'<br>Total : '+fmt(T):esc(sp.series[0].lib)+' : '+fmt(T));
+    s+='<rect class="col" x="'+(g+lw*i)+'" y="'+top+'" width="'+lw+'" height="'+hp+'" tabindex="0" data-stip="'+esc(tip)+'"/>';
+  });
+  el.innerHTML=s+'</svg>';
+}
+function stxCourbe(el,sp){
+  const W=Math.max(260,el.clientWidth),H=W<500?200:230,g=56,b=30,top=24,hp=H-top-b,n=sp.pts.length,fmt=sp.fmt||stxNb;
+  const vals=sp.pts.map(p=>p.v).filter(v=>v!=null);
+  let max=sp.max||Math.max(1,...vals,sp.seuil?sp.seuil.v*1.3:0);const pas=Math.max(1,Math.round(stxNice(max/4))); // graduations entières (valeurs arrondies à l'écran)
+ max=pas*Math.ceil(max/pas);
+  const lw=(W-g)/n,X=i=>g+lw*i+lw/2,Y=v=>top+hp-hp*v/max,every=Math.max(1,Math.ceil(46/lw));
+  let s='<svg viewBox="0 0 '+W+' '+H+'" height="'+H+'" role="img" aria-label="'+esc(sp.titre||'')+'">';
+  for(let v=0;v<=max;v+=pas){const y=Y(v);s+='<line x1="'+g+'" x2="'+W+'" y1="'+y+'" y2="'+y+'" class="'+(v?'gr':'base')+'"/><text x="'+(g-8)+'" y="'+(y+5)+'" class="ax" text-anchor="end">'+fmt(v)+'</text>'}
+  if(sp.seuil){const y=Y(sp.seuil.v);s+='<line x1="'+g+'" x2="'+W+'" y1="'+y+'" y2="'+y+'" class="seuil"/><text x="'+(g+6)+'" y="'+(y-7)+'" class="seuil-t" text-anchor="start">'+esc(sp.seuil.lib)+'</text>'}
+  const P=sp.pts.map((p,i)=>p.v==null?null:[X(i),Y(p.v)]);
+  let d='',seg=0;P.forEach(q=>{if(!q){seg=0;return}d+=(seg?'L':'M')+q[0].toFixed(1)+' '+q[1].toFixed(1);seg=1});
+  const pl=P.filter(Boolean);
+  if(pl.length>1)s+='<path class="aire" d="M'+pl[0][0]+' '+(top+hp)+pl.map(q=>'L'+q[0].toFixed(1)+' '+q[1].toFixed(1)).join('')+'L'+pl[pl.length-1][0]+' '+(top+hp)+'Z"/>';
+  s+='<path class="ligne" d="'+d+'"/>';
+  sp.pts.forEach((p,i)=>{if(p.v!=null&&n<=31)s+='<circle class="pnt" cx="'+X(i)+'" cy="'+Y(p.v)+'" r="'+(n>16?3.5:4.5)+'"/>';
+    if(i%every===0||n<=16)s+='<text x="'+X(i)+'" y="'+(H-8)+'" class="ax" text-anchor="middle">'+esc(p.nom)+'</text>'});
+  const li=sp.pts.map(p=>p.v!=null).lastIndexOf(true);
+  if(li>=0)s+='<text x="'+Math.min(W-4,X(li))+'" y="'+(Y(sp.pts[li].v)-12)+'" class="val" text-anchor="'+(X(li)>W-40?'end':'middle')+'">'+fmt(sp.pts[li].v)+'</text>';
+  s+='<line class="xh" x1="0" x2="0" y1="'+top+'" y2="'+(top+hp)+'" style="display:none"/>';
+  sp.pts.forEach((p,i)=>{const tip='<b>'+esc(p.long)+'</b>'+esc(sp.lib)+' : '+(p.v==null?'pas de donnée':fmt(p.v))+(p.note?'<br>'+esc(p.note):'');
+    s+='<rect class="col" x="'+(g+lw*i)+'" y="'+top+'" width="'+lw+'" height="'+hp+'" tabindex="0" data-cx="'+X(i)+'" data-stip="'+esc(tip)+'"/>'});
+  el.innerHTML=s+'</svg>';
+}
+function stxDessiner(){document.querySelectorAll('[data-stx-ch]').forEach(el=>{const sp=STX_CH[el.dataset.stxCh];if(sp)(sp.type==='courbe'?stxCourbe:stxBarres)(el,sp)})}
+// Motif hachuré « en retard » (orange), une seule fois dans la page.
+(function(){const d=document.createElement('div');d.setAttribute('aria-hidden','true');d.style.cssText='position:absolute;width:0;height:0;overflow:hidden';
+  d.innerHTML='<svg width="0" height="0"><defs><pattern id="stxRetard" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="9" height="9" style="fill:var(--s-warn,#E08A00)"/><rect x="5" width="4" height="9" style="fill:var(--s-warn2,#F7CF8A)"/></pattern></defs></svg>';
+  (document.body||document.documentElement).appendChild(d)})();
+
+// --- Lecture (opération « stats-lire ») ----------------------------------------------------------------------------
+// Ancien script Google (pas encore l'opération) : message clair, rien d'autre.
+const stxAncien=r=>r&&r.status===400&&/Opération refusée/i.test(r.error||'');
+const stxMsg=(cl,txt)=>'<div class="msg '+cl+'" role="status">'+svg(cl==='err'||cl==='warn'?'alerte':'aide')+'<div>'+txt+'</div></div>';
+function stxSecs(){const vis=secteursVisibles();return S.secteur==='tous'?vis:vis.filter(s=>s===S.secteur)}
+
+PAGES.stats=async()=>{
+  const num=numChargement;STX.ch={};STX.csvT=null;
+  const vis=secteursVisibles();
+  if(S.secteur!=='tous'&&!vis.includes(S.secteur))S.secteur='tous';
+  let h='<div class="stx"><div class="ph">'+pastille('stats','l')+'<div class="grow"><h1>Statistiques<span class="ro">'+svg('oeil')+' Lecture seule</span></h1><p>Ce qui s’est passé dans l’atelier, en graphiques. Survolez ou touchez une barre pour voir la valeur exacte.</p></div></div>';
+  h+='<div class="stx-tabs" role="tablist" aria-label="Statistiques">'+[['lan','Lancements','lancements'],['mnt','Maintenance','maintenance']].map(([k,l,ic])=>'<button class="stx-tab" role="tab" id="stx-tab-'+k+'" aria-controls="stx-vue" aria-selected="'+(STX.onglet===k)+'" data-stx="onglet" data-v="'+k+'">'+svg(ic)+l+'</button>').join('')+'</div>';
+  const choix=[['tous',vis.length>1?'Tous mes secteurs':secNom(vis[0]||'')]].concat(vis.length>1?vis.map(s=>[s,secNom(s)]):[]);
+  h+='<div class="stx-filtres"><div class="stx-fg"><span class="lib" id="stxLSec">Secteur</span><div class="secsel" role="group" aria-labelledby="stxLSec">'+choix.map(([k,l])=>'<button data-sec="'+esc(k)+'" aria-pressed="'+((S.secteur==='tous'?'tous':S.secteur)===k)+'">'+esc(l)+'</button>').join('')+'</div></div>'+
+    '<div class="stx-fg"><span class="lib" id="stxLPer">Période</span><div class="secsel" role="group" aria-labelledby="stxLPer">'+[28,91,365].map(p=>'<button data-stx="per" data-v="'+p+'" aria-pressed="'+(STX.per===p)+'">'+STX_PER[p]+'</button>').join('')+'</div></div>'+
+    '<span class="grow"></span><button class="btn" data-stx="csv"'+(STX.csv?'':' disabled')+'>'+svg('stx-dl')+'Exporter (Excel)</button></div>';
+  let corps;
+  try{corps=STX.onglet==='lan'?await stxVueLancements():await stxVueMaintenance()}
+  catch(e){if(e.message==='session')throw e;corps=stxMsg('err','<b>'+esc(e.message)+'</b>')}
+  if(num!==numChargement)return ''; // un chargement plus récent est en cours : il affichera la page
+  for(const k in STX_CH)delete STX_CH[k];Object.assign(STX_CH,STX.ch);STX.csv=STX.csvT;
+  h=h.replace('data-stx="csv" disabled','data-stx="csv"'+(STX.csv?'':' disabled'));
+  setTimeout(stxDessiner,0);
+  return h+'<div id="stx-vue" role="tabpanel" aria-labelledby="stx-tab-'+STX.onglet+'">'+corps+'</div></div>';
+};
+
+// --- Onglet Lancements (frittage : machines de la zone de la Relève) -----------------------------------------------------
+async function stxVueLancements(){
+  const vis=secteursVisibles(),secs=stxSecs();
+  if(!secs.includes('frittage'))return '<section class="card"><p class="vide">'+(vis.includes('frittage')?'Les Lancements ne servent qu’au <b>frittage</b> pour l’instant. Choisissez « Frittage » ou « Tous mes secteurs ».':'Les Lancements ne servent qu’au <b>frittage</b>, et vous n’avez pas accès à ce secteur. Demandez au responsable si vous en avez besoin.')+'</p></section>';
+  const P=stxPeriode('d',STX.per);
+  const r=await lire('stats-lire',{quoi:'lancements',secteur:'frittage',avant:P.avantDu,du:P.du,au:P.au});
+  if(stxAncien(r))return stxMsg('warn','<b>Le nouveau script Google n’est pas encore en ligne.</b> Les statistiques arriveront quand le responsable du pack l’aura mis en ligne.');
+  if(!r.ok)return refus(r);
+  return stxLancements(r.data,P,secs.length>1);
+}
+// Calcul et dessin à partir des totaux du script (fonction séparée : essayée sans Google).
+function stxLancements(d,P,autresSecteurs){
+  const L=d.jours||[],SC=d.scans||[],alerte=Number(d.alerte)||15;
+  // Totaux d'un ensemble de lignes [jour, machine, n, prepS, prepN, preteS, preteN, fctS, fctN, attS, attN, attMax].
+  const somme=l=>l.reduce((t,x)=>{for(let i=2;i<12;i++)t[i]=i===11?Math.max(t[i],x[i]):t[i]+x[i];return t},[0,0,0,0,0,0,0,0,0,0,0,0]);
+  const moy=(t,s,n)=>t[n]?t[s]/t[n]:null;
+  const cur=L.filter(x=>P.ou[x[0]]!==undefined),av=L.filter(x=>P.dansAvant[x[0]]);
+  const C=somme(cur),A=somme(av);
+  const scC=SC.filter(x=>P.ou[x[0]]!==undefined).reduce((t,x)=>[t[0]+x[1],t[1]+x[2]],[0,0]),scA=SC.filter(x=>P.dansAvant[x[0]]).reduce((t,x)=>[t[0]+x[1],t[1]+x[2]],[0,0]);
+  // Comparaison seulement si la période d'avant est couverte par les données (sinon : « pas de comparaison »).
+  // Comparaison seulement si la période d'avant est couverte, série par série (fins de production / scans).
+  const cF=!!(d.finsDepuis||d.depuis)&&(d.finsDepuis||d.depuis)<=P.avantDu,cS=!!(d.scansDepuis||d.depuis)&&(d.scansDepuis||d.depuis)<=P.avantDu;
+  const comparer=cF||cS,cmp=v=>cF?v:null,cmpS=v=>cS?v:null;
+  let h='';
+  if(autresSecteurs)h+='<p class="hint" style="margin:0 0 12px">Les Lancements ne concernent que le frittage : les autres secteurs n’apparaissent pas dans cet onglet.</p>';
+  if(!d.depuis)h+=stxMsg('info','<b>Pas encore de données.</b> Les fins de production et les scans s’ajoutent ici au fil des jours ; ils sont gardés '+(d.garde||12)+' mois.');
+  else if(d.depuis>P.du)h+=stxMsg('info','Données disponibles depuis le <b>'+esc(stxDateFr(d.depuis))+'</b> : le début de la période choisie est vide.');
+  const attM=moy(C,9,10),attA=moy(A,9,10),avL=(moy(C,3,4)||0)+(moy(C,5,6)||0),avLA=A[4]||A[6]?(moy(A,3,4)||0)+(moy(A,5,6)||0):null;
+  h+='<div class="kpis">'+
+    stxKpi('k-acc','Plateaux lancés',stxNb(C[2]),'≈ '+stxNb(C[2]/Math.max(1,P.ouvres))+' par jour travaillé (lundi au samedi)','',stxEvol(C[2],cmp(A[2]),'',null))+
+    stxKpi('k-warn','Attente d’un fichier avant lancement',attM==null?'—':stxDuree(attM),attM==null?'pas encore mesurée (voir plus bas)':'en moyenne, de son ajout par le bureau au lancement','',attA==null?'':stxEvol(attM,cmp(attA),' min',false))+
+    stxKpi('k-vio','Préparation → lancement',C[4]||C[6]?stxDuree(avL):'—','en moyenne (préparation + « Prête »)','',avLA==null?'':stxEvol(avL,cmp(avLA),' min',false))+
+    stxKpi('k-err','Scans refusés',stxNb(scC[1]),stxPct(scC[1],scC[0])+' % des '+stxNb(scC[0])+' scans','✕',stxEvol(scC[1],cmpS(scA[1]),'',false))+'</div>';
+  h+='<p class="hint" style="margin:-6px 0 14px">'+(comparer?'▲ ▼ : comparaison avec '+STX_AVANT[STX.per]+(cF&&cS?'.':' (seulement là où les données remontent assez loin).'):'Pas de comparaison avec '+STX_AVANT[STX.per]+' : les données ne remontent pas assez loin.')+'</p><div class="stack">';
+  const seaux=P.seaux.map((x,i)=>{const l=cur.filter(y=>P.ou[y[0]]===i),t=somme(l),sc=SC.filter(y=>P.ou[y[0]]===i).reduce((a,y)=>[a[0]+y[1],a[1]+y[2]],[0,0]);return {nom:x.nom,long:x.long,dow:x.dow,v:{n:t[2]},t,sc}});
+  const SL=[{k:'n',lib:'Plateaux lancés',c:'--accent'}];
+  h+=stxCarte('Plateaux lancés, par '+P.par,'Nombre de lancements (« En fonctionnement ») sur les machines du frittage, comptés à la fin de production.'+(P.par==='jour'?' Week-ends en plus clair.':''),
+    stxGraph('l-barres',{titre:'Plateaux lancés',seaux,series:SL})+stxTableau(['Période','Plateaux lancés','Scans','Refusés'],seaux.map(x=>[x.long,stxNb(x.v.n),stxNb(x.sc[0]),stxNb(x.sc[1])])));
+  const pts=seaux.map(x=>({nom:x.nom,long:x.long,v:x.t[10]?Math.round(x.t[9]/x.t[10]):null,note:x.t[10]?'sur '+x.t[10]+' plateaux · plus longue : '+stxDuree(x.t[11]):''}));
+  h+=stxCarte('Attente d’un fichier avant son lancement','Temps moyen entre l’ajout du fichier par le bureau et son lancement. La ligne rouge est le délai d’alerte réglé dans la console ('+alerte+' min).',
+    (d.ajoutDepuis?stxGraph('l-courbe',{type:'courbe',titre:'Attente moyenne',lib:'Attente moyenne',pts,fmt:v=>stxNb(v)+' min',seuil:{v:alerte,lib:'Alerte : '+alerte+' min'}})+
+      '<div class="stx-leg"><span><i class="lg-l" aria-hidden="true"></i>Attente moyenne (minutes)</span><span><i class="lg-s" aria-hidden="true"></i>Délai d’alerte « fichier en attente »</span></div>'+
+      (d.ajoutDepuis>P.du?'<p class="hint">Mesurée depuis le '+esc(stxDateFr(d.ajoutDepuis))+' (installation de la mise à jour).</p>':''):
+      '<p class="stx-attente">Pas encore de données : l’heure d’ajout du fichier est gardée à la fin de production depuis la mise à jour des Lancements. L’attente se mesure à partir de son installation.</p>')+
+    stxTableau(['Période','Attente moyenne','Plateaux mesurés'],seaux.map((x,i)=>[x.long,pts[i].v==null?'—':pts[i].v+' min',stxNb(x.t[10])])));
+  // Par machine (celles qui ont eu des plateaux sur la période ; liste du script, noms actuels du parc).
+  const noms=[...new Set(cur.map(x=>x[1]))].sort((a,b)=>a.localeCompare(b,'fr',{numeric:true}));
+  const parM=noms.map(m=>{const t=somme(cur.filter(x=>x[1]===m));return {nom:m,t,n:t[2],prep:moy(t,3,4),prete:moy(t,5,6),fct:moy(t,7,8)}});
+  const SPP=[{k:'prep',lib:'En préparation',c:'--c-prep'},{k:'prete',lib:'Prête, en attente du lancement',c:'--c-prete'}],SF=[{k:'fct',lib:'En fonctionnement',c:'--c-fct'}];
+  const dm=v=>v==null?'—':stxDuree(v);
+  h+='<div class="stx-g2">'+stxCarte('Plateaux par machine','Nombre de plateaux lancés sur la période.',
+      stxHb(parM.map(x=>({nom:x.nom,v:{n:x.n},extraTip:'≈ '+stxNb(x.n/Math.max(1,P.ouvres))+' par jour travaillé (lun. au sam.)'})),SL)+stxTableau(['Machine','Plateaux'],parM.map(x=>[x.nom,stxNb(x.n)])))+
+    stxCarte('Avant le lancement, par machine','Durée moyenne d’un cycle avant le lancement : préparation de la machine, puis attente une fois « Prête ».',
+      stxHb(parM.filter(x=>x.prep!=null||x.prete!=null).map(x=>({nom:x.nom,v:{prep:Math.round(x.prep||0),prete:Math.round(x.prete||0)}})),SPP,{fmt:stxDuree})+stxLeg(SPP)+
+      stxTableau(['Machine','Préparation','Prête (attente)','Total'],parM.map(x=>[x.nom,dm(x.prep),dm(x.prete),x.prep==null&&x.prete==null?'—':stxDuree((x.prep||0)+(x.prete||0))])))+'</div>';
+  const lR=(d.motifs||[]).map(x=>({nom:x[1],v:{n:x[2]}})),nRef=lR.reduce((t,x)=>t+x.v.n,0);
+  h+='<div class="stx-g2">'+stxCarte('Durée de production, par machine','Temps moyen « En fonctionnement », du lancement à la fin de production (remises libres par le bureau non comptées).',
+      stxHb(parM.filter(x=>x.fct!=null).map(x=>({nom:x.nom,v:{fct:Math.round(x.fct)}})),SF,{fmt:stxDuree})+stxTableau(['Machine','En fonctionnement (moyenne)'],parM.map(x=>[x.nom,dm(x.fct)])))+
+    stxCarte('Scans refusés, par motif','Pourquoi un scan d’étiquette a été refusé (par la tablette ou par Google). Motifs regroupés. Ces scans restent comptés ici même si le journal des scans a été vidé.',
+      stxHb(lR,[{k:'n',lib:'Scans refusés',c:'--s-err',sym:'✕'}],{long:true,total:(x,T)=>stxNb(T)+' <small>('+stxPct(T,nRef)+' %)</small>'})+stxTableau(['Motif','Nombre'],lR.map(x=>[x.nom,stxNb(x.v.n)])))+'</div>';
+  // Par opérateur (décision du 24/11 : oui) — « Douchette » = scan fait sans se connecter.
+  const ops=(d.operateurs||[]).map(x=>[x[0]==='Douchette'?'Douchette (sans nom)':x[0],x[1],x[2],x[3],x[4]]).sort((a,b)=>(b[1]+b[2]+b[3])-(a[1]+a[2]+a[3]));
+  const lignesOps=ops.map(x=>[x[0],stxNb(x[1]),stxNb(x[2]),stxNb(x[3]),stxNb(x[4])+' ('+stxPct(x[4],x[3])+' %)']);
+  h+=stxCarte('Par opérateur','Qui lance et qui termine les plateaux, et ses scans refusés. « Douchette » = scan fait sans se connecter.'+
+    (!d.lanceDepuis?' <span class="ex">Lancements par personne : comptés à partir de l’installation de la mise à jour (pas encore de données).</span>':d.lanceDepuis>P.du?' <span class="ex">Lancements par personne comptés depuis le '+esc(stxDateFr(d.lanceDepuis))+'.</span>':''),
+    ops.length?'<div class="tw"><table><thead><tr><th>Opérateur</th><th class="nb">Lancements</th><th class="nb">Fins de production</th><th class="nb">Scans</th><th class="nb">Refusés</th></tr></thead><tbody>'+
+      lignesOps.map(l=>'<tr>'+l.map((c,i)=>'<td'+(i?' class="nb"':'')+'>'+esc(c)+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>':'<p class="vide">Rien sur cette période.</p>');
+  STX.csvT={nom:'lancements',sections:[
+    ['Plateaux lancés et attente, par '+P.par,['Période','Plateaux lancés','Attente moyenne (min)','Scans','Scans refusés'],seaux.map((x,i)=>[x.long,x.v.n,pts[i].v==null?'':pts[i].v,x.sc[0],x.sc[1]])],
+    ['Par machine',['Machine','Plateaux','Préparation (min)','Prête, attente (min)','En fonctionnement (min)'],parM.map(x=>[x.nom,x.n,x.prep==null?'':Math.round(x.prep),x.prete==null?'':Math.round(x.prete),x.fct==null?'':Math.round(x.fct)])],
+    ['Scans refusés, par motif',['Motif','Nombre'],lR.map(x=>[x.nom,x.v.n])],
+    ['Par opérateur',['Opérateur','Lancements','Fins de production','Scans','Refusés'],ops]]};
+  return h+'</div>';
+}
+
+// --- Onglet Maintenance (un ou plusieurs secteurs selon les droits) ------------------------------------------------------
+const STX_SM=[{k:'ok',lib:'Faite à l’heure',c:'--s-ok',sym:'✓'},{k:'retard',lib:'Faite en retard',hatch:true,sym:'!'},{k:'non',lib:'Pas faite',c:'--s-err',sym:'✕'}];
+async function stxVueMaintenance(){
+  const secs=stxSecs();
+  if(!secs.length)return '<section class="card"><p class="vide">Aucun secteur visible : demandez au responsable.</p></section>';
+  if(typeof CalMaint==='undefined')return stxMsg('err','<b>Moteur du calendrier absent de cette console</b> : la console est à reconstruire.');
+  const P=stxPeriode('w',STX.per);
+  const rs=await Promise.all(secs.map(s=>lire('stats-lire',{quoi:'maintenance',secteur:s})));
+  if(rs.some(stxAncien))return stxMsg('warn','<b>Le nouveau script Google n’est pas encore en ligne.</b> Les statistiques arriveront quand le responsable du pack l’aura mis en ligne.');
+  const ok=[],refuses=[];rs.forEach((r,i)=>(r.ok?ok:refuses).push({sec:secs[i],r}));
+  let h=refuses.length?stxMsg('warn','Pas de données pour : '+refuses.map(x=>esc(secNom(x.sec))+' ('+(x.r.status===403?'pas d’accès':esc(x.r.error||'lecture impossible'))+')').join(', ')+'.'):'';
+  if(!ok.length)return h;
+  return h+stxMaintenance(ok.map(x=>({sec:x.sec,d:x.r.data})),P,secs.length>1);
+}
+// Retards et oublis d'un secteur : MÊME calcul que Maintenance › Suivi (hCalendrier) — chaque occurrence passée du
+// calendrier, machine par machine (broche par broche au fraisage), faite à temps / en retard / pas faite. du / au : jours.
+function stxEvenements(ST,du,au){
+  if(!ST||!ST.cal||!(ST.cal.regles||[]).length)return [];
+  const today=CalMaint.auj(),out=[];
+  let occ=[];try{occ=CalMaint.occurrences(ST,CalMaint.ajoute(du,-60),CalMaint.ajoute(today,60)).filter(o=>o.date)}catch(e){return []}
+  const parCle={};occ.forEach(o=>o.machines.forEach(m=>{const k=o.regle.id+'|'+m;(parCle[k]=parCle[k]||[]).push(o)}));
+  Object.keys(parCle).forEach(k=>{const l=parCle[k],m=k.slice(k.indexOf('|')+1);
+    l.forEach((o,i)=>{if(o.date<du||o.date>=au||o.date>today)return;
+      if(CalMaint.suivi(ST,o.op,m)){const x=CalMaint.brochesOcc(ST,o,m,CalMaint.borne(l[i+1]),i>0?l[i-1].date:'');
+        x.br.forEach(y=>{if(y.st==='hs'||y.st==='todo'&&o.date===today)return;const st=y.st==='ok'?(CalMaint.S(new Date(y.e.end))<=o.date?'ok':'retard'):'non';out.push({machine:m,date:o.date,st,e:y.st==='ok'?y.e:null})});return}
+      const e=CalMaint.faite(ST,o,m,CalMaint.borne(l[i+1]),i>0?l[i-1].date:'');
+      const st=!e?(o.date===today?null:'non'):CalMaint.S(new Date(e.end))<=o.date?'ok':'retard';if(st)out.push({machine:m,date:o.date,st,e})})});
+  return out;
+}
+const stxNormTexte=t=>String(t||'').toLowerCase().replace(/\s+/g,' ').trim();
+// Blocages : maintenance non terminée (lieu du blocage, texte libre) et broche « pas faite » (raison). Décision du 24/11 :
+// pas de liste de motifs ; les textes identiques (minuscules, espaces) sont regroupés.
+function stxBlocages(journal,sec,du,au){
+  const l=[];
+  (journal||[]).forEach(e=>{
+    const j=stxIso(new Date(e.start||0));if(!(j>=du&&j<au))return;
+    if(e.result==='ko')l.push({sec,machine:e.machine||'',date:e.start,texte:(e.title||'Maintenance')+' — '+(e.stuck?'bloqué à : '+e.stuck:'non terminée'),obs:e.obs||''});
+    const b=e.broches||{};Object.keys(b).forEach(k=>{if(b[k]&&b[k].rep==='p')l.push({sec,machine:e.machine||'',date:e.start,texte:'Broche '+k+' pas faite'+(b[k].raison?' : '+b[k].raison:''),obs:''})});
+  });
+  return l;
+}
+function stxMaintenance(donnees,P,plusieurs){
+  const today=CalMaint.auj(),au=P.au>today?today:P.au;
+  const sem=d=>stxIso(stxLundi(stxDeIso(d)));
+  // Comparaison : seulement si la période d'avant est dans les 12 mois gardés du journal (3 et 12 mois : voir le texte).
+  const limite=stxIso(stxAj(stxJour(new Date()),-365)),comparer=P.avantDu>=limite;
+  const ev=[],evA=[],bl=[],blA=[],jr=[];
+  donnees.forEach(({sec,d})=>{
+    const ST=etatCalendrier(d);
+    stxEvenements(ST,P.avantDu,au).forEach(x=>{x.sec=sec;const s=sem(x.date);if(P.ou[s]!==undefined){x.b=P.ou[s];ev.push(x)}else if(P.dansAvant[s])evA.push(x)});
+    stxBlocages(d.journal,sec,P.avantDu,au).forEach(x=>{const s=sem(stxIso(new Date(x.date)));if(P.ou[s]!==undefined)bl.push(x);else if(P.dansAvant[s])blA.push(x)});
+    (d.journal||[]).forEach(e=>{if(e.result!=='ok')return;const s=sem(stxIso(new Date(e.start||0)));if(P.ou[s]!==undefined)jr.push({sec,e})});
+  });
+  const compte=l=>{const o={ok:0,retard:0,non:0};l.forEach(x=>o[x.st]++);o.n=o.ok+o.retard+o.non;return o};
+  const C=compte(ev),A=compte(evA),tx=stxPct(C.ok,C.n),txA=A.n?stxPct(A.ok,A.n):null,cmp=v=>comparer?v:null;
+  const sansCal=donnees.filter(x=>!(x.d.cal&&(x.d.cal.regles||[]).length)).map(x=>secNom(x.sec));
+  let h='';
+  if(sansCal.length)h+=stxMsg('info','Pas de calendrier de maintenance réglé pour : '+esc(sansCal.join(', '))+'. Les maintenances prévues viennent du calendrier (Planification › Calendrier de maintenance).');
+  h+='<div class="kpis">'+
+    stxKpi('k-acc','Maintenances prévues',stxNb(C.n),'au calendrier, sur '+STX_PER[STX.per],'',stxEvol(C.n,cmp(A.n),'',null))+
+    stxKpi('k-ok','Faites à l’heure',C.n?tx+' %':'—',stxNb(C.ok)+' sur '+stxNb(C.n),'✓',txA==null?'':stxEvol(tx,cmp(txA),' pts',true))+
+    stxKpi('k-warn','Faites en retard',stxNb(C.retard),stxPct(C.retard,C.n)+' % des prévues','!',stxEvol(C.retard,cmp(A.retard),'',false))+
+    stxKpi('k-err','Pas faites',stxNb(C.non),stxPct(C.non,C.n)+' % des prévues','✕',stxEvol(C.non,cmp(A.non),'',false))+
+    stxKpi('k-vio','Blocages signalés',stxNb(bl.length),'« Je suis bloqué » / broche « Pas faite »','',stxEvol(bl.length,cmp(blA.length),'',false))+'</div>';
+  h+='<p class="hint" style="margin:-6px 0 14px">'+(comparer?'▲ ▼ : comparaison avec '+STX_AVANT[STX.per]+'.':'Pas de comparaison avec '+STX_AVANT[STX.per]+' : le journal des maintenances est gardé 12 mois.')+'</p><div class="stack">';
+  const seaux=P.seaux.map((x,i)=>{const c=compte(ev.filter(y=>y.b===i));return {nom:x.nom,long:x.long,v:c,c}});
+  h+=stxCarte('Prévu et fait, par '+P.par,'Chaque maintenance prévue au calendrier, machine par machine : faite le jour prévu (ou avant), faite plus tard, ou pas faite.',
+    stxGraph('m-barres',{titre:'Prévu et fait',seaux,series:STX_SM})+stxLeg(STX_SM)+
+    stxTableau(['Période','À l’heure','En retard','Pas faite','Total'],seaux.map(x=>[x.long,stxNb(x.c.ok),stxNb(x.c.retard),stxNb(x.c.non),stxNb(x.c.n)])));
+  const pts=seaux.map(x=>({nom:x.nom,long:x.long,v:x.c.n?stxPct(x.c.ok,x.c.n):null,note:x.c.n?x.c.ok+' à l’heure sur '+x.c.n+' prévues':''}));
+  h+=stxCarte('Part des maintenances faites à l’heure','Évolution, '+P.par+' après '+P.par+'. Plus la courbe est haute, mieux c’est.',
+    stxGraph('m-courbe',{type:'courbe',titre:'Part faite à l’heure',lib:'Faites à l’heure',pts,max:100,fmt:v=>stxNb(v)+' %'})+
+    '<div class="stx-leg"><span><i class="lg-l" aria-hidden="true"></i>Faites à l’heure (en %)</span></div>');
+  // Par machine.
+  const parM=new Map(),cleM=x=>x.sec+'|'+x.machine;
+  ev.forEach(x=>{const k=cleM(x);if(!parM.has(k))parM.set(k,{nom:x.machine,sous:plusieurs?secNom(x.sec):'',v:{ok:0,retard:0,non:0},b:0});parM.get(k).v[x.st]++});
+  bl.forEach(x=>{const k=cleM(x);if(!parM.has(k))parM.set(k,{nom:x.machine||'Machine ?',sous:plusieurs?secNom(x.sec):'',v:{ok:0,retard:0,non:0},b:0});parM.get(k).b++});
+  const lM=[...parM.values()].sort((a,b)=>(b.v.retard+b.v.non)-(a.v.retard+a.v.non)||b.b-a.b||a.nom.localeCompare(b.nom,'fr',{numeric:true}));
+  lM.forEach(x=>{x.extra=x.b?'<span class="tagb">✕ '+x.b+'</span>':'';x.extraTip=x.b?'✕ Blocages : '+x.b:''});
+  // Blocages les plus fréquents : textes identiques regroupés ; sinon (aucun texte répété) les derniers blocages.
+  const grp=new Map();bl.forEach(x=>{const k=stxNormTexte(x.texte);if(!grp.has(k))grp.set(k,{nom:x.texte,v:{n:0}});grp.get(k).v.n++});
+  const lB=[...grp.values()].sort((a,b)=>b.v.n-a.v.n||a.nom.localeCompare(b.nom,'fr')),regroupe=lB.some(x=>x.v.n>1);
+  const derniers=bl.slice().sort((a,b)=>b.date-a.date).slice(0,10);
+  const blocCorps=!bl.length?'<p class="vide">Aucun blocage sur cette période.</p>':regroupe?
+    stxHb(lB.slice(0,10),[{k:'n',lib:'Blocages',c:'--s-err',sym:'✕'}],{long:true,total:(x,T)=>stxNb(T)+' <small>('+stxPct(T,bl.length)+' %)</small>'})+stxTableau(['Blocage','Nombre'],lB.map(x=>[x.nom,stxNb(x.v.n)])):
+    '<p class="hint" style="margin:0 0 8px">Chaque blocage est différent : voici les derniers.</p><ul class="stx-bl">'+derniers.map(x=>'<li>'+esc(x.texte)+'<small>'+esc(dateFr(x.date))+' · '+esc(x.machine||'Machine ?')+(plusieurs?' · '+esc(secNom(x.sec)):'')+(x.obs?' · « '+esc(x.obs)+' »':'')+'</small></li>').join('')+'</ul>';
+  h+='<div class="stx-g2">'+stxCarte('Par machine','Les machines qui ont le plus de retards et d’oublis en premier. <span class="tagb">✕ n</span> = blocages signalés.',
+    stxHb(lM,STX_SM,{total:(x,T)=>stxPct(x.v.ok,T)+' % <small>à l’heure</small>'})+stxLeg(STX_SM)+stxTableau(['Machine','À l’heure','En retard','Pas faite','Blocages'],lM.map(x=>[x.nom+(x.sous?' ('+x.sous+')':''),stxNb(x.v.ok),stxNb(x.v.retard),stxNb(x.v.non),stxNb(x.b)])))+
+    stxCarte('Blocages les plus fréquents','Ce que les opérateurs ont signalé quand la maintenance n’a pas pu être faite (texte libre ; textes identiques regroupés).',blocCorps)+'</div>';
+  // Par personne (journal : maintenances terminées) et « dont en retard » (calendrier).
+  const SP=[{k:'seul',lib:'A fait seul',c:'--p-seul'},{k:'acc',lib:'A fait, accompagné',c:'--p-acc'},{k:'aide',lib:'A accompagné un collègue',c:'--p-aide'}];
+  const parP=new Map(),get=(n,s)=>{const k=s+'|'+n;if(!parP.has(k))parP.set(k,{nom:n,sous:plusieurs?secNom(s):'',v:{seul:0,acc:0,aide:0},ret:0});return parP.get(k)};
+  jr.forEach(({sec,e})=>{if(!e.op)return;get(e.op,sec).v[e.aide?'acc':'seul']++;if(e.aide)get(e.aide,sec).v.aide++});
+  ev.forEach(x=>{if(x.st==='retard'&&x.e&&x.e.op)get(x.e.op,x.sec).ret++});
+  const lP=[...parP.values()].sort((a,b)=>(b.v.seul+b.v.acc+b.v.aide)-(a.v.seul+a.v.acc+a.v.aide)||a.nom.localeCompare(b.nom,'fr'));
+  const secsD=donnees.map(x=>x.sec);
+  const lS=secsD.map(s=>{const f=jr.filter(x=>x.sec===s),a=f.filter(x=>x.e.aide).length;return {nom:secNom(s),v:{seul:stxPct(f.length-a,f.length),acc:stxPct(a,f.length)},n:f.length}});
+  const SA=[{k:'seul',lib:'Faite seul',c:'--p-seul'},{k:'acc',lib:'Faite accompagnée',c:'--p-acc'}];
+  h+='<div class="stx-g2">'+stxCarte('Par personne','Maintenances terminées par chacun (seul ou accompagné) et fois où il a accompagné un collègue.',
+    stxHb(lP,SP)+stxLeg(SP)+stxTableau(['Personne','Seul','Accompagné','A accompagné','Dont en retard'],lP.map(x=>[x.nom+(x.sous?' ('+x.sous+')':''),stxNb(x.v.seul),stxNb(x.v.acc),stxNb(x.v.aide),stxNb(x.ret)])))+
+    stxCarte('Seul ou accompagné','Part des maintenances terminées faites seul ou à deux'+(secsD.length>1?', par secteur':'')+'.',
+    stxHb(lS.filter(x=>x.n),SA,{max:100,fmt:v=>v+' %',total:x=>stxNb(x.n)+' <small>faites</small>'})+stxLeg(SA)+stxTableau(['Secteur','Seul (%)','Accompagné (%)','Faites'],lS.map(x=>[x.nom,x.v.seul+' %',x.v.acc+' %',stxNb(x.n)])))+'</div>';
+  h+=stxMsg('info','<b>Nouveau par rapport à Maintenance › Suivi</b> : plusieurs secteurs ensemble (selon vos droits), retards séparés des oublis par machine, taux à l’heure en courbe, blocages regroupés, part « seul / accompagné » par secteur, et la comparaison avec la période d’avant. Le Suivi de la tablette reste tel quel ; sur 3 et 12 mois il ne voit que les 90 derniers jours du journal, ici les maintenances archivées (12 mois) sont comptées : les chiffres peuvent donc différer.');
+  STX.csvT={nom:'maintenance',sections:[
+    ['Prévu et fait, par '+P.par,['Période','À l’heure','En retard','Pas faite','Total','À l’heure (%)'],seaux.map(x=>[x.long,x.c.ok,x.c.retard,x.c.non,x.c.n,x.c.n?stxPct(x.c.ok,x.c.n):''])],
+    ['Par machine',['Machine','Secteur','À l’heure','En retard','Pas faite','Blocages'],lM.map(x=>[x.nom,x.sous||secNom(secsD[0]),x.v.ok,x.v.retard,x.v.non,x.b])],
+    ['Blocages',['Blocage','Nombre'],lB.map(x=>[x.nom,x.v.n])],
+    ['Par personne',['Personne','Secteur','Seul','Accompagné','A accompagné','Dont en retard'],lP.map(x=>[x.nom,x.sous||secNom(secsD[0]),x.v.seul,x.v.acc,x.v.aide,x.ret])],
+    ['Seul ou accompagné',['Secteur','Seul (%)','Accompagné (%)','Faites'],lS.map(x=>[x.nom,x.v.seul,x.v.acc,x.n])]]};
+  return h+'</div>';
+}
+
+// --- Export (Excel) : un CSV par onglet, séparateur « ; », BOM UTF-8 (s'ouvre directement dans Excel) ---------------------
+function stxCsv(){
+  const x=STX.csv;if(!x)return;
+  const q=v=>{const t=String(v==null?'':v);return /[";\r\n]|^[=+\-@]/.test(t)?'"'+(/^[=+\-@]/.test(t)?"'":'')+t.replace(/"/g,'""')+'"':t};
+  const secs=x.nom==='lancements'?'Frittage':stxSecs().map(secNom).join(', ');
+  const l=[['Statistiques — '+(x.nom==='lancements'?'Lancements (frittage)':'Maintenance'),'Secteur : '+secs,'Période : '+STX_PER[STX.per],'Le '+new Date().toLocaleDateString('fr-FR')]];
+  x.sections.forEach(([titre,tetes,lignes])=>{l.push([]);l.push([titre]);l.push(tetes);lignes.forEach(r=>l.push(r))});
+  const b=new Blob(['﻿'+l.map(r=>r.map(q).join(';')).join('\r\n')],{type:'text/csv;charset=utf-8'}),a=document.createElement('a');
+  a.href=URL.createObjectURL(b);a.download='statistiques-'+x.nom+'-'+(S.secteur==='tous'?'tous':S.secteur)+'-'+STX_PER[STX.per].replace(/\s+/g,'-')+'-'+stxIso(new Date())+'.csv';
+  document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);
+}
+
+// --- Gestes : onglets, période, export ; bulle de survol (souris, toucher, clavier) -------------------------------------
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-stx]');if(!b||b.disabled)return;
+  const a=b.dataset.stx;S.dernierGeste=Date.now();
+  if(a==='onglet'){STX.onglet=b.dataset.v;chargerPage().then(()=>{const t=document.getElementById('stx-tab-'+STX.onglet);if(t)t.focus()});return}
+  if(a==='per'){STX.per=+b.dataset.v;chargerPage();return}
+  if(a==='csv')stxCsv();
+});
+document.addEventListener('keydown',e=>{const t=e.target.closest&&e.target.closest('.stx-tab');if(!t||!['ArrowLeft','ArrowRight'].includes(e.key))return;
+  e.preventDefault();STX.onglet=STX.onglet==='lan'?'mnt':'lan';chargerPage().then(()=>{const x=document.getElementById('stx-tab-'+STX.onglet);if(x)x.focus()})});
+const stxTip=(function(){let el=null,cible=null,vu=0;
+  const montrer=(c,x,y)=>{if(!el){el=document.createElement('div');el.id='stxTip';el.setAttribute('role','tooltip');document.body.appendChild(el)}
+    cible=c;vu=Date.now();el.innerHTML=c.dataset.stip;el.hidden=false;
+    document.querySelectorAll('.stx .col.on').forEach(z=>z.classList.remove('on'));if(c.classList.contains('col'))c.classList.add('on');
+    const xh=c.dataset.cx&&c.closest('svg').querySelector('.xh');if(xh){xh.setAttribute('x1',c.dataset.cx);xh.setAttribute('x2',c.dataset.cx);xh.style.display=''}
+    const r=el.getBoundingClientRect();let L=x+14,T=y-r.height-12;if(L+r.width>innerWidth-8)L=Math.max(8,x-r.width-14);if(T<8)T=y+18;el.style.left=L+'px';el.style.top=T+'px'};
+  const cacher=()=>{if(el)el.hidden=true;cible=null;document.querySelectorAll('.stx .col.on').forEach(z=>z.classList.remove('on'));document.querySelectorAll('.stx .xh').forEach(z=>z.style.display='none')};
+  // Le défilement causé par le focus clavier (élément amené à l'écran) ne referme pas la bulle qu'il vient d'ouvrir.
+  return {montrer,cacher,cible:()=>cible,recent:()=>Date.now()-vu<400};
+})();
+document.addEventListener('pointermove',e=>{if(e.pointerType!=='mouse')return;const c=e.target.closest&&e.target.closest('.stx [data-stip]');if(c)stxTip.montrer(c,e.clientX,e.clientY);else if(stxTip.cible())stxTip.cacher()});
+document.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse')return;const c=e.target.closest&&e.target.closest('.stx [data-stip]');if(c)stxTip.montrer(c,e.clientX,e.clientY);else stxTip.cacher()});
+document.addEventListener('focusin',e=>{const c=e.target.closest&&e.target.closest('.stx [data-stip]');if(c){const r=c.getBoundingClientRect();stxTip.montrer(c,r.left+r.width/2,r.top+8)}else if(stxTip.cible())stxTip.cacher()});
+addEventListener('scroll',()=>{if(stxTip.cible()&&!stxTip.recent())stxTip.cacher()},{passive:true,capture:true});
+let stxRT,stxLW=innerWidth;addEventListener('resize',()=>{clearTimeout(stxRT);stxRT=setTimeout(()=>{if(innerWidth!==stxLW){stxLW=innerWidth;stxDessiner()}},120)});
+// </statistiques-console>
 // --- Garder sa place pendant un nouveau dessin (défaut du 22/10 : « la page remonte » quand on remplit une case) ---------
 // Un nouveau dessin de la page garde : le défilement de la page, celui des zones qui défilent seules (panneau de droite du
 // flux, dessin, tableaux larges) et le focus du champ où la personne est ALLÉE (Tab, toucher un autre champ) : au moment
@@ -5749,12 +6290,19 @@ PAGES.teles=async()=>{
   if(!T.d)return h+'<div class="msg err">'+svg('alerte')+'<div><b>'+esc(T.err||'Liste des télés illisible.')+'</b></div></div>';
   if(T.err)h+='<div class="msg warn">'+svg('alerte')+'<div>Liste lue à '+heureFr(T.lu)+' : '+esc(T.err)+'</div></div>';
   if(T.d.avisVu)h+='<div class="msg warn">'+svg('alerte')+'<div>'+esc(T.d.avisVu)+'</div></div>';
+  // À surveiller (2026-11-24) : les télés seulement, d'après l'onglet « Tablettes » de la Sheet (lecture gardée en
+  // mémoire, comme la partie Tablettes ; il faut le droit « Tablettes »). Pas pendant le réglage d'une télé.
+  if(!T.b&&droit('tablettes')){
+    const [r,ign]=await Promise.all([lire('tablettes-lire').catch(x=>{if(x.message==='session')throw x;return null}),apiPC('/api/alertes-ignorees').catch(x=>{if(x.message==='session')throw x;return null})]);
+    // Seulement les télés (zone « Télé · <id> ») : les lignes ignorées des tablettes ne sont pas touchées d'ici.
+    if(r&&r.ok)h+=carteSurveiller((r.data.tablettes||[]).filter(t=>/^Télé · /.test(String(t.zone||''))),{ign,peutIgn:!!ign&&peutModif('tablettes'),titre:'Télés à surveiller'});
+  }
   return h+(T.b?tvEditeur():tvListe());
 };
 function tvListe(){
   const T=S.tv,l=T.d.teles,mod=tvMod();
   let h='<section class="card"><h2>'+pastille('ecran','s')+'Les télés <span class="tag">'+l.filter(t=>!t.nouvelle).length+'</span></h2>';
-  h+=l.length?l.map(t=>'<div class="tv-l'+(t.nouvelle?' nv':'')+'"><div class="tv-n"><b>'+esc(t.nom||t.id)+'</b>'+(t.nouvelle?' <span class="tag acc">nouvelle télé</span>':'')+'<br><span class="hint">'+esc(t.id)+(t.ip?' · IP <b>'+esc(t.ip)+'</b>':'')+(t.demarre?' · Raspberry démarré le <b>'+esc(t.demarre)+'</b>':'')+'</span></div>'+
+  h+=l.length?l.map(t=>'<div class="tv-l'+(t.nouvelle?' nv':'')+'"><div class="tv-n"><b>'+esc(t.nom||t.id)+'</b>'+(t.nouvelle?' <span class="tag acc">nouvelle télé</span>':'')+'<br><span class="hint">'+esc(t.id)+(t.ip?' · IP <b>'+esc(t.ip)+'</b>':'')+(t.demarre?' · Raspberry démarré le <b>'+esc(t.demarre)+'</b>':'')+(t.programme?' · programme <b>'+esc(t.programme)+'</b>':'')+'</span></div>'+
     '<div class="tv-a">'+(t.nouvelle?'<span class="hint">S’est présentée : donnez-lui un nom et ce qu’elle affiche.</span>':esc(tvResume(t.contenu,t))+(tvVeilleResume(t.veille)?'<br><span class="hint">☾ '+esc(tvVeilleResume(t.veille))+'</span>':'')+(tvMusiqueResume(t.musique)?'<br><span class="hint">♪ '+esc(tvMusiqueResume(t.musique))+'</span>':''))+'</div>'+
     '<div class="tv-e">'+tvVu(t)+(t.nouvelle?'':t.recu?'<span class="tag ok">✓ réglage reçu</span>':'<span class="tag">• réglage pas encore reçu</span>')+(t.nouvelle?'':tvVeilleTag(t)+tvMusiqueTag(t))+'</div>'+
     // Droits par secteur (2026-11-12) : une télé d'un autre secteur (ou commune) est montrée, mais pas modifiable.
@@ -5763,7 +6311,9 @@ function tvListe(){
   h+='<p class="hint" style="margin:6px 0 0">« Réglage reçu » : la télé a lu le dernier changement (vérifié à chaque visite, une fois par minute). La dernière visite est notée par Google au plus toutes les 5 minutes.</p></section>';
   if(mod)h+='<section class="card" style="margin-top:16px"><h2>Ajouter une télé</h2><div class="row"><label class="lbl" style="margin:0;flex:1;min-width:240px">Nom de la télé (celui de la carte du Raspberry Pi)<input class="in" id="tvNouvId" maxlength="40" placeholder="ex. tele-fours" autocomplete="off"></label><button class="btn pri" data-tv="ajouter">Ajouter</button></div>'+
     '<p class="hint" style="margin:8px 0 0">Lettres minuscules, chiffres et tirets. Plus simple : préparez la carte avec ce nom, branchez la télé : elle apparaît ici d’elle-même.</p></section>';
-  h+='<section class="card" style="margin-top:16px"><h2>Adresse ouverte par une télé</h2><p class="hint" style="margin:0">Le Raspberry Pi ouvre <b>http://127.0.0.1:8789/tele?id=</b><i>nom-de-la-télé</i> (plus tard : l’adresse du serveur Lynk de l’entreprise suivie de <b>/tele?id=</b>…). Aucun bouton à l’écran : tout se règle ici.</p></section>';
+  h+='<section class="card" style="margin-top:16px"><h2>Adresse ouverte par une télé</h2><p class="hint" style="margin:0">Le Raspberry Pi ouvre <b>http://127.0.0.1:8789/tele?id=</b><i>nom-de-la-télé</i> (plus tard : l’adresse du serveur Lynk de l’entreprise suivie de <b>/tele?id=</b>…). Aucun bouton à l’écran : tout se règle ici.</p>'+
+    // Mise à jour des télés par le réseau (2026-11-24) : rappel de son fonctionnement, au même endroit.
+    '<p class="hint" style="margin:8px 0 0">Programme de la télé : publié avec la nouvelle version du pack (« Publier »), le Raspberry va le chercher seul (toutes les 30 minutes environ), le vérifie et revient à l’ancien si l’écran ne répond plus. Une télé réglée « Tablette test » (onglet Tablettes, appareil T-…) reçoit d’abord la version en test. Le numéro affiché à côté de chaque télé est celui de son programme.</p></section>';
   return h;
 }
 // --- Mise en veille programmée (2026-11-12, demande : « mettre en veille la vidéo de la télé sur certaines heures » ;
