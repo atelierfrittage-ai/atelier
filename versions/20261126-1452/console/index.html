@@ -3097,7 +3097,11 @@ function vueJournalScans(st,mod){
 // surveiller), 'info' (à vérifier, ton neutre). Rien n'est écrit nulle part : simple lecture de l'état envoyé.
 // Seuils : ici (pas de réglage dans la console). nuit = heure du redémarrage de nuit des Raspberry (HEURE_REDEMARRAGE
 // de lynk.conf, 04:30 par défaut).
-const SURV_SEUILS={envoiH:2,vuH:24,majH:1,oubliJ:30,nuit:'04:30'};
+// Santé des Raspberry des télés (2026-11-26, demande : « des alertes en cas de problème : carte SD, alimentation… ») :
+// teleMuetteMin télé pas vue (hors veille) → à corriger ; tempRouge / tempOrange (°C) ; placePct place libre de la carte
+// SD (%) ; wifiDbm signal Wi-Fi faible (dBm) ; redemH redémarrage ou coupure récents (h) ; redem7 redémarrages en 7 jours
+// (hors redémarrage de nuit) ; santeH : mesure plus ancienne = pas d'alerte de santé (la règle « pas vue » le dit).
+const SURV_SEUILS={envoiH:2,vuH:24,majH:1,oubliJ:30,nuit:'04:30',teleMuetteMin:15,tempRouge:80,tempOrange:75,placePct:10,wifiDbm:-75,redemH:24,redem7:3,santeH:2};
 const Surveillance=(()=>{
   const H=3600000;
   const n2=x=>String(x).padStart(2,'0');
@@ -3113,6 +3117,75 @@ const Surveillance=(()=>{
     return {t,h:+m[3]*60+(+m[4]),txt:m[1]+'/'+m[2]+' à '+m[3]+':'+m[4]}};
   // Appareils jamais suivis : aperçu de la console sur un PC, tablette pas encore installée dans une zone.
   const ignore=z=>/PC \(aperçu de la console\)/.test(z)||/^Pas encore installée/.test(z);
+  // --- Santé du Raspberry d'une télé (2026-11-26) : chaîne « v1;clé=valeur;… » de la colonne Santé (serveur.mjs, bloc
+  // <sante-tele>, qui en décrit les clés). Retour : null = script Google plus ancien (il ne rend pas « sante ») ;
+  // {vide:true} = rien de remonté (programme de la télé pas encore à jour, ou télé en mode serveur) ; sinon les mesures
+  // (null = inconnue sur ce Raspberry). Heures en minutes depuis 1970, base 36.
+  const d36=s=>{const n=parseInt(s,36);return isNaN(n)?0:n*60000};
+  function sante(s){
+    if(s===undefined||s===null)return null;
+    const t=String(s),o={};if(!/^v1;/.test(t))return {vide:true};
+    for(const p of t.split(';').slice(1)){const i=p.indexOf('=');if(i>0)o[p.slice(0,i)]=p.slice(i+1)}
+    const num=k=>o[k]!==undefined&&o[k]!==''&&o[k]!=='?'&&!isNaN(+o[k])?+o[k]:null;
+    const th=/^0x[0-9a-f]{1,8}$/i.test(o.th||'')?parseInt(o.th,16):null,bit=b=>th==null?null:!!(th&b);
+    const rb=String(o.rb||'').split(',').map(x=>{const m=/^([0-9a-z]+)([pb])([0-9a-z]*)$/.exec(x);return m?{d:d36(m[1]),brutal:m[2]==='b',vivant:m[3]?d36(m[3]):0}:null}).filter(Boolean);
+    return {vide:false,modele:String(o.mo||'').slice(0,40),throttled:th,sousTension:bit(0x1),sousTensionDepuis:bit(0x10000),
+      chaleur:bit(0x8),chaleurDepuis:bit(0x80000),v5:num('v5'),temp:num('t'),lectureSeule:o.ro==='1'?true:o.ro==='0'?false:null,
+      erreurs:num('je'),ext4:num('fe'),ext4T:o.ft?d36(o.ft):0,libre:num('li'),libreGo:num('lg'),memoire:num('me'),charge:num('ch'),
+      wifi:num('wi'),up:num('up'),rb,h:o.h?d36(o.h):0,
+      // Veille (2026-11-26) : eteinte = télé restée éteinte après la veille (pas encore revue allumée) ; veille = dernières
+      // actions « <heure>.<code> », plus récentes d'abord : {t, code ('c','h','n','r','e','m'), essai}.
+      eteinte:o.vx==='1',veille:String(o.vj||'').split(',').map(x=>{const m=/^([0-9a-z]+)\.([chnrem])(\d*)$/.exec(x);return m?{t:d36(m[1]),code:m[2],essai:+m[3]||0}:null}).filter(Boolean)};
+  }
+  const VEILLE_MOTS={c:'éteinte par HDMI-CEC',h:'signal HDMI coupé (HDMI-CEC ne répond pas)',n:'écran noir seulement',e:'restée éteinte après la veille',m:'vue rallumée ensuite (à la main ?)'};
+  const veilleMot=a=>a.code==='r'?'rallumée par HDMI-CEC (essai '+(a.essai||1)+')':VEILLE_MOTS[a.code];
+  // Dernière mise en veille faite sans HDMI-CEC (signal coupé ou écran noir), dans les 36 dernières heures.
+  const veilleSansCec=(sa,now)=>{const a=sa.veille.find(x=>'chn'.includes(x.code));return a&&a.code!=='c'&&a.t>now-36*H?a:null};
+  const pi5=m=>/^Pi 5|^Pi 500|Compute Module 5/.test(m||'');
+  // Redémarrage dans la fenêtre du redémarrage de nuit (15 min avant à 45 min après) : normal, jamais compté.
+  const dansNuit=(ms,S)=>{const nh=/^(\d\d):(\d\d)$/.exec(S.nuit)||[0,4,30],n=+nh[1]*60+(+nh[2]),d=new Date(ms),h=d.getHours()*60+d.getMinutes();return h>=n-15&&h<=n+45};
+  // Redémarrages des 7 derniers jours, sans les redémarrages de nuit propres.
+  const redem7=(sa,S,now)=>sa.rb.filter(x=>x.d>now-7*24*H&&x.d<=now+H&&(x.brutal||!dansNuit(x.d,S)));
+  const nombre=x=>String(x).replace('.',',');
+  // Ce que dit la santé, ligne par ligne, pour les deux consoles : [{titre, niv ('ok' | 'att' | 'err' | 'info'), txt}].
+  function santeLignes(sa,o){
+    o=o||{};const S=Object.assign({},SURV_SEUILS,o.seuils||{}),now=o.maintenant||Date.now();
+    if(sa===null)return [{titre:'Santé',niv:'info',txt:'script Google à mettre en ligne (il ne range pas encore la santé des Raspberry)'}];
+    if(!sa||sa.vide)return [{titre:'Santé',niv:'info',txt:'pas encore remontée par la télé (programme de la télé pas encore mis à jour, ou télé en mode serveur)'}];
+    const l=[],add=(titre,niv,txt)=>l.push({titre,niv,txt});
+    if(sa.throttled==null)add('Alimentation','info','inconnue (mesure impossible sur ce Raspberry)');
+    else add('Alimentation',sa.sousTension||sa.sousTensionDepuis?'err':'ok',(sa.sousTension?'sous-tension en ce moment':sa.sousTensionDepuis?'sous-tension depuis le démarrage':'OK')+(sa.v5!=null?' · '+nombre(sa.v5)+' V':''));
+    if(sa.temp==null)add('Température','info','inconnue');
+    else add('Température',sa.temp>=S.tempRouge?'err':sa.temp>=S.tempOrange||sa.chaleur||sa.chaleurDepuis?'att':'ok',sa.temp+' °C'+(sa.chaleur||sa.chaleurDepuis?' · ralenti par la chaleur'+(sa.chaleur?'':' depuis le démarrage'):''));
+    const e4=sa.ext4>0&&sa.ext4T>now-7*24*H;
+    if(sa.lectureSeule)add('Carte SD','err','en lecture seule : le système ne peut plus rien écrire');
+    else if(sa.erreurs>0)add('Carte SD','err',sa.erreurs+' erreur'+(sa.erreurs>1?'s':'')+' de lecture ou d’écriture depuis le démarrage');
+    else if(e4)add('Carte SD','err','erreur du système de fichiers le '+quand(sa.ext4T));
+    else if(sa.erreurs==null)add('Carte SD',sa.lectureSeule===false?'ok':'info','OK'+(sa.lectureSeule===false?'':' (lecture seule : inconnu)')+' · journal des erreurs non lisible (kit à mettre à jour sur ce Raspberry)');
+    else add('Carte SD','ok','OK, aucune erreur depuis le démarrage');
+    if(sa.libre!=null)add('Place libre',sa.libre<S.placePct?'att':'ok',sa.libre+' %'+(sa.libreGo!=null?' ('+nombre(sa.libreGo)+' Go)':''));
+    if(sa.memoire!=null||sa.charge!=null)add('Mémoire','ok',(sa.memoire!=null?sa.memoire+' % libre':'')+(sa.charge!=null?(sa.memoire!=null?' · ':'')+'charge '+nombre(sa.charge):''));
+    if(sa.wifi==null)add('Wi-Fi','info','pas de Wi-Fi (câble réseau)');
+    else add('Wi-Fi',sa.wifi<S.wifiDbm?'att':'ok',(sa.wifi<S.wifiDbm?'faible':sa.wifi>=-67?'bon':'moyen')+' ('+sa.wifi+' dBm)');
+    const r=redem7(sa,S,now),b=r.filter(x=>x.brutal);
+    add('Redémarrages (7 jours)',r.length>=S.redem7||r.some(x=>x.d>now-S.redemH*H)?'att':'ok',(r.length?r.length+(b.length?' dont '+b.length+' coupure'+(b.length>1?'s':'')+' de courant probable'+(b.length>1?'s':''):''):'aucun')+' (sans le redémarrage de nuit)');
+    const dc=sa.rb.filter(x=>x.brutal)[0];
+    if(dc)add('Dernière coupure',dc.d>now-S.redemH*H?'att':'info','vers '+(dc.vivant?quand(dc.vivant):'?')+', reparti le '+quand(dc.d));
+    // Veille (2026-11-26) : les 4 dernières actions, la plus récente d'abord.
+    if(sa.veille.length)add('Veille',sa.eteinte?'err':veilleSansCec(sa,now)?'att':'ok',sa.veille.slice(0,4).map(a=>quand(a.t)+' '+veilleMot(a)).join(' · '));
+    add('Raspberry','info',(sa.modele||'modèle inconnu')+(sa.h?' · mesuré le '+quand(sa.h):''));
+    return l;
+  }
+  // Télé probablement en veille (pas d'alerte « télé muette ») : elle le disait à sa dernière visite, ou l'heure de sa
+  // prochaine veille (« veille jeu 20:00 », heure de l'atelier) est passée depuis.
+  const JOURS=['dim','lun','mar','mer','jeu','ven','sam'];
+  function veilleProbable(e,vu,now){
+    if(/ · veille (cec|hdmi|noir|attente)(?=[ \/]|$)/.test(e))return true;
+    const m=/ · veille (dim|lun|mar|mer|jeu|ven|sam) (\d\d):(\d\d)(?= · |\/|$)/.exec(e);if(!m)return false;
+    const d=new Date(vu);
+    for(let i=0;i<8;i++){const x=new Date(d.getFullYear(),d.getMonth(),d.getDate()+i,+m[2],+m[3]);if(JOURS[x.getDay()]===m[1]&&x.getTime()>=vu-60000)return x.getTime()<=now}
+    return false;
+  }
   function liste(tabs,site,o){
     o=o||{};const S=Object.assign({},SURV_SEUILS,o.seuils||{}),now=o.maintenant||Date.now(),l=[];
     const nh=/^(\d\d):(\d\d)$/.exec(S.nuit)||[0,4,30],nuit=+nh[1]*60+(+nh[2]);
@@ -3129,6 +3202,10 @@ const Surveillance=(()=>{
       // 1. Données pas envoyées et tablette muette depuis plus de 2 h : elles risquent de rester bloquées dessus.
       const env=/^à envoyer : ([^·]+)/.exec(e),bloquees=!tele&&env&&age>S.envoiH*H;
       if(bloquees)add('bloquees','err','Données bloquées sur la tablette : '+env[1].trim(),vuTxt,'Allumer la tablette avec le Wi-Fi et ouvrir ces applications : les données partent à l’ouverture.',env[1].trim());
+      // 2a. Télé muette (2026-11-26) : pas vue depuis plus de 15 min alors qu'elle n'est pas en veille. Google note la
+      //     visite au plus toutes les 5 min : 15 min = au moins deux visites manquées.
+      else if(tele&&age>S.teleMuetteMin*60000&&age<=S.vuH*H&&!veilleProbable(e,vu,now))add('absent','err','Télé pas vue depuis '+duree(age)+' (hors veille)','vue le '+t.vu,
+        'Vérifier que la télé et son Raspberry sont allumés et sur le réseau. Si elle revient seule, regarder la santé de son Raspberry (console › Télés) : alimentation, coupures.',t.vu);
       // 2. Pas vu depuis plus de 24 h (sauf si la règle 1 le dit déjà).
       else if(age>S.vuH*H)add('absent',age>72*H?'err':'att',(tele?'Télé':'Tablette')+' pas vue depuis '+duree(age),'vue le '+t.vu,
         tele?'Vérifier que le Raspberry de la télé est alimenté et relié au réseau.':'Vérifier qu’elle est allumée, chargée et sur le Wi-Fi, puis ouvrir le pack.',t.vu);
@@ -3156,10 +3233,54 @@ const Surveillance=(()=>{
         add('son','att','Télé sans son : aucune sortie son HDMI trouvée','vue le '+t.vu,'Vérifier que la télé est allumée et que le câble HDMI est branché : le Raspberry réessaie seul toutes les 30 s.','aucune');
       // 4b. Redémarrage hors de celui de la nuit (fenêtre de 15 min avant à 45 min après) : à vérifier seulement, une
       //     mise à jour par carte SD redémarre aussi le Raspberry (normal).
-      const d=dateDemarre(e,now);
-      if(d&&!(d.h>=nuit-15&&d.h<=nuit+45))
-        add('redemarrage','info','Télé redémarrée le '+d.txt+', en dehors du redémarrage de nuit ('+S.nuit+')','il y a '+duree(Math.max(0,now-d.t)),
+      //     Santé (2026-11-26) : à surveiller (orange) pendant les 24 h qui suivent ; pas répété si la règle « coupure »
+      //     ci-dessous dit déjà ce redémarrage.
+      const d=dateDemarre(e,now),sa=sante(t.sante),frais=sa&&!sa.vide&&sa.h>now-S.santeH*H;
+      const coupures=frais?sa.rb.filter(x=>x.brutal&&x.d>now-S.redemH*H&&x.d<=now+H):[];
+      if(d&&!(d.h>=nuit-15&&d.h<=nuit+45)&&!coupures.some(x=>Math.abs(x.d-d.t)<15*60000))
+        add('redemarrage',now-d.t<S.redemH*H?'att':'info','Télé redémarrée le '+d.txt+', en dehors du redémarrage de nuit ('+S.nuit+')','il y a '+duree(Math.max(0,now-d.t)),
           'À vérifier : normal après une mise à jour par carte SD ; sinon, vérifier l’alimentation du Raspberry.',d.txt);
+      // 5. Santé du Raspberry (2026-11-26) : d'après la colonne Santé (mesure de moins de 2 h ; plus vieille, la règle
+      //    « pas vue » le dit). Les clés ne reprennent pas les valeurs mesurées (température…) : une ligne ignorée ne
+      //    revient pas à chaque mesure, seulement si le problème change de nature.
+      if(!frais)continue;
+      const mes='mesuré le '+quand(sa.h);
+      // Veille (2026-11-26, tele-fraisage restée éteinte un matin après sa veille) : le Raspberry a essayé de la
+      // rallumer 10 min sans succès. Plus signalé dès qu'elle est revue allumée (vx retiré) ou que le son HDMI revient,
+      // ni pendant une nouvelle veille.
+      const ve=sa.veille.find(x=>x.code==='e');
+      if(sa.eteinte&&!enVeille&&!/ · musique [a-z0-9]+\/hdmi(?= · |$)/.test(e))
+        add('eteinte','err','Télé restée éteinte après la veille'+(ve?' (depuis le '+quand(ve.t)+')':''),mes,
+          'Rallumer la télé à la télécommande ; vérifier que HDMI-CEC (Anynet+, Bravia Sync, SimpLink…) est activé dans les réglages de la télé.',ve?String(Math.round(ve.t/60000)):'');
+      const sc=veilleSansCec(sa,now);
+      if(sc)add('veillesanscec','att','Mise en veille sans HDMI-CEC le '+quand(sc.t)+' : '+VEILLE_MOTS[sc.code],mes,
+        'Vérifier que HDMI-CEC (Anynet+, Bravia Sync, SimpLink…) est activé dans les réglages de la télé et que le câble HDMI est bien branché.',sc.code);
+      if(sa.sousTension||sa.sousTensionDepuis)
+        add('alim','err','Alimentation trop faible : sous-tension '+(sa.sousTension?'en ce moment':'depuis le démarrage du Raspberry'),mes,
+          'Changer le bloc secteur pour un modèle officiel Raspberry Pi '+(pi5(sa.modele)?'5 V 5 A (Pi 5)':/^Pi 4|^Pi 400/.test(sa.modele)?'5 V 3 A (Pi 4)':'5 V 3 A (Pi 4) ou 5 V 5 A (Pi 5)')+'.','sous-tension');
+      if(sa.lectureSeule)
+        add('sdlecture','err','Carte SD en lecture seule : le Raspberry ne peut plus rien y écrire',mes,
+          'Remplacer la carte SD par une carte neuve préparée avec le kit (Raspberry-tele), puis vérifier l’alimentation.','');
+      else if(sa.erreurs>0||(sa.ext4>0&&sa.ext4T>now-7*24*H))
+        add('sderreurs','err','Carte SD : '+(sa.erreurs>0?sa.erreurs+' erreur'+(sa.erreurs>1?'s':'')+' de lecture ou d’écriture depuis le démarrage':'erreur du système de fichiers le '+quand(sa.ext4T)),mes,
+          'Carte SD qui s’abîme : prévoir de la remplacer par une carte neuve préparée avec le kit (Raspberry-tele).','');
+      if(sa.temp!=null&&sa.temp>=S.tempOrange)
+        add('chaleur',sa.temp>=S.tempRouge?'err':'att','Raspberry trop chaud : '+sa.temp+' °C',mes,
+          'Vérifier que le Raspberry est aéré : pas enfermé, pas collé à une source de chaleur.',sa.temp>=S.tempRouge?'rouge':'orange');
+      else if(sa.chaleur||sa.chaleurDepuis)
+        add('chaleur','att','Raspberry ralenti par la chaleur'+(sa.chaleur?'':' depuis le démarrage'),mes,'Vérifier que le Raspberry est aéré : pas enfermé, pas collé à une source de chaleur.','ralenti');
+      if(sa.libre!=null&&sa.libre<S.placePct)
+        add('placesd','att','Carte SD presque pleine : '+sa.libre+' % libre'+(sa.libreGo!=null?' ('+nombre(sa.libreGo)+' Go)':''),mes,
+          'Retirer des vidéos ou de la musique de cette télé (console › Télés) : le Raspberry efface d’abord les fichiers qui ne servent plus.','');
+      if(sa.wifi!=null&&sa.wifi<S.wifiDbm)
+        add('wifi','att','Wi-Fi faible : '+sa.wifi+' dBm',mes,'Rapprocher la borne Wi-Fi ou le Raspberry, ou le relier par un câble réseau.','');
+      for(const c of coupures.slice(0,1))
+        add('coupure','att','Arrêt brutal du Raspberry vers '+(c.vivant?quand(c.vivant):'?')+' (coupure de courant probable), reparti le '+quand(c.d),'il y a '+duree(Math.max(0,now-c.d)),
+          'Vérifier que la prise du Raspberry reste alimentée (multiprise à interrupteur, prise coupée…) et que le bloc secteur est bien branché.',String(Math.round(c.d/60000)));
+      const r7=redem7(sa,S,now);
+      if(r7.length>=S.redem7)
+        add('redemarrages','att',r7.length+' redémarrages en 7 jours'+(r7.some(x=>x.brutal)?' dont '+r7.filter(x=>x.brutal).length+' arrêt(s) brutal(aux)':'')+' (sans le redémarrage de nuit)',mes,
+          'Regarder la santé de ce Raspberry (console › Télés) : alimentation, température, carte SD.',String(r7.length));
     }
     const rang={err:0,att:1,info:2};
     return l.sort((a,b)=>rang[a.niv]-rang[b.niv]||b.age-a.age);
@@ -3176,7 +3297,7 @@ const Surveillance=(()=>{
     const ids=new Set((tabs||[]).map(t=>t.id)),cles=new Set(l.map(a=>a.cle));
     return Object.keys(ign||{}).filter(k=>{const m=/^s\|([^|]+)\|([a-z]+)\|/.exec(k);return !!m&&ids.has(m[1])&&!cles.has(k)&&!(m[2]==='version'&&!(site&&site.id))});
   }
-  return {liste,resume,visibles,ignorees,aOublier,SEUILS:SURV_SEUILS};
+  return {liste,resume,visibles,ignorees,aOublier,sante,santeLignes,SEUILS:SURV_SEUILS};
 })();
 // </surveillance>
 // Tablettes & alertes (lot 7b, 2026-10-15). Suppression d'un appareil : par le script (session, zones du manager).
@@ -3216,7 +3337,7 @@ function carteSurveiller(tabs,o){
       :'<div class="msg ok" style="margin:0">'+svg('ok')+'<b>'+(ig.length?'Rien d’autre à surveiller.':o.titre?'Rien à surveiller sur les télés.':'Rien à surveiller : les appareils se connectent'+(o.site?', sont à jour':'')+' et ont tout envoyé.')+'</b></div>');
   if(ig.length)h+='<p class="hint" style="margin:10px 0 0"><button class="btn" data-tab="sv-voir">'+(S_SV.voir?'Cacher':'Voir')+' les lignes ignorées ('+ig.length+')</button></p>'+
     (S_SV.voir?'<div class="als" style="margin-top:8px">'+ig.map(a=>ligne(a,true)).join('')+'</div>'+(pi&&ig.length>1?'<p style="margin:8px 0 0"><button class="btn" data-tab="sv-tout-retablir" data-cles="'+esc(ig.map(a=>a.cle).join('\n'))+'">Tout rétablir</button></p>':''):'');
-  return h+'<p class="hint" style="margin:10px 0 0">✕ à corriger · ! à surveiller · • à vérifier. Signalé : données pas envoyées et tablette muette depuis plus de '+S.envoiH+' h, appareil pas vu depuis plus de '+S.vuH+' h (parmi ceux vus ces '+S.oubliJ+' derniers jours), tablette pas à jour '+S.majH+' h après la publication, pas prête sans internet, mémoire presque pleine, télé sans son ou redémarrée hors de la nuit. Une ligne ignorée revient si le problème change, ou s’il disparaît puis revient.'+
+  return h+'<p class="hint" style="margin:10px 0 0">✕ à corriger · ! à surveiller · • à vérifier. Signalé : données pas envoyées et tablette muette depuis plus de '+S.envoiH+' h, appareil pas vu depuis plus de '+S.vuH+' h (parmi ceux vus ces '+S.oubliJ+' derniers jours), tablette pas à jour '+S.majH+' h après la publication, pas prête sans internet, mémoire presque pleine, télé sans son ou redémarrée hors de la nuit, télé muette depuis plus de '+S.teleMuetteMin+' min hors veille, santé du Raspberry (sous-tension, carte SD en lecture seule ou en erreur, plus de '+S.tempOrange+' °C, moins de '+S.placePct+' % de place, Wi-Fi sous '+S.wifiDbm+' dBm, coupure de courant, '+S.redem7+' redémarrages ou plus en 7 jours, télé restée éteinte après la veille, veille sans HDMI-CEC). Une ligne ignorée revient si le problème change, ou s’il disparaît puis revient.'+
     (CONSOLE_PC?'':' « Ignorer » se fait sur le PC de l’atelier.')+(o.site||o.titre?'':' Les versions des tablettes ne sont vérifiées que dans la console du PC, pour un administrateur.')+'</p></section>';
 }
 // « Voir les lignes ignorées » ouvert ou fermé (pour cette page seulement).
@@ -6259,6 +6380,15 @@ function tvResume(c,t){
     return l.length===1?'Vidéo · '+l[0].nom+son:'Vidéos à la suite · '+l.length+' : '+l.map(v=>v.nom).join(', ').slice(0,90)+son}
   return 'Rien (écran d’attente)';
 }
+// Santé du Raspberry de chaque télé (2026-11-26, demande : « des données sur les Raspberry des télés ») : mêmes mots que
+// la console du PC (Surveillance.santeLignes) ; couleur + symbole + mot (charte). santeScript false = le script Google
+// ne range pas encore la santé (à mettre en ligne) ; les alertes sont dans « Télés à surveiller » au-dessus.
+const TV_SANTE_SY={ok:'✓',att:'!',err:'✕',info:'•'},TV_SANTE_CL={ok:' ok',att:' warn',err:' err',info:''};
+function tvSante(t){
+  if(!t.vu)return '';
+  const sa=S.tv.d&&S.tv.d.santeScript===false?null:Surveillance.sante(typeof t.sante==='string'?t.sante:'');
+  return '<div class="tv-s" role="group" aria-label="Santé du Raspberry"><b>Santé du Raspberry</b>'+Surveillance.santeLignes(sa).map(x=>'<span class="tag'+TV_SANTE_CL[x.niv]+'"><span aria-hidden="true">'+TV_SANTE_SY[x.niv]+'</span> '+esc(x.titre)+' : '+esc(x.txt)+'</span>').join('')+'</div>';
+}
 // Dernière visite : notée par Google au plus toutes les 5 min (onglet Tablettes) ; en ligne = vue il y a moins de 12 min.
 function tvVu(t){
   const v=dateVu(t.vu),age=v?Date.now()-v:Infinity;
@@ -6270,6 +6400,7 @@ function tvCss(){
   if(document.getElementById('tvCss'))return;trCss();
   const st=document.createElement('style');st.id='tvCss';
   st.textContent='.tv-l{display:flex;align-items:center;gap:14px;flex-wrap:wrap;border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin-bottom:10px;background:var(--card)}'+
+    '.tv-l .tv-s{flex:1 1 100%;display:flex;flex-wrap:wrap;gap:6px;align-items:center;border-top:1px solid var(--line2);padding-top:8px}.tv-l .tv-s>b{font-size:14px;margin-right:4px}'+
     '.tv-l.nv{border:2px dashed var(--accent)}.tv-l .tv-n{flex:1 1 240px;min-width:0}.tv-l .tv-n b{font-size:17px}.tv-l .tv-a{flex:2 1 300px;min-width:0;overflow-wrap:anywhere}.tv-l .tv-e{display:flex;flex-direction:column;gap:4px;align-items:flex-start}'+
     '.tv-ed h3{font-size:16px;margin:18px 0 8px}.tv-ed .tv-imgs{display:flex;flex-wrap:wrap;gap:10px;margin:8px 0}.tv-ed .tv-img{border:1px solid var(--line);border-radius:10px;padding:6px;display:flex;flex-direction:column;gap:6px;align-items:center;max-width:200px}'+
     '.tv-ed .tv-img img{max-width:186px;max-height:110px}.tv-ed textarea.in{min-height:110px}.tv-ed .tv-pied{display:flex;gap:10px;flex-wrap:wrap;align-items:center;border-top:1px solid var(--line2);margin-top:18px;padding-top:14px}'+
@@ -6306,7 +6437,7 @@ function tvListe(){
     '<div class="tv-a">'+(t.nouvelle?'<span class="hint">S’est présentée : donnez-lui un nom et ce qu’elle affiche.</span>':esc(tvResume(t.contenu,t))+(tvVeilleResume(t.veille)?'<br><span class="hint">☾ '+esc(tvVeilleResume(t.veille))+'</span>':'')+(tvMusiqueResume(t.musique)?'<br><span class="hint">♪ '+esc(tvMusiqueResume(t.musique))+'</span>':''))+'</div>'+
     '<div class="tv-e">'+tvVu(t)+(t.nouvelle?'':t.recu?'<span class="tag ok">✓ réglage reçu</span>':'<span class="tag">• réglage pas encore reçu</span>')+(t.nouvelle?'':tvVeilleTag(t)+tvMusiqueTag(t))+'</div>'+
     // Droits par secteur (2026-11-12) : une télé d'un autre secteur (ou commune) est montrée, mais pas modifiable.
-    (mod&&t.modifiable!==false?'<button class="btn'+(t.nouvelle?' pri':'')+'" data-tv="ouvrir" data-id="'+esc(t.id)+'">'+(t.nouvelle?'Régler cette télé':'Changer')+'</button>':mod?'<span class="tag" title="Seul l’administrateur peut la changer">• lecture seule (autre secteur ou télé commune)</span>':'')+'</div>').join('')
+    (mod&&t.modifiable!==false?'<button class="btn'+(t.nouvelle?' pri':'')+'" data-tv="ouvrir" data-id="'+esc(t.id)+'">'+(t.nouvelle?'Régler cette télé':'Changer')+'</button>':mod?'<span class="tag" title="Seul l’administrateur peut la changer">• lecture seule (autre secteur ou télé commune)</span>':'')+tvSante(t)+'</div>').join('')
     :'<div class="vide">Aucune télé pour le moment. Une télé branchée apparaît ici toute seule (« nouvelle télé »).</div>';
   h+='<p class="hint" style="margin:6px 0 0">« Réglage reçu » : la télé a lu le dernier changement (vérifié à chaque visite, une fois par minute). La dernière visite est notée par Google au plus toutes les 5 minutes.</p></section>';
   if(mod)h+='<section class="card" style="margin-top:16px"><h2>Ajouter une télé</h2><div class="row"><label class="lbl" style="margin:0;flex:1;min-width:240px">Nom de la télé (celui de la carte du Raspberry Pi)<input class="in" id="tvNouvId" maxlength="40" placeholder="ex. tele-fours" autocomplete="off"></label><button class="btn pri" data-tv="ajouter">Ajouter</button></div>'+

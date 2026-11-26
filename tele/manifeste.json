@@ -1,8 +1,8 @@
 {
  "format": 1,
- "id": "20261125-0742",
- "date": 1795588955678,
- "empreinte": "234a0f9f45abd66c5d20c255e03809b54cb98517e85594c3723f8c56dc2ac991",
+ "id": "20261126-1452",
+ "date": 1795701171524,
+ "empreinte": "acacdb0cffd72191ac7f709e4b9a53080fea96f403ed2e58c52d2a5569e61a14",
  "fichiers": {
   "Fours/Fours.html": {
    "sha256": "ee19576c84bd967cce83d91b24e93b1f3d718d6a2a4051bee710c01e9446efa1",
@@ -57,8 +57,8 @@
    "taille": 12215
   },
   "Pack-Tablettes/console/serveur.mjs": {
-   "sha256": "05a6c82282d36c9df979a1dcac38959cd0715c6a1696adc3b8245f275b7af46a",
-   "taille": 252933
+   "sha256": "21efd2aa2d35ab392b598c4a9d5c22cb535117f3a5b36f63475cdd4ec382ea87",
+   "taille": 271591
   },
   "Pack-Tablettes/console/tele.html": {
    "sha256": "88a8dbf926b73864bf71143c5c4f52581eee951462eca8068d2143c4480fce60",
@@ -86,7 +86,7 @@
   }
  },
  "paquet": {
-  "taille": 1381968,
-  "sha256": "60662489e7ddd7c3e9313c491c0f157c9c5efb8a02c24fbc27091e770b10fb85"
+  "taille": 1401115,
+  "sha256": "df7f73a7601dbd25e86e39e6728525e6db2932790951d3fcc8f4e463fe561309"
  }
 }

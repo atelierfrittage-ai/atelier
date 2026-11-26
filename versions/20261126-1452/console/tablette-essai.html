@@ -550,7 +550,7 @@ document.addEventListener('DOMContentLoaded',demarrer);
 window.ESSAI_SECTEURS={"fraisage":{"id":"fraisage","nom":"Fraisage","description":"","releve":false,"machines":[],"taches":[],"fiches":[],"maintenance":[],"procedures":[]},"frittage":{"id":"frittage","nom":"Frittage","description":"Fusion laser métal : PROX, TP2000, TP1000","releve":true,"machines":["PROX 5","PROX 6","PROX 7","PROX 8","PROX 9","PROX 11","PROX 12","TP2000 COCR1","TP2000 COCR2","TP2000 COCR3","TP2000 COCR4","TP2000 COCR5","TP2000 COCR6","TP2000 TI1","TP2000 TI2","TP1000","Tamiseuse Trumpf"],"taches":null,"fiches":null,"maintenance":null,"procedures":null},"grattage":{"id":"grattage","nom":"Grattage","description":"","releve":false,"machines":[],"taches":[],"fiches":[],"maintenance":[],"procedures":[]},"resine":{"id":"resine","nom":"Résine","description":"","releve":false,"machines":[],"taches":[],"fiches":[],"maintenance":[],"procedures":[]}};
 </script>
 <script>
-window.ESSAI_SCRIPT="1E5FF074";
+window.ESSAI_SCRIPT="4CC923BA";
 window.EssaiScriptGoogle=function(SpreadsheetApp,DriveApp,PropertiesService,CacheService,Utilities,LockService,Logger,Session,ContentService){
 
 
@@ -771,7 +771,10 @@ function reponse_(status, data, reglages) {
 
 
 
-var TABLETTES_TITRES = ['Identifiant', 'Nom (à saisir)', 'Code des Réglages (à saisir)', 'Code envoyé', 'Applications', 'Dernière connexion', 'Version du pack', 'Zone', 'État'];
+
+
+
+var TABLETTES_TITRES = ['Identifiant', 'Nom (à saisir)', 'Code des Réglages (à saisir)', 'Code envoyé', 'Applications', 'Dernière connexion', 'Version du pack', 'Zone', 'État', 'Santé'];
 
 function installerTablettes_(ss) {
   var t = feuille_(ss, FEUILLES.tablettes);
@@ -792,7 +795,7 @@ function appareil_(body) {
   
   
   var cc = CacheService.getScriptCache(), cleApp = 'appareil-' + id;
-  var sig = [body.app || 'releve', body.version || '', body.zone || '', body.etat || ''].join('|');
+  var sig = [body.app || 'releve', body.version || '', body.zone || '', body.etat || '', body.sante || ''].join('|');
   try { var vu = JSON.parse(cc.get(cleApp) || 'null'); if (vu && vu.sig === sig && typeof vu.code === 'string') return vu.code; } catch (e) {}
   var code = appareilFeuille_(body, id);
   try { if (typeof code === 'string') cc.put(cleApp, JSON.stringify({sig: sig, code: code}), 60); } catch (e) {}
@@ -803,7 +806,7 @@ function appareil_(body) {
 function appareilConnu_(body) {
   var id = String(body.appareil || '');
   if (!/^T-[0-9A-Z]{6}$/.test(id)) return null;
-  var sig = [body.app || 'releve', body.version || '', body.zone || '', body.etat || ''].join('|');
+  var sig = [body.app || 'releve', body.version || '', body.zone || '', body.etat || '', body.sante || ''].join('|');
   try { var vu = JSON.parse(CacheService.getScriptCache().get('appareil-' + id) || 'null'); if (vu && vu.sig === sig && typeof vu.code === 'string') return vu.code; } catch (e) {}
   return undefined;
 }
@@ -829,8 +832,14 @@ function appareilFeuille_(body, id) {
     if (t.getRange(1, 9, 1, 1).getDisplayValues()[0][0] !== 'État') t.getRange(1, 9, 1, 1).setValues([['État']]).setFontWeight('bold');
     CacheService.getScriptCache().put('titre-etat', '1', 21600);
   }
+  
+  var sante = sansFormule_(String(body.sante || '').slice(0, 400));
+  if (sante && !CacheService.getScriptCache().get('titre-sante')) {
+    if (t.getRange(1, 10, 1, 1).getDisplayValues()[0][0] !== 'Santé') t.getRange(1, 10, 1, 1).setValues([['Santé']]).setFontWeight('bold');
+    CacheService.getScriptCache().put('titre-sante', '1', 21600);
+  }
   if (ligne < 0) {
-    ecrire_(t, n + 1, [[id, '', '', envoye, appli, quand, version, zone, etat]]);
+    ecrire_(t, n + 1, [[id, '', '', envoye, appli, quand, version, zone, etat, sante]]);
     return code;
   }
   var l = lignes[ligne], r = ligne + 2, apps = String(l[4]).split(', ').filter(String);
@@ -839,6 +848,7 @@ function appareilFeuille_(body, id) {
   if (version && l[6] !== version) ecrire_(t, r, [[version]], 7);
   if (zone && l[7] !== zone) ecrire_(t, r, [[zone]], 8);
   if (etat && l[8] !== etat) ecrire_(t, r, [[etat]], 9);
+  if (sante && l[9] !== sante) ecrire_(t, r, [[sante]], 10);
   
   var cache = CacheService.getScriptCache(), cle = 'vu-' + id;
   if (!cache.get(cle)) { ecrire_(t, r, [[quand]], 6); cache.put(cle, '1', 300); }
@@ -5081,7 +5091,9 @@ function tablettesPack_() {
   if (!t || t.getLastRow() < 2) return [];
   return t.getRange(2, 1, t.getLastRow() - 1, TABLETTES_TITRES.length).getDisplayValues()
     .filter(function (l) { return /^T-[0-9A-Z]{6}$/.test(String(l[0]).trim()); })
-    .map(function (l) { return {id: l[0], nom: l[1], applis: l[4], vu: l[5], version: l[6], zone: l[7], etat: l[8] || ''}; });
+    
+    
+    .map(function (l) { return {id: l[0], nom: l[1], applis: l[4], vu: l[5], version: l[6], zone: l[7], etat: l[8] || '', sante: l[9] || ''}; });
 }
 
 
